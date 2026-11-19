@@ -559,16 +559,33 @@ function AgentsSection({
         {actionLabel}
       </Button>
     );
-    if (state === "ready" || state === "disabled") {
+    const turnedOnSwitch = (
+      <Switch
+        aria-label={name}
+        checked={state !== "disabled"}
+        disabled={!canManageProviders || serverConfig === null}
+        onCheckedChange={(checked) => void setTurnedOn(provider, checked)}
+      />
+    );
+    if (state === "ready" || state === "disabled") return turnedOnSwitch;
+    // An agent that is on but not signed in can still be turned off here.
+    if (state === "signIn" || state === "attention") {
       return (
-        <Switch
-          aria-label={name}
-          checked={state === "ready"}
-          disabled={!canManageProviders || serverConfig === null}
-          onCheckedChange={(checked) => void setTurnedOn(provider, checked)}
-        />
+        <span className="flex items-center gap-3">
+          {setupActionFor(provider, name, state, settingsAction)}
+          {turnedOnSwitch}
+        </span>
       );
     }
+    return setupActionFor(provider, name, state, settingsAction);
+  };
+
+  const setupActionFor = (
+    provider: ServerProvider,
+    name: string,
+    state: ReturnType<typeof stateOf>,
+    settingsAction: (actionLabel: string) => ReactNode,
+  ) => {
     // Settings updates a broken CLI the way it was installed, including a custom binary path.
     if (isBrokenVersion(provider))
       return settingsAction(gt("Update", { $context: "verb, updates an agent CLI" }));
