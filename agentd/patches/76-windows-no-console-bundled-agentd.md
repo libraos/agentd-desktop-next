@@ -10,7 +10,7 @@ Ours:
 - `apps/server/src/agentd/AgentdTeamNode.ts` — `windowsHide: true` on the team-node worker it starts.
 - `apps/server/src/agentd/AgentdBridge.ts` — `AgentdNotFoundError` says `bundled: true` when the desktop app carries agentd.
 - `apps/server/src/agentd/AgentdBridge.test.ts` — the not-found case also checks the bundled flag.
-- `apps/web/src/components/agentd/AgentdPage.tsx`, `apps/web/src/components/agentd/BackgroundTasksPane.tsx` — with a bundled agentd, say to reinstall AgentD Desktop instead of linking agentd-core's install guide.
+- `apps/web/src/components/agentd/AgentdPage.tsx`, `apps/web/src/components/agentd/BackgroundTasksPane.tsx` — with a bundled agentd, say to reinstall AgentD Desktop instead of linking agentd's install guide.
 
 Upstream, one or two lines each:
 
@@ -35,7 +35,7 @@ Node's `child_process` shows a console window on Windows unless `windowsHide` is
   - The snapshot forks (`GlobalShiftShortcutProcess`, `RegionSnapShot`, `SnapShotAccessibilityProcess`) run the app's own Electron executable, a GUI-subsystem binary that never gets a console, and `fork()`'s types take no `windowsHide`.
   - POSIX-only sites never run on Windows: `ClaudeAdapterV2` `/bin/sh`, `noCopyOnWrite`, `envTrampoline`, `os-jank` login shell, `serviceLauncher` systemctl/busctl/cp, the macOS and Linux snapshot helpers, and `hyprctl`.
   - `cli/triage.ts` and `AgentDeviceShim` run from a terminal. `sshDeviceScript` and `deviceToolMaintenance` run on a device host under a node that was started hidden, and their children share its hidden console.
-- agentd's own children (workers, PowerShell in agentd) are libraos/agentd-core#932, not this repository.
+- agentd's own children (workers, PowerShell in agentd) belong to agentd, not this repository.
 
 ## Bundled agentd
 
