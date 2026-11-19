@@ -812,7 +812,7 @@ it("shows only compatible endpoints and keeps the Gateway shortcut selected", as
   await screen.getByRole("link", { name: "Back" }).click();
   await expect.element(firstHeading).toBeVisible();
 
-  await screen.getByRole("link", { name: "LibraOS Gateway" }).click();
+  await screen.getByRole("link", { name: "Use a LibraOS account" }).click();
   await expect.element(endpointHeading).toBeVisible();
   await expect
     .element(screen.getByText("LibraOS Gateway selected. Requires a LibraOS account."))

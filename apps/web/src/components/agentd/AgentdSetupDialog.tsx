@@ -3,6 +3,7 @@ import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime"
 import type { AgentdSetupState, EnvironmentId } from "@t3tools/contracts";
 import { Atom } from "effect/reactivity";
 import { T, useGT, Var } from "gt-react";
+import { ChevronRightIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -15,9 +16,9 @@ import { appAtomRegistry } from "~/rpc/atomRegistry";
 import { usePrimaryEnvironmentId } from "~/state/environments";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { Button } from "../ui/button";
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import {
   Dialog,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogPanel,
@@ -26,6 +27,11 @@ import {
 } from "../ui/dialog";
 
 const EULA_URL = "https://libraos.com/eula";
+
+// On a short window the benefit lines would push the agreement off screen, so it starts open.
+function openAgreementFirst() {
+  return typeof window !== "undefined" && window.matchMedia("(max-height: 640px)").matches;
+}
 
 // The environment the person opened the dialog for, and those they answered Not now for, this run.
 const openedFor = Atom.make<EnvironmentId | null>(null).pipe(
@@ -144,57 +150,80 @@ function AgentdSetupDialog({ environmentId }: { readonly environmentId: Environm
           <DialogTitle>
             <T>Set up AgentD</T>
           </DialogTitle>
-          <DialogDescription>
-            <T>
-              AgentD runs tasks and workers for your agents. To set it up, accept its End User
-              Agreement: Accept runs <code>agentd init</code> on this environment, which records
-              your acceptance and sets agentd up. Chat and code work without it.
-            </T>
-          </DialogDescription>
         </DialogHeader>
         <DialogPanel>
           <div className="space-y-3">
             {shown === null ? (
               <>
-                <p className="font-medium text-sm">
-                  {eula.data?.version ? (
+                <ul className="list-disc space-y-1 pl-5 text-sm">
+                  <li>
                     <T>
-                      AgentD End User Agreement, version <Var>{eula.data.version}</Var>
+                      Hand a task to a worker with a goal, a check and a budget, and keep working
+                      while it runs.
                     </T>
-                  ) : (
-                    <T>AgentD End User Agreement</T>
-                  )}
+                  </li>
+                  <li>
+                    <T>Run it on this machine, a team machine or in the cloud.</T>
+                  </li>
+                  <li>
+                    <T>See results, approvals and cost in one place.</T>
+                  </li>
+                </ul>
+                <p className="text-sm">
+                  <T>Chat and Code work without it.</T>
                 </p>
-                {eula.error ? (
-                  <p role="alert" className="text-destructive text-sm">
-                    <T>
-                      Couldn&apos;t read the agreement from agentd: <Var>{eula.error}</Var>
-                    </T>
-                  </p>
-                ) : (
-                  <div
-                    role="document"
-                    aria-label={gt("AgentD End User Agreement")}
-                    tabIndex={0}
-                    className="max-h-72 overflow-y-auto rounded-lg border border-border p-3"
-                  >
-                    <pre className="wrap-anywhere whitespace-pre-wrap font-sans text-xs">
-                      {eula.data?.text ?? gt("Loading…")}
-                    </pre>
-                  </div>
-                )}
-                <p className="text-muted-foreground text-sm">
+                <Collapsible defaultOpen={openAgreementFirst()}>
+                  <CollapsibleTrigger className="group inline-flex items-center gap-1.5 text-sm font-medium underline-offset-4 hover:underline">
+                    <ChevronRightIcon className="size-3.5 group-data-panel-open:rotate-90" />
+                    {eula.data?.version ? (
+                      <T>
+                        Read the agreement (version <Var>{eula.data.version}</Var>)
+                      </T>
+                    ) : (
+                      <T>Read the agreement</T>
+                    )}
+                  </CollapsibleTrigger>
+                  <CollapsiblePanel>
+                    <div className="mt-2 space-y-2">
+                      {eula.error ? (
+                        <p role="alert" className="text-destructive text-sm">
+                          <T>
+                            Couldn&apos;t read the agreement from agentd: <Var>{eula.error}</Var>
+                          </T>
+                        </p>
+                      ) : (
+                        <div
+                          role="document"
+                          aria-label={gt("AgentD End User Agreement")}
+                          tabIndex={0}
+                          className="max-h-72 overflow-y-auto rounded-lg border border-border p-3"
+                        >
+                          <pre className="wrap-anywhere whitespace-pre-wrap font-sans text-xs">
+                            {eula.data?.text ?? gt("Loading…")}
+                          </pre>
+                        </div>
+                      )}
+                      <p className="text-muted-foreground text-sm">
+                        <T>
+                          Also at{" "}
+                          <a
+                            className="underline"
+                            href={EULA_URL}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                          >
+                            libraos.com/eula
+                          </a>
+                          .
+                        </T>
+                      </p>
+                    </div>
+                  </CollapsiblePanel>
+                </Collapsible>
+                <p className="text-muted-foreground text-xs">
                   <T>
-                    Also at{" "}
-                    <a
-                      className="underline"
-                      href={EULA_URL}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                    >
-                      libraos.com/eula
-                    </a>
-                    .
+                    Accept records that you accept the AgentD End User Agreement and runs{" "}
+                    <code>agentd init</code> on this environment.
                   </T>
                 </p>
                 {!canSetUp && (

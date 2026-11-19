@@ -29,6 +29,7 @@ export type SettingsPath =
   | "/settings/keybindings"
   | "/settings/snap-shot"
   | "/settings/providers"
+  | "/settings/workers"
   | "/settings/threads"
   | "/settings/browser"
   | "/settings/devices"
@@ -105,6 +106,7 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/keybindings": msg("Keybindings"),
   "/settings/snap-shot": msg("SnapShots"),
   "/settings/providers": msg("Providers"),
+  "/settings/workers": msg("Workers"),
   "/settings/threads": msg("Threads"),
   "/settings/browser": msg("Browser"),
   "/settings/devices": msg("Devices"),
@@ -155,6 +157,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
     heading: msg("Agents"),
     paths: [
       "/settings/providers",
+      "/settings/workers",
       "/settings/threads",
       "/settings/browser",
       "/settings/devices",
@@ -1077,6 +1080,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     providerSettingsOnly: true,
   },
   {
+    id: "workers",
+    title: msg("Workers"),
+    to: "/settings/workers",
+    searchTerms: [msg("agentd suggest workers run tasks on cloud workers default budget")],
+  },
+  {
     id: "scheduled-tasks",
     title: msg("Scheduled tasks"),
     to: "/settings/scheduled-tasks",
@@ -1488,6 +1497,7 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   "/settings/snap-shot": null,
   "/settings/keybindings": null,
   "/settings/providers": null,
+  "/settings/workers": null,
   "/settings/threads": null,
   "/settings/browser": null,
   "/settings/devices": null,

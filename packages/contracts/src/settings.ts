@@ -402,6 +402,15 @@ export const VoiceTranscriptionDestination = Schema.Union([
 ]);
 export type VoiceTranscriptionDestination = typeof VoiceTranscriptionDestination.Type;
 
+/** Where Hand to a worker starts a task by default: this machine or Cloud Workers. */
+export const AgentdRunTasksOn = Schema.Literals(["local", "cloud"]);
+export type AgentdRunTasksOn = typeof AgentdRunTasksOn.Type;
+/** A worker budget in minutes and dollars, such as `60m,$5`, used when agentd has no estimate. */
+export const AgentdDefaultBudget = Schema.String.check(
+  Schema.isPattern(/^[1-9][0-9]{0,3}m,\$(?!0+(?:\.0{1,2})?$)[0-9]{1,4}(?:\.[0-9]{1,2})?$/),
+);
+export const DEFAULT_AGENTD_BUDGET = "60m,$5";
+
 export const ClientSettingsSchema = Schema.Struct({
   notificationMode: NotificationMode.pipe(
     Schema.withDecodingDefault(Effect.succeed("off" as const)),
@@ -600,6 +609,15 @@ export const ClientSettingsSchema = Schema.Struct({
   // Opt-in TeX typesetting in rendered Markdown. Off keeps math parsing and
   // KaTeX out of the render path entirely.
   mathRenderingEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  agentdSuggestWorkers: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  agentdRunTasksOn: AgentdRunTasksOn.pipe(Schema.withDecodingDefault(Effect.succeed("local"))),
+  agentdDefaultBudget: AgentdDefaultBudget.pipe(
+    Schema.withDecodingDefault(Effect.succeed(DEFAULT_AGENTD_BUDGET)),
+  ),
+  // Environment ids whose "Try a worker" card was shown or dismissed.
+  agentdFirstTaskShown: Schema.Record(Schema.String, Schema.Boolean).pipe(
+    Schema.withDecodingDefault(Effect.succeed({})),
+  ),
 });
 export type ClientSettings = typeof ClientSettingsSchema.Type;
 
@@ -2142,5 +2160,9 @@ export const ClientSettingsPatch = Schema.Struct({
   snapShotAnimations: Schema.optionalKey(Schema.Boolean),
   wordWrap: Schema.optionalKey(Schema.Boolean),
   mathRenderingEnabled: Schema.optionalKey(Schema.Boolean),
+  agentdSuggestWorkers: Schema.optionalKey(Schema.Boolean),
+  agentdRunTasksOn: Schema.optionalKey(AgentdRunTasksOn),
+  agentdDefaultBudget: Schema.optionalKey(AgentdDefaultBudget),
+  agentdFirstTaskShown: Schema.optionalKey(Schema.Record(Schema.String, Schema.Boolean)),
 });
 export type ClientSettingsPatch = typeof ClientSettingsPatch.Type;

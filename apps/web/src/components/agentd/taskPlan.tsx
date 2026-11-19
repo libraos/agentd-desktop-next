@@ -28,6 +28,7 @@ import {
   taskStartProblem,
   type TaskFields,
 } from "./startTask.logic";
+import { useWorkerDefaults } from "./workerSettings";
 
 const isCommandError = Schema.is(AgentdCommandError);
 
@@ -95,9 +96,15 @@ export function useTaskPlan({
   const startTask = useAtomCommand(agentdEnvironment.startTask, { reportFailure: false });
   const [starting, setStarting] = useState(false);
   const startingRef = useRef(false);
+  const workerDefaults = useWorkerDefaults();
 
   const estimate = defaults?.estimate ?? null;
-  const local = autoBudget({ estimate, defaultMinutes: null, balanceUsd: null });
+  const local = autoBudget({
+    estimate,
+    defaultMinutes: null,
+    balanceUsd: null,
+    fallback: workerDefaults.budget,
+  });
   const filled: TaskFields = {
     ...fields,
     budget: fields.budget.trim() || `${local.minutes}m,$${budgetDollars(local.dollars)}`,

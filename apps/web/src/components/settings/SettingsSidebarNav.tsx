@@ -31,6 +31,7 @@ import {
   ShieldCheckIcon,
   SmartphoneIcon,
   UsersIcon,
+  WorkflowIcon,
   WrenchIcon,
   XIcon,
 } from "lucide-react";
@@ -100,6 +101,7 @@ const SETTINGS_SECTION_ICONS: Readonly<
   "/settings/keybindings": KeyboardIcon,
   "/settings/snap-shot": SnapShotIcon,
   "/settings/providers": BotIcon,
+  "/settings/workers": WorkflowIcon,
   "/settings/threads": MessagesSquareIcon,
   "/settings/browser": GlobeIcon,
   "/settings/devices": SmartphoneIcon,

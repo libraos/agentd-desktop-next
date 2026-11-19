@@ -30,6 +30,7 @@ import {
   defaultModelAccess,
   modelAccessChoices,
 } from "./startTask.logic";
+import { useWorkerDefaults } from "./workerSettings";
 
 const validBudget = Schema.is(AgentdCloudBudget);
 const validPath = Schema.is(AgentdCloudKeyFile);
@@ -52,7 +53,9 @@ export function useStartTaskCloud(
     readonly gatewayConnected: boolean;
   },
 ) {
-  const [requested, setRequested] = useState(false);
+  const workerDefaults = useWorkerDefaults();
+  // Settings → Workers chooses where a task starts; the checkbox still overrides it per task.
+  const [requested, setRequested] = useState(workerDefaults.runTasksOn === "cloud");
   const availability = useAgentdCloudSetup(cwd, environmentId, false);
   const billing = useAgentdCloudSetup(
     requested && availability.data?.project ? cwd : null,
@@ -84,6 +87,7 @@ export function useStartTaskCloud(
     estimate,
     defaultMinutes: budgetMinutes(setup?.defaultBudget),
     balanceUsd: setup?.balanceUsd ?? null,
+    fallback: workerDefaults.budget,
   });
   const dollars = enteredDollars ?? budgetDollars(filled.dollars);
   const minutes = enteredMinutes ?? String(filled.minutes);

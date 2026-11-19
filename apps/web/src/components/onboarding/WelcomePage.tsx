@@ -85,10 +85,10 @@ import { useDesktopCliCommand } from "../settings/CliCommandSettingsRow";
 import { TerminalViewport } from "../ThreadTerminalDrawer";
 import { ProviderInstanceIcon } from "../chat/ProviderInstanceIcon";
 import { ACPRegistryIcon } from "../Icons";
-import { T3Wordmark } from "../T3Wordmark";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
+import { Switch } from "../ui/switch";
 import { Tooltip, TooltipTrigger, TooltipPopup } from "../ui/tooltip";
 import { ScrollArea } from "../ui/scroll-area";
 import { SidebarInset } from "../ui/sidebar";
@@ -96,6 +96,7 @@ import { toastManager } from "../ui/toast";
 import { WorkspacePageHeader } from "../WorkspacePageHeader";
 import { cn } from "../../lib/utils";
 import { formatRelativeTime } from "../../timestampFormat";
+import { WelcomeAccountCards } from "../agentd/WelcomeAccountCards";
 import { ConnectEndpointScreen } from "./ConnectEndpointScreen";
 import { JoinTeamScreen } from "./JoinTeamScreen";
 
@@ -229,6 +230,7 @@ export function WelcomePage({
   });
   // Without import permission, starting simply skips the projects.
   const selected = projectImport.canWrite ? projectImport.selected : [];
+  const agentsId = useId();
   const start = () => {
     keepChoicesRef.current = scans.some((scan) => scan.data === null);
     if (selected.length === 0) {
@@ -270,12 +272,25 @@ export function WelcomePage({
                   <h1 className="mb-7 text-center text-3xl font-semibold tracking-tight text-foreground">
                     <T>Connect an agent you already use</T>
                   </h1>
+                  <WelcomeAccountCards
+                    environmentId={environmentId}
+                    agentsId={agentsId}
+                    gatewayLink={<Link to="." search={{ screen: "gateway" }} hash={true} />}
+                  />
                   <AgentsSection
+                    id={agentsId}
                     agents={agents}
                     environmentId={environmentId}
                     label={label}
                     isPrimary={isPrimary}
                     onImportSourceEnabled={() => scans[0]?.refresh()}
+                    projects={
+                      <ProjectsSection
+                        scan={scans[0]}
+                        projectImport={projectImport}
+                        isImporting={isImporting}
+                      />
+                    }
                   />
                   <div className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm">
                     <Link
@@ -295,11 +310,6 @@ export function WelcomePage({
                       <T>Join a team</T>
                     </Link>
                   </div>
-                  <ProjectsSection
-                    scan={scans[0]}
-                    projectImport={projectImport}
-                    isImporting={isImporting}
-                  />
                   <div className="mt-7 flex justify-center">
                     <Button disabled={!agentReady || isImporting} onClick={start}>
                       {isImporting
@@ -425,12 +435,16 @@ const isImportSource = Schema.is(AgentSessionSource);
 const ACP_REGISTRY_DRIVER_KIND = ProviderDriverKind.make("acpRegistry");
 
 function AgentsSection({
+  id,
   agents,
   environmentId,
   label,
   isPrimary,
   onImportSourceEnabled,
+  projects,
 }: {
+  readonly id: string;
+  readonly projects: ReactNode;
   readonly agents: ReturnType<typeof useWelcomeAgents>;
   readonly environmentId: EnvironmentId;
   readonly label: string;
@@ -439,9 +453,7 @@ function AgentsSection({
   readonly onImportSourceEnabled: () => void;
 }) {
   const { serverConfig, primary, more } = agents;
-  const gatewayDescriptionId = useId();
   const gt = useGT();
-  const gatewayName = gt("LibraOS Gateway");
   const refreshProviders = useAtomCommand(serverEnvironment.refreshProviders, {
     reportFailure: false,
   });
@@ -547,32 +559,33 @@ function AgentsSection({
         {actionLabel}
       </Button>
     );
-    if (state === "ready") {
+    const turnedOnSwitch = (
+      <Switch
+        aria-label={name}
+        checked={state !== "disabled"}
+        disabled={!canManageProviders || serverConfig === null}
+        onCheckedChange={(checked) => void setTurnedOn(provider, checked)}
+      />
+    );
+    if (state === "ready" || state === "disabled") return turnedOnSwitch;
+    // An agent that is on but not signed in can still be turned off here.
+    if (state === "signIn" || state === "attention") {
       return (
-        <Button
-          size="xs"
-          variant="ghost-muted"
-          aria-label={gt("Turn off: {agent}", { agent: name })}
-          disabled={!canManageProviders || serverConfig === null}
-          onClick={() => void setTurnedOn(provider, false)}
-        >
-          <T>Turn off</T>
-        </Button>
+        <span className="flex items-center gap-3">
+          {setupActionFor(provider, name, state, settingsAction)}
+          {turnedOnSwitch}
+        </span>
       );
     }
-    if (state === "disabled") {
-      return (
-        <Button
-          size="xs"
-          variant="outline"
-          aria-label={gt("Turn on: {agent}", { agent: name })}
-          disabled={!canManageProviders || serverConfig === null}
-          onClick={() => void setTurnedOn(provider, true)}
-        >
-          <T>Turn on</T>
-        </Button>
-      );
-    }
+    return setupActionFor(provider, name, state, settingsAction);
+  };
+
+  const setupActionFor = (
+    provider: ServerProvider,
+    name: string,
+    state: ReturnType<typeof stateOf>,
+    settingsAction: (actionLabel: string) => ReactNode,
+  ) => {
     // Settings updates a broken CLI the way it was installed, including a custom binary path.
     if (isBrokenVersion(provider))
       return settingsAction(gt("Update", { $context: "verb, updates an agent CLI" }));
@@ -612,7 +625,10 @@ function AgentsSection({
   ].filter((note) => note !== null);
 
   return (
-    <section aria-label={gt("Agents")}>
+    <section id={id} tabIndex={-1} aria-label={gt("Agents")} className="outline-none">
+      <p className="mb-2.5 text-center text-xs text-muted-foreground">
+        <T>Agents that are on are available in chats. Turn off any you do not want.</T>
+      </p>
       <ul className="space-y-2.5">
         {primary.map(({ driver, name, provider }) => (
           <AgentRow
@@ -625,38 +641,12 @@ function AgentsSection({
           />
         ))}
       </ul>
-      <div className="mt-2.5">
-        <Button
-          variant="secondary"
-          size="multiline"
-          className="w-full justify-start"
-          render={
-            <Link
-              to="."
-              search={{ screen: "gateway" }}
-              hash={true}
-              aria-label={gatewayName}
-              aria-describedby={gatewayDescriptionId}
-            />
-          }
-        >
-          <T3Wordmark className="size-6 shrink-0" />
-          <span className="space-y-0.5 text-left">
-            <span className="block">{gatewayName}</span>
-            <span
-              id={gatewayDescriptionId}
-              className="block text-xs font-normal text-muted-foreground"
-            >
-              <T>Models for all the agents above with one LibraOS account.</T>
-            </span>
-          </span>
-        </Button>
-      </div>
       {notes.map((note) => (
         <p key={note} className="mt-2 text-center text-xs text-muted-foreground">
           {note}
         </p>
       ))}
+      {projects}
       <Collapsible>
         <div className="mt-3 text-center">
           <CollapsibleTrigger className="group inline-flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
@@ -837,7 +827,7 @@ function ProjectsSection({
                     "{count, plural, one {Import {count} project and their threads} other {Import {count} projects and their threads}}",
                     { count: selected.length },
                   )
-                : gt("Import projects and their threads")}
+                : gt("Import projects and their threads (optional)")}
             </span>
             <span className="block text-xs text-muted-foreground">
               <T>
