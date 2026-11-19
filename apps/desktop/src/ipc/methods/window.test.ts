@@ -37,6 +37,7 @@ import * as DesktopIpc from "../DesktopIpc.ts";
 import {
   getLocalEnvironmentBootstraps,
   installRelayTelemetryEnabled,
+  pickFiles,
   pickProjectFavicon,
   probeRemoteEditors,
   readMedia,
@@ -359,19 +360,35 @@ describe("readMedia", () => {
   );
 });
 
-describe("pickProjectFavicon", () => {
-  const pickerLayer = (
-    pickFiles: () => Effect.Effect<Array<string>>,
-    settings?: DesktopAppSettings.DesktopSettings,
-  ) =>
-    Layer.mergeAll(
-      Layer.mock(ElectronDialog.ElectronDialog)({ pickFiles }),
-      Layer.mock(ElectronWindow.ElectronWindow)({
-        focusedMainOrFirst: Effect.succeedNone,
-      }),
-      DesktopAppSettings.layerTest(settings),
-    );
+const pickerLayer = (
+  pickFiles: () => Effect.Effect<Array<string>>,
+  settings?: DesktopAppSettings.DesktopSettings,
+) =>
+  Layer.mergeAll(
+    Layer.mock(ElectronDialog.ElectronDialog)({ pickFiles }),
+    Layer.mock(ElectronWindow.ElectronWindow)({
+      focusedMainOrFirst: Effect.succeedNone,
+    }),
+    DesktopAppSettings.layerTest(settings),
+  );
 
+describe("pickFiles", () => {
+  it.effect.each([
+    { paths: ["/home/user/.config/openai.key"], selected: "/home/user/.config/openai.key" },
+    { paths: [], selected: null },
+  ])("returns $selected from the native single-file picker", ({ paths, selected }) =>
+    Effect.gen(function* () {
+      const pick = vi.fn(() => Effect.succeed(paths));
+      const result = yield* pickFiles.handler(undefined).pipe(Effect.provide(pickerLayer(pick)));
+      assert.strictEqual(result, selected);
+      assert.deepEqual(pick.mock.calls, [
+        [{ owner: Option.none(), defaultPath: Option.none(), multiple: false, filters: [] }],
+      ]);
+    }),
+  );
+});
+
+describe("pickProjectFavicon", () => {
   it.effect("opens a single-image picker from the project directory", () =>
     Effect.gen(function* () {
       const pickFiles = vi.fn(() => Effect.succeed(["/pictures/icon.png"]));

@@ -128,6 +128,7 @@ export function useTaskPlan({
     balanceUsd: cloud.setup?.balanceUsd ?? null,
     creditProblem: cloud.setup?.problem === "credit",
     modelAccess: cloud.modelAccess,
+    planProblem: cloud.planProblem,
     signedIn: cloud.signedIn,
     gatewayConnected,
     worker,
@@ -142,6 +143,10 @@ export function useTaskPlan({
         return gt("There is not enough LibraOS credit for Cloud Workers.");
       case "sign-in":
         return gt("Sign in to LibraOS or connect the LibraOS Gateway to use LibraOS models.");
+      case "subscription":
+        return cloud.plan === "codex"
+          ? gt("Set up your ChatGPT plan, or choose another model access.")
+          : gt("Set up your Claude plan, or choose another model access.");
       case "worker":
         return gt("Choose a worker. The default is set in agentd.");
       case "not-repo":
@@ -168,7 +173,11 @@ export function useTaskPlan({
   const models = cloud.enabled
     ? cloud.modelAccess === "libraos"
       ? gt("LibraOS models")
-      : gt("your API key")
+      : cloud.modelAccess === "subscription"
+        ? cloud.plan === "codex"
+          ? gt("your ChatGPT plan")
+          : gt("your Claude plan")
+        : gt("your API key")
     : gatewayConnected
       ? gt("LibraOS models")
       : null;

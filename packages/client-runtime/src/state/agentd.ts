@@ -102,6 +102,12 @@ export function createAgentdEnvironmentAtoms<R, E>(
       tag: WS_METHODS.agentdCloudSetup,
       staleTimeMs: 0,
     }),
+    // The caller refreshes its own cloud setup reads: they are keyed by a working directory.
+    cloudConfigure: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:agentd:cloud-configure",
+      tag: WS_METHODS.agentdCloudConfigure,
+      scheduler,
+    }),
     cloudReview: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:agentd:cloud-review",
       tag: WS_METHODS.agentdCloudReview,

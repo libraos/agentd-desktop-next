@@ -1139,6 +1139,7 @@ export interface DesktopBridge {
   setWslBackendEnabled: (enabled: boolean) => Promise<DesktopWslState>;
   setWslDistro: (distro: string | null) => Promise<DesktopWslState>;
   setWslOnly: (enabled: boolean) => Promise<DesktopWslState>;
+  pickFiles: () => Promise<string | null>;
   pickFolder: (options?: PickFolderOptions) => Promise<string | null>;
   /** Maps a Windows path to the one a local backend (`primary` or `wsl:…`) sees; null when it cannot. */
   toLocalBackendPath: (backendId: string, windowsPath: string) => Promise<string | null>;

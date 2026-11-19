@@ -16,6 +16,17 @@ export const CLOUD_REASONS = {
   subscriptionSignIn: "Your Claude subscription sign-in isn’t valid. Set it up again.",
   subscriptionLimit:
     "Your Claude plan reached its usage limit. Wait for it to reset before trying again.",
+  subscriptionToken:
+    "Your Claude subscription isn’t set up. Run claude setup-token in a terminal and save the token in a private file.",
+  subscriptionTokenFormat:
+    "Your Claude token file doesn’t hold a token from claude setup-token. Run claude setup-token in a terminal and save the token alone in the file.",
+  chatgptUnavailable:
+    "Running on your ChatGPT plan isn’t available yet. Use LibraOS or your API key.",
+  chatgptSignIn: "Your ChatGPT sign-in for Codex isn’t valid. Run codex login again.",
+  chatgptLimit:
+    "Your ChatGPT plan reached its usage limit. Wait for it to reset before trying again.",
+  chatgptAuth: "Your ChatGPT plan isn’t set up for Codex. Run codex login in a terminal.",
+  pickPlan: "Both a Claude and a ChatGPT plan are set up. Choose the plan for this task.",
   teamServer: "Submit cloud tasks from a local AgentD session, not through a team server.",
   providerSignIn:
     "The cloud worker could not sign in to the model provider. Check your model access before trying again.",
@@ -44,7 +55,7 @@ export function cloudSetupProblem(message: string): CloudProblem | null {
   )
     return "repository";
   if (
-    /set \[cloud\] url|cloud_not_configured|agentd access revoked|cloud\.key_file\b.*(?:no such file|not found|does not exist|missing|failed to read|cannot be read)|\[cloud\] key_file\b.*(?:no such file|not found|does not exist|missing|failed to read|cannot be read)/i.test(
+    /set \[cloud\] url|needs \[cloud\] url|cloud_not_configured|agentd access revoked|cloud\.key_file\b.*(?:no such file|not found|does not exist|missing|failed to read|cannot be read)|\[cloud\] key_file\b.*(?:no such file|not found|does not exist|missing|failed to read|cannot be read)/i.test(
       message,
     )
   )
@@ -59,6 +70,12 @@ export function cloudReason(message: string): string | null {
   if (setup !== null) return CLOUD_REASONS[setup];
   if (/can be read or written by others|belongs to another user/i.test(message))
     return CLOUD_REASONS.privateFile;
+  const chatgpt = chatgptReason(message);
+  if (chatgpt !== null) return chatgpt;
+  if (/must hold the token from claude setup-token/i.test(message))
+    return CLOUD_REASONS.subscriptionTokenFormat;
+  if (/subscription needs your Claude token|needs cloud\.claude_token_file/i.test(message))
+    return CLOUD_REASONS.subscriptionToken;
   if (
     /OAuth access token is invalid|could not sign in with your Claude subscription|subscription sign-?in/i.test(
       message,
@@ -91,6 +108,42 @@ export function cloudReason(message: string): string | null {
   if (/timed? ?out|time limit|ran past/i.test(message)) return CLOUD_REASONS.time;
   if (/push.*(?:failed|refused)|could not push/i.test(message)) return CLOUD_REASONS.push;
   return null;
+}
+
+// Codex on a ChatGPT plan: agentd names ChatGPT, codex_auth_file or codex login in each refusal.
+function chatgptReason(message: string): string | null {
+  if (
+    /claude_token_file\b.*codex_auth_file\b|codex_auth_file\b.*claude_token_file\b/i.test(message)
+  )
+    return CLOUD_REASONS.pickPlan;
+  // Not "codex" alone: a BYOK job runs Codex on an API key, and its failures are the provider's.
+  if (!/chatgpt|codex[_-]auth[_-]file|codex login/i.test(message)) return null;
+  if (/subscription.*(?:not enabled|turned off|disabled|not available)/i.test(message))
+    return CLOUD_REASONS.chatgptUnavailable;
+  if (/usage limit|rate limit/i.test(message)) return CLOUD_REASONS.chatgptLimit;
+  if (
+    /could not sign in|sign-?in.*(?:expired|revoked|invalid|not valid)|refresh token|\b401\b/i.test(
+      message,
+    )
+  )
+    return CLOUD_REASONS.chatgptSignIn;
+  if (/needs your (?:ChatGPT|Codex)|codex login|needs cloud\.codex_auth_file/i.test(message))
+    return CLOUD_REASONS.chatgptAuth;
+  return null;
+}
+
+/** One line for an `agentd cloud setup` refusal, from agentd's own wording; the key is never in it. */
+export function cloudSetupReason(message: string): string {
+  const said = message.replace(/^cloud setup:\s*/i, "").trim();
+  if (/refused the account key/i.test(said))
+    return "The Job API refused this account key. Copy the whole key and try again.";
+  if (/could not reach the Job API|TLS certificate/i.test(said))
+    return "AgentD couldn’t reach Cloud Workers. Check this machine’s connection and try again.";
+  if (/account balance/i.test(said))
+    return "Cloud Workers couldn’t confirm the account balance. Try again in a moment.";
+  if (/on one line|too long|could not read the account key/i.test(said))
+    return "Paste the account key on one line.";
+  return said === "" ? "AgentD couldn’t set up Cloud Workers." : said;
 }
 
 /** The reason a finished cloud job shows; null while it is not in a failed state. */

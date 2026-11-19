@@ -6,8 +6,11 @@ import { makeStreamingTimelineFixture } from "~/test-fixtures";
 import {
   autoBudget,
   budgetMinutes,
+  cloudPlanProblem,
   conversationTaskDraft,
+  defaultCloudPlan,
   defaultModelAccess,
+  modelAccessChoices,
   EMPTY_TASK_FIELDS,
   prepareTaskFields,
   TASK_DRAFT_PROMPT,
@@ -166,7 +169,8 @@ it("names the first problem that stops a Start", () => {
     cloud: false,
     balanceUsd: null,
     creditProblem: false,
-    modelAccess: "libraos" as const,
+    modelAccess: "libraos" as "libraos" | "byok" | "subscription",
+    planProblem: null as "agentd" | "not-set-up" | null,
     signedIn: false,
     gatewayConnected: false,
     worker: "claude" as const,
@@ -185,4 +189,44 @@ it("names the first problem that stops a Start", () => {
   expect(taskStartProblem({ ...cloud, signedIn: false })).toBe("sign-in");
   expect(taskStartProblem({ ...cloud, signedIn: false, gatewayConnected: true })).toBeNull();
   expect(taskStartProblem({ ...cloud, signedIn: false, modelAccess: "byok" })).toBeNull();
+  const subscription = { ...cloud, signedIn: false, modelAccess: "subscription" as const };
+  expect(taskStartProblem(subscription)).toBeNull();
+  expect(taskStartProblem({ ...subscription, planProblem: "not-set-up" })).toBe("subscription");
+  expect(taskStartProblem({ ...cloud, planProblem: "agentd" })).toBeNull();
+});
+
+it("offers each subscription plan only when agentd can run it and has its credential", () => {
+  const plan = (
+    state: Partial<{ supported: boolean; configured: boolean; valid: boolean | null }>,
+  ) => ({
+    supported: true,
+    configured: true,
+    valid: true as boolean | null,
+    expiresAbout: null,
+    ...state,
+  });
+  const both = { claude: plan({}), codex: plan({}), setupUnavailable: false };
+  // v0.1.13: no subscription jobs at all.
+  expect(modelAccessChoices(null).map((choice) => choice.disabled)).toEqual([false, false, true]);
+  expect(modelAccessChoices(both).map((choice) => choice.disabled)).toEqual([false, false, false]);
+  expect(cloudPlanProblem(null, "claude", false)).toBe("agentd");
+
+  expect(cloudPlanProblem(both, "claude", false)).toBeNull();
+  // valid is null when agentd cannot tell without a job (a ChatGPT login before its report).
+  expect(cloudPlanProblem({ ...both, codex: plan({ valid: null }) }, "codex", false)).toBeNull();
+  const unset = { ...both, claude: plan({ configured: false, valid: null }) };
+  expect(cloudPlanProblem(unset, "claude", false)).toBe("not-set-up");
+  expect(cloudPlanProblem(unset, "claude", true)).toBeNull();
+  expect(cloudPlanProblem({ ...both, claude: plan({ valid: false }) }, "claude", false)).toBe(
+    "invalid",
+  );
+  expect(cloudPlanProblem({ ...unset, setupUnavailable: true }, "claude", false)).toBe("windows");
+  // An agentd too old for ChatGPT refuses it even with a file chosen.
+  const claudeOnly = { ...both, codex: plan({ supported: false, configured: false }) };
+  expect(cloudPlanProblem(claudeOnly, "codex", true)).toBe("agentd");
+
+  expect(defaultCloudPlan(both)).toBe("claude");
+  expect(defaultCloudPlan(unset)).toBe("codex");
+  expect(defaultCloudPlan(claudeOnly)).toBe("claude");
+  expect(defaultCloudPlan(null)).toBe("claude");
 });

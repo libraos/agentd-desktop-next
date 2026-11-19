@@ -83,6 +83,8 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   // Connecting an agent edits its config on this host; joining a team links the host to a server.
   [WS_METHODS.agentdConnectAgent]: AuthEnvironmentMaintainScope,
   [WS_METHODS.agentdJoinTeam]: AuthEnvironmentMaintainScope,
+  // Cloud setup writes agentd's account key and [cloud] settings on this host.
+  [WS_METHODS.agentdCloudConfigure]: AuthEnvironmentMaintainScope,
   // Working for the team runs agents on this host for the team server.
   [WS_METHODS.agentdSetTeamNode]: AuthEnvironmentMaintainScope,
   // Setting agentd up accepts its EULA and writes its services on this host.

@@ -3,11 +3,15 @@ import "~/index.css";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
 import {
   AgentdCommandError,
+  type AgentdCloudPlanState,
   type AgentdCloudSetup,
   type AgentdStartTaskResult,
   type AgentdTaskDefaults,
   type AgentdTaskOther,
+  EnvironmentId,
+  PRIMARY_LOCAL_ENVIRONMENT_ID,
   ThreadId,
+  type ExecutionEnvironmentPlatformOs,
 } from "@t3tools/contracts";
 import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/reactivity";
@@ -17,14 +21,17 @@ import { page, userEvent } from "vite-plus/test/browser";
 import { hostRightPanel, selectActiveRightPanel, useRightPanelStore } from "~/rightPanelStore";
 import { AppAtomRegistryProvider } from "~/rpc/atomRegistry";
 import { makeThreadFixture } from "~/test-fixtures";
-import { render } from "../../../test/render";
+import { render, stubGlobal } from "../../../test/render";
 import { ToastProvider } from "../ui/toast";
+import { CloudWorkersSetup } from "./CloudWorkersSetup";
 import { openStartTaskDialog, StartTaskDialogHost } from "./StartTaskDialog";
 import { EMPTY_TASK_FIELDS } from "./startTask.logic";
 import { TaskDraftCard } from "./TaskDraftCard";
 
 const state = vi.hoisted(() => ({
   start: vi.fn(),
+  configure: vi.fn(),
+  cloudRefresh: vi.fn(),
   refresh: vi.fn(),
   branch: "feature/export",
   cloud: null as AgentdCloudSetup | null,
@@ -32,21 +39,36 @@ const state = vi.hoisted(() => ({
   defaults: { estimate: null, check: null } as AgentdTaskDefaults,
   gateway: false,
   worker: "opencode" as string | null,
+  primary: null as EnvironmentId | null,
+  os: "unknown" as ExecutionEnvironmentPlatformOs,
 }));
 
 vi.mock("~/lib/agentdState", async () => {
   const { Atom } = await import("effect/reactivity");
   const allowed = Atom.make(true);
   return {
-    agentdEnvironment: { startTask: { permissionAtom: () => allowed } },
+    agentdEnvironment: {
+      startTask: { permissionAtom: () => allowed },
+      cloudConfigure: { permissionAtom: () => allowed, label: "cloud-configure" },
+    },
     useAgentdStatus: () => ({ data: { defaultWorker: state.worker } }),
     useAgentdTaskDefaults: () => ({ data: state.defaults }),
-    useAgentdCloudSetup: (cwd: string | null) => ({ data: cwd ? state.cloud : null, error: null }),
+    useAgentdCloudSetup: (cwd: string | null) => ({
+      data: cwd ? state.cloud : null,
+      error: null,
+      refresh: state.cloudRefresh,
+    }),
     useAgentdTaskOthers: () => ({ data: state.others, isPending: false, isSuccess: true }),
   };
 });
 vi.mock("~/lib/libraosGatewayState", () => ({
   useLibraosGatewayConnected: () => state.gateway,
+}));
+vi.mock("~/state/environments", () => ({
+  usePrimaryEnvironmentId: () => state.primary,
+  useEnvironment: () => ({
+    serverConfig: { environment: { platform: { os: state.os } } },
+  }),
 }));
 vi.mock("~/state/entities", () => ({
   useQuietThreadShell: () => thread,
@@ -61,7 +83,12 @@ vi.mock("~/state/query", () => ({
   useEnvironmentQuery: () => ({ data: { isRepo: true, refName: state.branch }, error: null }),
 }));
 vi.mock("~/state/use-atom-command", () => ({
-  useAtomCommand: (command: unknown) => (command === state.refresh ? state.refresh : state.start),
+  useAtomCommand: (command: unknown) =>
+    command === state.refresh
+      ? state.refresh
+      : (command as { label?: string }).label === "cloud-configure"
+        ? state.configure
+        : state.start,
 }));
 
 const thread = makeThreadFixture({ worktreePath: "/repo/worktrees/export" });
@@ -74,8 +101,12 @@ function setup(branch: string, open: boolean | typeof drafted = true) {
   state.others = [];
   state.defaults = { estimate: null, check: null };
   state.gateway = false;
+  state.primary = null;
+  state.os = "unknown";
   state.worker = "opencode";
   state.start.mockReset();
+  state.configure.mockReset();
+  state.cloudRefresh.mockReset();
   state.refresh
     .mockReset()
     .mockResolvedValue(AsyncResult.success({ isRepo: true, refName: branch }));
@@ -204,8 +235,20 @@ it("starts a cloud task with a dollar cap and a provider key path, without the l
   await page.getByRole("combobox", { name: "Model access" }).click();
   await page.getByRole("option", { name: "Your API key" }).click();
   const keyPath = page.getByLabelText("Anthropic key file path");
-  await userEvent.fill(keyPath, "sk-example-not-a-path");
-  await expect.element(start).toBeDisabled();
+  const openai = page.getByLabelText("OpenAI key file path");
+  await userEvent.fill(openai, "/private/openai.key");
+  for (const value of ["sk-example/with-separator", "sk-ant-example", "x".repeat(31)]) {
+    await userEvent.fill(keyPath, value);
+    await expect.element(keyPath).toHaveAttribute("aria-invalid", "true");
+    await expect
+      .element(
+        page.getByText("This looks like the key itself. Save it in a file and choose that file."),
+      )
+      .toBeVisible();
+    await expect.element(start).toBeDisabled();
+    expect(state.start).not.toHaveBeenCalled();
+  }
+  await userEvent.fill(openai, "");
   await userEvent.fill(keyPath, "/private/key file");
   await expect.element(page.getByText(/Your provider bills inference separately/)).toBeVisible();
   await start.click();
@@ -490,6 +533,320 @@ it("renders a drafted task as a card that starts it or opens the dialog with its
       worker: "opencode",
       budget: "60m,$5",
       issue: null,
+    },
+  });
+});
+
+const cloudReady = (fields: Partial<AgentdCloudSetup> = {}): AgentdCloudSetup => ({
+  supported: true,
+  canConfigure: true,
+  setupUrl: "https://cloud-api.libraos.com",
+  subscription: null,
+  project: "acme/app",
+  balanceUsd: 20,
+  balanceText: null,
+  defaultBudget: null,
+  problem: null,
+  ...fields,
+});
+const keyFileEnvironments = [
+  { os: "windows", mode: "local", prefix: "C:\\Users\\<you>\\.config\\" },
+  { os: "darwin", mode: "remote", prefix: "/Users/<you>/.config/" },
+  { os: "linux", mode: "wsl", prefix: "/home/<you>/.config/" },
+  { os: "linux", mode: "web", prefix: "/home/<you>/.config/" },
+] as const;
+
+it.each(keyFileEnvironments)(
+  "uses the $os key file example and offers Browse only on the native desktop ($mode)",
+  async ({ os, mode, prefix }) => {
+    setup("feature/export");
+    state.cloud = cloudReady({ balanceUsd: null });
+    state.primary = mode === "remote" ? EnvironmentId.make("other") : thread.environmentId;
+    state.os = os;
+    const openaiPath = "C:\\Users\\Developer\\.config\\openai.key";
+    const pickFiles = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(openaiPath);
+    using _bridge = stubGlobal(
+      "desktopBridge",
+      mode === "web"
+        ? undefined
+        : {
+            pickFiles,
+            getLocalEnvironmentBootstraps: () => [
+              {
+                id: PRIMARY_LOCAL_ENVIRONMENT_ID,
+                runningDistro: mode === "wsl" ? "Ubuntu" : null,
+                httpBaseUrl: "http://localhost:3773",
+                wsBaseUrl: "ws://localhost:3773",
+              },
+            ],
+          },
+    );
+    await using _screen = await renderDialog();
+    await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+    const anthropic = page.getByRole("textbox", { name: "Anthropic key file path" });
+    const openai = page.getByRole("textbox", { name: "OpenAI key file path" });
+    await expect.element(anthropic).toHaveAttribute("placeholder", prefix + "anthropic.key");
+    await expect.element(openai).toHaveAttribute("placeholder", prefix + "openai.key");
+    await expect
+      .element(
+        page.getByText("Save the key on its own line in a text file, then choose that file."),
+      )
+      .toBeVisible();
+    await userEvent.fill(anthropic, prefix + "anthropic.key");
+    await expect.element(anthropic).toHaveAttribute("aria-invalid", "false");
+
+    const browse = page.getByRole("button", { name: /^Browse…/ });
+    if (mode !== "local") {
+      await expect.element(browse).not.toBeInTheDocument();
+      return;
+    }
+    expect(browse.all()).toHaveLength(2);
+    await browse.nth(0).click();
+    await expect.element(browse.nth(0)).toBeEnabled();
+    await expect.element(anthropic).toHaveValue(prefix + "anthropic.key");
+    await browse.nth(1).click();
+    await expect.element(openai).toHaveValue(openaiPath);
+    expect(pickFiles.mock.calls).toEqual([[], []]);
+  },
+);
+
+const plan = (fields: Partial<AgentdCloudPlanState> = {}): AgentdCloudPlanState => ({
+  supported: true,
+  configured: true,
+  valid: true,
+  expiresAbout: null,
+  ...fields,
+});
+
+it("sets Cloud Workers up from the Start dialog with a pasted key, showing a refusal or the balance", async () => {
+  setup("feature/export");
+  state.cloud = cloudReady({ balanceUsd: null, problem: "setup" });
+  const key = "lcw_live_0123456789abcdefghij";
+  state.configure
+    .mockResolvedValueOnce(
+      AsyncResult.failure(
+        Cause.fail(
+          new AgentdCommandError({
+            message: "The Job API refused this account key. Copy the whole key and try again.",
+            notSetUp: false,
+          }),
+        ),
+      ),
+    )
+    .mockResolvedValueOnce(AsyncResult.success({ balanceUsd: 12.5 }));
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await expect
+    .element(page.getByRole("link", { name: "Create a key in LibraOS Console" }))
+    .toHaveAttribute("href", "https://console.libraos.com/agentd");
+  const field = page.getByLabelText("Cloud Workers account key");
+  await expect.element(field).toHaveAttribute("type", "password");
+  const setUp = page.getByRole("button", { name: "Set up Cloud Workers" });
+
+  await userEvent.fill(field, key);
+  await setUp.click();
+  await expect.element(page.getByText(/refused this account key/)).toHaveAttribute("role", "alert");
+  await expect.element(field).toHaveValue("");
+  expect(state.cloudRefresh).not.toHaveBeenCalled();
+
+  await userEvent.fill(field, `${key}\n`);
+  await setUp.click();
+  await expect
+    .element(page.getByRole("status").filter({ hasText: "Cloud Workers are set up." }))
+    .toHaveTextContent("Cloud Workers are set up. Available LibraOS credit: $12.50");
+  const input = { key, url: "https://cloud-api.libraos.com" };
+  expect(state.configure.mock.calls).toEqual([
+    [{ environmentId: thread.environmentId, input }],
+    [{ environmentId: thread.environmentId, input }],
+  ]);
+  expect(state.cloudRefresh).toHaveBeenCalled();
+});
+
+it("names a separately hosted Job API before asking for its key", async () => {
+  setup("feature/export");
+  const custom = "https://jobs.example.com";
+  state.cloud = cloudReady({ balanceUsd: null, problem: "setup", setupUrl: custom });
+  state.configure.mockResolvedValueOnce(AsyncResult.success({ balanceUsd: null }));
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await expect
+    .element(page.getByText(/AgentD sends it to https:\/\/jobs\.example\.com to check it/))
+    .toBeVisible();
+  await expect.element(page.getByText(/A LibraOS Console key won’t work there/)).toBeVisible();
+  await expect
+    .element(page.getByRole("link", { name: "Create a key in LibraOS Console" }))
+    .not.toBeInTheDocument();
+  await userEvent.fill(page.getByLabelText("Cloud Workers account key"), "custom-key");
+  await page.getByRole("button", { name: "Set up Cloud Workers" }).click();
+  await expect.element(page.getByText("Cloud Workers are set up.")).toBeVisible();
+  expect(state.configure).toHaveBeenCalledExactlyOnceWith({
+    environmentId: thread.environmentId,
+    input: { key: "custom-key", url: custom },
+  });
+});
+
+it("asks for no account key while agentd won't say where it would send one", async () => {
+  setup("feature/export");
+  state.cloud = cloudReady({ balanceUsd: null, problem: "setup", setupUrl: null });
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await expect.element(page.getByLabelText("Cloud Workers account key")).not.toBeInTheDocument();
+  await expect
+    .element(page.getByText(/didn’t say where it would send an account key/))
+    .toBeVisible();
+});
+
+it("offers no Keep the current key once a replacement key is on its way", async () => {
+  setup("feature/export", false);
+  let answer: (value: unknown) => void = () => {};
+  state.configure.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+  const cancel = vi.fn();
+  await using _screen = await render(
+    <AppAtomRegistryProvider>
+      <CloudWorkersSetup
+        environmentId={thread.environmentId}
+        canConfigure
+        setupUrl="https://cloud-api.libraos.com"
+        onCancel={cancel}
+      />
+    </AppAtomRegistryProvider>,
+  );
+  const keep = page.getByRole("button", { name: "Keep the current key" });
+  await expect.element(keep).toBeEnabled();
+  await userEvent.fill(page.getByLabelText("Cloud Workers account key"), "new-key");
+  await page.getByRole("button", { name: "Set up Cloud Workers" }).click();
+  await expect.element(page.getByRole("button", { name: "Setting up…" })).toBeVisible();
+  await expect.element(keep).toBeDisabled();
+  answer(AsyncResult.success({ balanceUsd: 1 }));
+  await expect.element(page.getByText(/Cloud Workers are set up/)).toBeVisible();
+  expect(cancel).not.toHaveBeenCalled();
+});
+
+it("keeps the Console link and asks for agentd upgrade when agentd has no cloud setup", async () => {
+  setup("feature/export");
+  state.cloud = cloudReady({ balanceUsd: null, problem: "setup", canConfigure: false });
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await expect
+    .element(page.getByRole("link", { name: "Open Cloud Workers setup in LibraOS Console" }))
+    .toBeVisible();
+  await expect.element(page.getByText(/agentd upgrade$/)).toBeVisible();
+  await expect.element(page.getByLabelText("Cloud Workers account key")).not.toBeInTheDocument();
+});
+
+it("lists Your subscription as disabled while agentd can't run subscription jobs", async () => {
+  setup("feature/export");
+  state.cloud = cloudReady();
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await page.getByRole("combobox", { name: "Model access" }).click();
+  await expect
+    .element(
+      page.getByRole("option", { name: "Your subscription (needs AgentD v0.1.14 or later)" }),
+    )
+    .toHaveAttribute("aria-disabled", "true");
+});
+
+it("starts a cloud task on the Claude plan agentd has set up, never choosing it by default", async () => {
+  setup("feature/export");
+  state.gateway = true;
+  state.cloud = cloudReady({
+    subscription: {
+      claude: plan({ expiresAbout: "2027-11-01" }),
+      codex: plan({ supported: false, configured: false, valid: null }),
+      setupUnavailable: false,
+    },
+  });
+  state.start.mockResolvedValue(
+    AsyncResult.success({ id: "hof-123abc", started: true, note: null }),
+  );
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await userEvent.fill(page.getByLabelText("Goal"), "Fix export");
+  const access = page.getByRole("combobox", { name: "Model access" });
+  await expect.element(access).toHaveTextContent("LibraOS");
+  await access.click();
+  await page.getByRole("option", { name: "Your subscription" }).click();
+  await expect
+    .element(
+      page.getByText("Using the Claude token AgentD has set up. It runs out about Nov 1, 2027."),
+    )
+    .toBeVisible();
+  await expect.element(page.getByText(/^Billed to your Claude plan\./)).toBeVisible();
+  await expect.element(page.getByText(/budget up to \$5\.00 · your Claude plan/)).toBeVisible();
+
+  await page.getByRole("combobox", { name: "Plan" }).click();
+  await expect
+    .element(page.getByRole("option", { name: "ChatGPT (Codex): needs a newer AgentD" }))
+    .toHaveAttribute("aria-disabled", "true");
+  await userEvent.keyboard("{Escape}");
+
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await expect.element(page.getByText("Started task hof-123abc.")).toBeVisible();
+  expect(state.start).toHaveBeenCalledExactlyOnceWith({
+    environmentId: thread.environmentId,
+    input: {
+      cwd: "/repo/worktrees/export",
+      goal: "Fix export",
+      accept: [],
+      check: null,
+      cloud: { budget: "60m,$5", modelAccess: "subscription", plan: "claude" },
+    },
+  });
+});
+
+it("says how to set up a plan with no credential, and starts with a chosen file", async () => {
+  setup("feature/export");
+  state.cloud = cloudReady({
+    subscription: {
+      claude: plan({ configured: false, valid: null }),
+      codex: plan({ configured: false, valid: null }),
+      setupUnavailable: false,
+    },
+  });
+  state.start.mockResolvedValue(
+    AsyncResult.success({ id: "hof-123abc", started: true, note: null }),
+  );
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await userEvent.fill(page.getByLabelText("Goal"), "Fix export");
+  await page.getByRole("combobox", { name: "Model access" }).click();
+  await page.getByRole("option", { name: "Your subscription" }).click();
+  const start = page.getByRole("button", { name: "Start", exact: true });
+  await expect.element(page.getByText(/claude setup-token$/)).toBeVisible();
+  await expect.element(page.getByRole("button", { name: "Copy command" })).toBeVisible();
+  await expect
+    .element(page.getByText("Set up your Claude plan, or choose another model access."))
+    .toBeVisible();
+  await expect.element(start).toBeDisabled();
+
+  await page.getByRole("combobox", { name: "Plan" }).click();
+  await page.getByRole("option", { name: "ChatGPT (Codex)" }).click();
+  await expect.element(page.getByText(/codex login$/)).toBeVisible();
+  await expect
+    .element(page.getByText(/absolute path of Codex’s auth.json on that machine/))
+    .toBeVisible();
+  await expect.element(page.getByText(/^Billed to your ChatGPT plan\./)).toBeVisible();
+  await userEvent.fill(
+    page.getByLabelText("ChatGPT auth.json path (optional)"),
+    "/home/me/.codex/auth.json",
+  );
+  await expect.element(start).toBeEnabled();
+  await start.click();
+  await expect.element(page.getByText("Started task hof-123abc.")).toBeVisible();
+  expect(state.start).toHaveBeenCalledExactlyOnceWith({
+    environmentId: thread.environmentId,
+    input: {
+      cwd: "/repo/worktrees/export",
+      goal: "Fix export",
+      accept: [],
+      check: null,
+      cloud: {
+        budget: "60m,$5",
+        modelAccess: "subscription",
+        plan: "codex",
+        codexAuthFile: "/home/me/.codex/auth.json",
+      },
     },
   });
 });
