@@ -463,14 +463,11 @@ function ByokKeyFile({
             aria-labelledby={id + "-browse " + id + "-label"}
             onClick={async () => {
               setPicking(true);
-              try {
-                const selected = await pickFiles().catch(() => null);
-                if (selected !== null && inputRef.current) {
-                  inputRef.current.value = selected;
-                  updatePath(selected);
-                }
-              } finally {
-                setPicking(false);
+              const selected = await pickFiles().catch(() => null);
+              setPicking(false);
+              if (selected !== null && inputRef.current) {
+                inputRef.current.value = selected;
+                updatePath(selected);
               }
             }}
           >
