@@ -26,14 +26,14 @@ It runs on macOS, Linux and Windows.
 
 ## Install
 
-Installers are on the [releases page](https://github.com/libraos/agentd-desktop-next/releases), with agentd and its Skills inside. The files and the app still carry the earlier name, AgentD Desktop.
+Installers are on the [releases page](https://github.com/libraos/agentd-desktop-next/releases), with agentd and its Skills inside. Releases up to 0.1.10-agentd.6 carry the earlier name, AgentD Desktop, in the app and in the file names (`AgentD-Desktop-…`).
 
-| System                | File                                          |
-| --------------------- | --------------------------------------------- |
-| macOS (Apple silicon) | `AgentD-Desktop-…-arm64.dmg` or `…-arm64.zip` |
-| macOS (Intel)         | `AgentD-Desktop-…-x64.dmg` or `…-x64.zip`     |
-| Windows (x64)         | `AgentD-Desktop-…-x64.exe`                    |
-| Linux (x64)           | `…-x64.AppImage` or `…-amd64.deb`             |
+| System                | File                                       |
+| --------------------- | ------------------------------------------ |
+| macOS (Apple silicon) | `AgentD-Next-…-arm64.dmg` or `…-arm64.zip` |
+| macOS (Intel)         | `AgentD-Next-…-x64.dmg` or `…-x64.zip`     |
+| Windows (x64)         | `AgentD-Next-…-x64.exe`                    |
+| Linux (x64)           | `…-x64.AppImage` or `…-amd64.deb`          |
 
 Download from the official releases page and check the installer against `SHA256SUMS` before opening it. A matching checksum checks the file against the published checksum; it is not a publisher signature. macOS beta builds are ad-hoc signed and not notarized; Windows installers are unsigned. If you verified the download, trust the source, and your organization's policy allows it, use the operating system's per-app option:
 
@@ -42,7 +42,7 @@ Download from the official releases page and check the installer against `SHA256
 
 Do not override a malware warning or a block enforced by your organization.
 
-The app finds agents on your login shell's `PATH` and in the folders their installers use, such as `~/.local/bin`, `~/.claude/local` and `/opt/homebrew/bin`. Its command line tool is `agentd-desktop`; the first run offers to put it on `PATH`.
+The app finds agents on your login shell's `PATH` and in the folders their installers use, such as `~/.local/bin`, `~/.claude/local` and `/opt/homebrew/bin`. Its command line tool is `agentd-next`; the first run offers to put it on `PATH`.
 
 ## Run it from source
 
