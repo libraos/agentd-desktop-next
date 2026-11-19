@@ -66,7 +66,8 @@ vi.mock("~/lib/agentdState", async () => {
 vi.mock("~/lib/libraosGatewayState", () => ({
   useLibraosGatewayConnected: () => state.gateway,
 }));
-vi.mock("~/state/environments", () => ({
+vi.mock("~/state/environments", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/state/environments")>()),
   usePrimaryEnvironmentId: () => state.primary,
   useEnvironment: () => ({
     serverConfig: { environment: { platform: { os: state.os } } },

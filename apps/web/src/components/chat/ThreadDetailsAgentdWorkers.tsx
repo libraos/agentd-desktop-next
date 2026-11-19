@@ -4,6 +4,7 @@ import { T, Var, useGT } from "gt-react";
 import { BotIcon, ListIcon } from "lucide-react";
 import { useId } from "react";
 
+import { useClientSettings } from "../../hooks/useSettings";
 import { useAgentdTasks } from "../../lib/agentdState";
 import { buildThreadRouteParams } from "../../threadRoutes";
 import { cn } from "../../lib/utils";
@@ -53,6 +54,7 @@ export function ThreadDetailsAgentdWorkers({ threadRef }: { readonly threadRef: 
   const headingId = useId();
   const navigate = useNavigate();
   const { data: tasks, failure } = useAgentdTasks(threadRef.environmentId);
+  const runTasksOn = useClientSettings((settings) => settings.agentdRunTasksOn);
   const activity = groupWorkerActivity(tasks ?? [], []);
   const workers = [
     ...activity.local,
@@ -81,6 +83,9 @@ export function ThreadDetailsAgentdWorkers({ threadRef }: { readonly threadRef: 
           >
             <T>AgentD workers</T>
           </button>
+          <span className="ms-1.5 font-normal">
+            {runTasksOn === "cloud" ? <T>cloud</T> : <T>this machine</T>}
+          </span>
         </h3>
         {workers.slice(0, MAX_WORKERS).map((row) => (
           <WorkerRow key={row.id} row={row} onOpen={() => openWorker(row)} />
