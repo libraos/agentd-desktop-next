@@ -1,0 +1,594 @@
+# 86: Rename AgentD Desktop to AgentD Next
+
+The product is now called AgentD Next. This patch changes every name a person or an agent reads, the installer file names and the CLI and MCP names that PR #98 introduced. It leaves alone the identifiers that agentd.6 installs (`v0.1.10-agentd.6`) depend on to update in place.
+
+## Renamed
+
+- **Text.** "AgentD Desktop" becomes "AgentD Next" everywhere it is shown: web, desktop (window and installer titles, the Nightly variant, notifications, macOS usage strings, GNOME extension), server (CLI help and errors, runtime instructions, triage prompt and `.github/triage/PLAYBOOK.md`, which stay byte-identical), mobile, marketing, packages, scripts, docs and recorded fixtures. The sidebar wordmark reads AgentD + Next.
+- **i18n.** The catalogs in `apps/web`, `apps/mobile` and `apps/desktop` were regenerated. A renamed string gets a new key, so every locale's earlier translation was carried over to that key with the name replaced. No translation was lost, and zh has no untranslated new string.
+- **Installers.** `artifactName` is `AgentD-Next-${version}-${arch}.${ext}`, and the AppImage is `AgentD-Next-${arch}.${ext}` (`AgentD-Next-Nightly-…` on Nightly). The release workflow's upload paths, its file check, `SHA256SUMS`, the draft release title and notes, and `agentd/scripts/build-desktop.sh` use these names. The release notes have one line for people coming from the earlier name.
+- **Bundle and executable names.** `productName` is `AgentD Next`, so macOS installs `AgentD Next.app` and Windows has `AgentD Next.exe` and shortcuts. The Windows install folder comes from the unchanged package name, so an update lands in the same folder. `installer.nsh` still finds and closes a running app under the earlier name (`AgentD Desktop`, `AgentD Desktop (Nightly)`). On macOS the `AgentD Desktop.app` from an earlier version stays in Applications until the user deletes it. It shares the app id and data, and the release notes say to delete it.
+- **CLI.** The command is `agentd-next` (`agentd-next.cmd` on Windows), with the `t3` alias unchanged. The launcher has a new marker, and files with the earlier marker still count as the app's own. agentd.6 installed `agentd-desktop`, so an existing `agentd-desktop` launcher is refreshed in place but never created. Removing the command also removes an earlier link or PATH entry that the app wrote. Help text, messages, settings rows and docs name `agentd-next`.
+- **MCP.** Agents see `mcp__agentd-next__<tool>`. The server names are `agentd-next` and Codex's `agentd-next-direct`, opencode v2 uses `agentd-next-<thread>` with a deny rule on `agentd-next-*`, and Pi hides `mcp__agentd_next__`. This holds for every provider: Claude, Codex, opencode v1/v2, ACP and ACP Registry, Antigravity, Cursor, Muse, Pi and Kiro. `agentd-desktop` as an MCP name never shipped in a release, so nothing maps from it. `normalizeLegacyAppMcpAllowedTool` still rewrites saved `mcp__t3-code__t3_*` and `mcp__t3-code__*` entries, now to `mcp__agentd-next__*`. The history resolver still maps the `t3-code` aliases.
+
+## Kept, and why
+
+- App id `ai.libraos.agentd-desktop` (and `.dev.*`, `.desktop`), userData folder `agentd-desktop` / `agentd-desktop-dev`, builder `extraMetadata.name`, Linux `executableName` and deb `packageName` `agentd-desktop`, URL schemes `agentd-desktop` / `agentd-desktop-dev` (and the CORS origins for them), the service name, `.agentd-desktop` home, the `agentd-desktop-installed` marker and the `agentd-desktop/compile-cache` folder. agentd.6 installs depend on these to update in place and keep their settings.
+- The internal tool icon key `agentd-desktop`, which is derived and never shown or stored.
+- Repository URL `libraos/agentd-desktop-next` and references to `libraos/agentd-desktop` issues.
+- Codex originator and clientInfo "T3 Code", `t3code:` storage keys, `T3CODE_*` env vars and `@t3tools/*` package names.
+- README.md, LICENSE, `agentd/design/shots` and the earlier notes in `agentd/patches` (which describe what they changed under the name of their time).
+- The 2026-11-18 internal test build record in `agentd/design/build.md`: it names the files that build produced.
+
+## Files
+
+The i18n catalogs (`apps/{web,mobile,desktop}/src/i18n/translations/*.json`) were regenerated as above. Every other file:
+
+- `.github/triage/PLAYBOOK.md` — product name.
+- `.github/workflows/release.yml` — installer names `AgentD-Next-*` in the upload, the file check, SHA256SUMS and the release; release title and notes, with a line for people coming from the earlier name.
+- `AGENTS.md` — product name.
+- `agentd/UPSTREAM.md` — product name.
+- `agentd/design/build.md` — guide title.
+- `agentd/scripts/build-desktop.sh` — installer file names.
+- `agents/implementer.md` — product name.
+- `agents/ui.md` — product name.
+- `apps/desktop/gnome-extension/captureFeedback.js` — product name.
+- `apps/desktop/gnome-extension/captureService.js` — product name.
+- `apps/desktop/gnome-extension/captureService.test.js` — product name.
+- `apps/desktop/gnome-extension/metadata.json` — product name.
+- `apps/desktop/package.json` — productName `AgentD Next` (macOS bundle `AgentD Next.app`, Windows exe and shortcuts).
+- `apps/desktop/resources/dmg/dmg-background-latest.svg` — product name.
+- `apps/desktop/resources/dmg/dmg-background-nightly.svg` — product name.
+- `apps/desktop/resources/installer.nsh` — product name; an update still finds and closes a running app under the earlier name (agentd.6 and before).
+- `apps/desktop/resources/linux/ai.libraos.agentd-desktop.metainfo.xml` — product name.
+- `apps/desktop/scripts/electron-launcher.mjs` — product name.
+- `apps/desktop/src/app/DesktopApp.ts` — product name.
+- `apps/desktop/src/app/DesktopAppActivation.ts` — product name.
+- `apps/desktop/src/app/DesktopAppActivationBroker.ts` — product name.
+- `apps/desktop/src/app/DesktopAppIdentity.test.ts` — product name.
+- `apps/desktop/src/app/DesktopCliCommand.test.ts` — command name `agentd-next`; the earlier launcher is cleaned up.
+- `apps/desktop/src/app/DesktopCliCommand.ts` — installs `agentd-next` (and `t3`), removes an earlier `agentd-desktop` link or PATH entry the app wrote; messages.
+- `apps/desktop/src/app/DesktopCliShim.test.ts` — product name.
+- `apps/desktop/src/app/DesktopCliShim.ts` — launcher `agentd-next` with a new marker; launchers with the earlier marker count as ours; an installed `agentd-desktop` launcher is refreshed, never created.
+- `apps/desktop/src/app/DesktopEnvironment.test.ts` — product name.
+- `apps/desktop/src/app/DesktopEnvironment.ts` — product name.
+- `apps/desktop/src/app/DesktopExitChildren.test.ts` — product name.
+- `apps/desktop/src/app/DesktopLegacyLocalStorage.ts` — product name.
+- `apps/desktop/src/app/DesktopLifecycle.test.ts` — product name.
+- `apps/desktop/src/app/DesktopLinuxUrlHandler.test.ts` — product name.
+- `apps/desktop/src/app/DesktopPreReadyPlatform.test.ts` — product name.
+- `apps/desktop/src/app/DesktopStartupRecovery.ts` — product name.
+- `apps/desktop/src/backend/DesktopBackendPool.ts` — product name.
+- `apps/desktop/src/backend/DesktopHomeOwner.ts` — product name, CLI command `agentd-next`.
+- `apps/desktop/src/backend/DesktopLocalEnvironmentAuth.ts` — product name.
+- `apps/desktop/src/electron/ElectronShell.ts` — product name.
+- `apps/desktop/src/electron/ElectronUpdater.test.ts` — product name.
+- `apps/desktop/src/electron/WindowsForeground.ts` — product name.
+- `apps/desktop/src/permissions/MacPermissionHelper.test.ts` — product name.
+- `apps/desktop/src/preview/BrowserImport/BrowserImport.test.ts` — product name.
+- `apps/desktop/src/preview/BrowserSession.ts` — product name.
+- `apps/desktop/src/snapShot/DesktopSnapShot.test.ts` — product name.
+- `apps/desktop/src/snapShot/DesktopSnapShot.ts` — product name.
+- `apps/desktop/src/snapShot/GnomeCaptureSetup.ts` — product name.
+- `apps/desktop/src/snapShot/HyprlandSnapShot.ts` — product name.
+- `apps/desktop/src/snapShot/KdeSnapShot.ts` — product name.
+- `apps/desktop/src/snapShot/LinuxSnapShot.test.ts` — product name.
+- `apps/desktop/src/snapShot/LinuxSnapShot.ts` — product name.
+- `apps/desktop/src/snapShot/NiriCaptureShortcut.ts` — product name.
+- `apps/desktop/src/snapShot/NiriSnapShot.test.ts` — product name.
+- `apps/desktop/src/snapShot/NiriSnapShot.ts` — product name.
+- `apps/desktop/src/snapShot/PortalCaptureShortcut.ts` — product name.
+- `apps/desktop/src/snapShot/SnapShotTransition.ts` — product name.
+- `apps/desktop/src/ssh/DesktopSshEnvironment.test.ts` — product name.
+- `apps/desktop/src/ssh/DesktopSshEnvironment.ts` — product name.
+- `apps/desktop/src/ssh/DesktopSshPasswordPrompts.ts` — product name.
+- `apps/desktop/src/telemetry/DesktopTelemetryPublisher.test.ts` — product name.
+- `apps/desktop/src/updates/DesktopUpdatePolicy.ts` — product name.
+- `apps/desktop/src/updates/DesktopUpdates.test.ts` — product name.
+- `apps/desktop/src/updates/DesktopUpdates.ts` — product name.
+- `apps/desktop/src/window/DesktopApplicationMenu.test.ts` — product name.
+- `apps/desktop/src/window/DesktopApplicationMenu.ts` — product name.
+- `apps/desktop/src/window/DesktopWindow.test.ts` — product name.
+- `apps/desktop/src/wsl/DesktopWslBackend.test.ts` — product name.
+- `apps/desktop/src/wsl/DesktopWslBackend.ts` — product name, CLI command `agentd-next`.
+- `apps/desktop/src/wsl/DesktopWslEnvironment.ts` — product name.
+- `apps/marketing/src/i18n/de.ts` — product name.
+- `apps/marketing/src/i18n/en.ts` — product name.
+- `apps/marketing/src/i18n/es.ts` — product name.
+- `apps/marketing/src/i18n/fr.ts` — product name.
+- `apps/marketing/src/i18n/ja.ts` — product name.
+- `apps/marketing/src/i18n/ko.ts` — product name.
+- `apps/marketing/src/i18n/pt-BR.ts` — product name.
+- `apps/marketing/src/i18n/ru.ts` — product name.
+- `apps/marketing/src/i18n/zh.ts` — product name.
+- `apps/marketing/src/layouts/Layout.astro` — product name.
+- `apps/marketing/src/lib/seo.ts` — product name.
+- `apps/marketing/src/lib/tweets.ts` — product name.
+- `apps/marketing/src/pages/404.astro` — product name.
+- `apps/marketing/src/pages/95.astro` — product name.
+- `apps/marketing/src/pages/[...locale]/download.astro` — product name.
+- `apps/marketing/src/pages/[...locale]/index.astro` — product name.
+- `apps/marketing/src/pages/legal.astro` — product name.
+- `apps/marketing/src/pages/llms.txt.ts` — product name.
+- `apps/marketing/src/pages/privacy-policy.astro` — product name.
+- `apps/marketing/src/pages/security-policy.astro` — product name.
+- `apps/marketing/src/pages/terms-of-service.astro` — product name.
+- `apps/mobile/README.md` — product name.
+- `apps/mobile/app.config.ts` — product name.
+- `apps/mobile/modules/t3-composer-editor/android/src/main/java/expo/modules/t3composereditor/T3ComposerEditorModule.kt` — product name.
+- `apps/mobile/modules/t3-composer-editor/ios/T3ComposerEditor.podspec` — product name.
+- `apps/mobile/modules/t3-highlights/T3HighlightsNative.podspec` — product name.
+- `apps/mobile/modules/t3-native-controls/android/src/main/java/expo/modules/t3nativecontrols/T3NativeControlsModule.kt` — product name.
+- `apps/mobile/modules/t3-native-controls/ios/T3NativeControls.podspec` — product name.
+- `apps/mobile/modules/t3-native-controls/ios/T3NativeControlsModule.swift` — product name.
+- `apps/mobile/modules/t3-native-controls/ios/T3NativeImageViewer.swift` — product name.
+- `apps/mobile/modules/t3-review-diff/T3ReviewDiffNative.podspec` — product name.
+- `apps/mobile/modules/t3-source-text/T3SourceText.podspec` — product name.
+- `apps/mobile/modules/t3-source-text/UPSTREAM.md` — product name.
+- `apps/mobile/modules/t3-terminal/T3TerminalNative.podspec` — product name.
+- `apps/mobile/modules/t3-voice-transcription/ios/T3VoiceTranscription.podspec` — product name.
+- `apps/mobile/modules/t3-web-socket/ios/T3WebSocket.podspec` — product name.
+- `apps/mobile/scripts/measure-renders.mts` — product name.
+- `apps/mobile/src/components/BrandMark.tsx` — product name.
+- `apps/mobile/src/components/CompactBrandTitle.tsx` — product name.
+- `apps/mobile/src/components/T3Wordmark.tsx` — product name.
+- `apps/mobile/src/features/agent-awareness/remoteRegistration.ts` — product name.
+- `apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx` — product name.
+- `apps/mobile/src/features/diagnostics/crash-log-model.ts` — product name.
+- `apps/mobile/src/features/home/HomeRouteScreen.tsx` — product name.
+- `apps/mobile/src/features/issues/IssuesScreen.tsx` — product name.
+- `apps/mobile/src/features/layout/workspace/ListSearchToolbar.android.tsx` — product name.
+- `apps/mobile/src/features/layout/workspace/WorkspaceListHeader.android.tsx` — product name.
+- `apps/mobile/src/features/layout/workspace/WorkspaceListHeader.types.ts` — product name.
+- `apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.tsx` — product name.
+- `apps/mobile/src/features/pull-requests/pullRequestAgentTasks.ts` — product name.
+- `apps/mobile/src/features/settings/OutdatedServerUpdateSection.tsx` — product name.
+- `apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx` — product name.
+- `apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx` — product name.
+- `apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx` — product name.
+- `apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx` — product name.
+- `apps/mobile/src/features/settings/ThreadSettingsSections.tsx` — product name.
+- `apps/mobile/src/features/settings/VoiceModelSection.tsx` — product name.
+- `apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx` — product name.
+- `apps/mobile/src/features/settings/environmentUpdateCheck.ts` — product name.
+- `apps/mobile/src/features/showcase/showcaseAgentActivity.ts` — product name.
+- `apps/mobile/src/features/threads/ThreadComposer.tsx` — product name.
+- `apps/mobile/src/features/threads/ThreadFeed.tsx` — product name.
+- `apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx` — product name.
+- `apps/mobile/src/features/threads/ThreadQueueControl.tsx` — product name.
+- `apps/mobile/src/features/threads/guestMessageStyle.tsx` — product name.
+- `apps/mobile/src/features/voice-input/voiceDestination.ts` — product name.
+- `apps/mobile/src/lib/authClientMetadata.ts` — product name.
+- `apps/mobile/src/lib/mobileTheme.ts` — product name.
+- `apps/mobile/src/lib/saveImageToLibrary.ts` — product name.
+- `apps/mobile/src/state/use-thread-composer-state.ts` — product name.
+- `apps/mobile/src/widgets/AgentActivityWidget.tsx` — product name.
+- `apps/mobile/src/widgets/SubscriptionUsage.android.tsx` — product name.
+- `apps/mobile/src/widgets/SubscriptionUsage.tsx` — product name.
+- `apps/mobile/src/widgets/agentActivityWidgetTimeline.ts` — product name.
+- `apps/mobile/src/widgets/subscriptionUsageSnapshot.ts` — product name.
+- `apps/server/README.md` — product name.
+- `apps/server/integration/TransferBudgetReport.integration.ts` — product name.
+- `apps/server/scripts/acp-mock-agent.ts` — product name.
+- `apps/server/src/agentd/AgentdBridge.test.ts` — product name.
+- `apps/server/src/auth/EnvironmentAuth.ts` — product name.
+- `apps/server/src/auth/McpOAuth.ts` — product name.
+- `apps/server/src/auth/SessionStore.ts` — product name.
+- `apps/server/src/background/KeepAwake.ts` — product name.
+- `apps/server/src/binCli.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/acpMcpBridge.ts` — product name.
+- `apps/server/src/cli/app.test.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/app.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/automaticPort.ts` — product name.
+- `apps/server/src/cli/browser.test.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/browser.ts` — product name.
+- `apps/server/src/cli/config.test.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/config.ts` — product name.
+- `apps/server/src/cli/connect.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/doctor.test.ts` — product name.
+- `apps/server/src/cli/doctor.ts` — product name.
+- `apps/server/src/cli/environment.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/invocation.test.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/invocation.ts` — CLI command `agentd-next`.
+- `apps/server/src/cli/managedChatGptToken.ts` — product name.
+- `apps/server/src/cli/pair.test.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/pair.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/policy.test.ts` — product name.
+- `apps/server/src/cli/policy.ts` — product name.
+- `apps/server/src/cli/project.ts` — CLI command `agentd-next`.
+- `apps/server/src/cli/server.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/service.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/theme.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/thread.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/triage.ts` — product name.
+- `apps/server/src/cli/uninstall.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/up.test.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/up.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/update.test.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/update.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cli/updateProgress.ts` — product name.
+- `apps/server/src/cliCompileCache.test.ts` — CLI command `agentd-next`.
+- `apps/server/src/cloud/CliTokenManager.test.ts` — CLI command `agentd-next`.
+- `apps/server/src/cloud/CliTokenManager.ts` — CLI command `agentd-next`.
+- `apps/server/src/cloud/CloudLink.ts` — CLI command `agentd-next`.
+- `apps/server/src/cloud/ConnectReachability.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cloud/RelayClientLedger.ts` — product name.
+- `apps/server/src/cloud/bootService.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cloud/cliAuthHtml.ts` — product name.
+- `apps/server/src/cloud/relayResponse.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cloud/selfUpdate.test.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cloud/selfUpdate.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/cloud/servicePreflight.test.ts` — CLI command `agentd-next`.
+- `apps/server/src/cloud/servicePreflight.ts` — CLI command `agentd-next`.
+- `apps/server/src/desktopUpdate/DesktopAppUpdate.ts` — product name.
+- `apps/server/src/device/AgentDeviceShim.ts` — product name.
+- `apps/server/src/device/AgentDeviceTarget.test.ts` — product name.
+- `apps/server/src/device/DeviceService.test.ts` — product name.
+- `apps/server/src/device/DeviceToolchain.ts` — product name.
+- `apps/server/src/device/EasDeviceHost.ts` — product name.
+- `apps/server/src/device/SimlockDeviceHost.ts` — product name.
+- `apps/server/src/device/SshDeviceHost.ts` — product name.
+- `apps/server/src/diagnostics/ProcessDiagnostics.ts` — product name.
+- `apps/server/src/environment/ServerEnvironmentLabel.ts` — product name.
+- `apps/server/src/mcp/AcpMcpStdioBridge.ts` — product name, MCP server name `agentd-next`.
+- `apps/server/src/mcp/McpHttpServer.ts` — product name.
+- `apps/server/src/mcp/McpInvocationContext.ts` — product name.
+- `apps/server/src/mcp/OrchestratorMcpService.ts` — product name.
+- `apps/server/src/mcp/ThreadMetadataMcpService.ts` — product name.
+- `apps/server/src/mcp/WorktreeMcpService.ts` — product name.
+- `apps/server/src/mcp/threadAccess.ts` — product name.
+- `apps/server/src/mcp/toolkits/device/handlers.ts` — product name.
+- `apps/server/src/mcp/toolkits/issues/tools.ts` — product name.
+- `apps/server/src/mcp/toolkits/orchestrator/tools.ts` — product name.
+- `apps/server/src/mcp/toolkits/pullRequests/tools.ts` — product name.
+- `apps/server/src/mcp/toolkits/theme/tools.ts` — product name.
+- `apps/server/src/mcp/toolkits/toolSearch/tools.ts` — product name.
+- `apps/server/src/orchestration-v2/Adapters/AcpAdapterV2.test.ts` — product name, MCP server name `agentd-next`.
+- `apps/server/src/orchestration-v2/Adapters/AcpRegistryAdapterV2.test.ts` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/Adapters/AntigravityAdapterV2.test.ts` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/Adapters/ClaudeAdapterV2.test.ts` — MCP server name `agentd-next`.
+- `apps/server/src/orchestration-v2/Adapters/ClaudeAdapterV2.ts` — product name.
+- `apps/server/src/orchestration-v2/Adapters/CodexAdapterV2.test.ts` — product name, MCP server name `agentd-next`.
+- `apps/server/src/orchestration-v2/Adapters/CodexAdapterV2.ts` — product name, MCP server name `agentd-next`.
+- `apps/server/src/orchestration-v2/Adapters/OpenCode2AdapterV2.test.ts` — product name, MCP server name `agentd-next`.
+- `apps/server/src/orchestration-v2/ContextHandoffService.ts` — product name.
+- `apps/server/src/orchestration-v2/IdleCompactionService.ts` — product name.
+- `apps/server/src/orchestration-v2/OpenCode2OrchestratorV2.integration.test.ts` — MCP server name `agentd-next`.
+- `apps/server/src/orchestration-v2/Orchestrator.ts` — product name.
+- `apps/server/src/orchestration-v2/ProjectionStore.ts` — product name.
+- `apps/server/src/orchestration-v2/ProviderTurnStartService.test.ts` — product name.
+- `apps/server/src/orchestration-v2/ProviderTurnStartService.ts` — product name.
+- `apps/server/src/orchestration-v2/PullRequestWatchReactor.ts` — product name.
+- `apps/server/src/orchestration-v2/RestartBackgroundNote.ts` — product name.
+- `apps/server/src/orchestration-v2/RestartContinuation.ts` — product name.
+- `apps/server/src/orchestration-v2/UserFacingErrors.ts` — product name.
+- `apps/server/src/orchestration-v2/pullRequestWatch.ts` — product name.
+- `apps/server/src/orchestration-v2/runtimeLayer.test.ts` — product name.
+- `apps/server/src/orchestration-v2/testkit/OrchestratorReplayRecovery.integration.test.ts` — product name.
+- `apps/server/src/orchestration-v2/testkit/OrchestratorReplayRestartBackgroundNote.integration.test.ts` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/command_output_streaming/codex_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/grok_auto_blocked_command/grok_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/grok_background_bash/grok_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/grok_background_bash_fast_wake/grok_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/grok_background_subagent/grok_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/grok_monitor/grok_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/grok_prompt_error/grok_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/kiro_model_switch/kiro_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/kiro_subagent_interrupt/kiro_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/kiro_unknown_model/kiro_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/multi_turn/grok_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/multi_turn/muse_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/muse_permission/muse_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/muse_subagent_approval/muse_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/muse_subagent_interrupt/muse_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/muse_workflow/muse_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_background/opencode_transcript.ndjson` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_command/opencode_transcript.ndjson` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_compaction/opencode_transcript.ndjson` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_fork/opencode_transcript.ndjson` — MCP server name `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_inbox/opencode_transcript.ndjson` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_interrupt/opencode_transcript.ndjson` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_missing_step_usage/opencode_transcript.ndjson` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_nested_background/opencode_transcript.ndjson` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_permission/opencode_transcript.ndjson` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_question/opencode_transcript.ndjson` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_resume_after_restart/opencode_transcript.ndjson` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_revert/opencode_transcript.ndjson` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_simple/opencode_transcript.ndjson` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_skill/opencode_transcript.ndjson` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_subagent/opencode_transcript.ndjson` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_tool_call/opencode_transcript.ndjson` — CLI command `agentd-next`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/proposed_plan/cursor_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/queued_turn/grok_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/simple/grok_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/simple/muse_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/subagent_v2/muse_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/thread_fork_native_prior_turn/codex_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/todo_list/grok_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/tool_call_read_only_on_request/grok_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/turn_interrupt/grok_transcript.ndjson` — product name.
+- `apps/server/src/orchestration-v2/testkit/fixtures/turn_interrupt/muse_transcript.ndjson` — product name.
+- `apps/server/src/peer/PeerLinks.test.ts` — product name.
+- `apps/server/src/peer/PeerLinks.testkit.ts` — product name.
+- `apps/server/src/peer/PeerLinks.ts` — product name.
+- `apps/server/src/peer/PeerMcpClient.ts` — product name.
+- `apps/server/src/persistence/DatabaseMaintenance.ts` — product name.
+- `apps/server/src/persistence/DatabaseStorage.ts` — product name.
+- `apps/server/src/persistence/Sqlite.ts` — product name.
+- `apps/server/src/policy/managedProviders.ts` — product name.
+- `apps/server/src/policy/policyTemplates.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/preview/PreviewBrowser.test.ts` — product name.
+- `apps/server/src/preview/PreviewBrowser.ts` — product name.
+- `apps/server/src/preview/PreviewBrowserHost.test.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/preview/PreviewBrowserHost.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/preview/ServerBrowser.ts` — product name.
+- `apps/server/src/preview/ServerBrowserPage.ts` — product name.
+- `apps/server/src/project/ManagedProjectFolders.ts` — product name.
+- `apps/server/src/provider/AcpRegistrySessions.ts` — product name.
+- `apps/server/src/provider/AgentContextBudget.test.ts` — CLI command `agentd-next`.
+- `apps/server/src/provider/AntigravityInstallation.ts` — product name.
+- `apps/server/src/provider/AntigravityProvider.ts` — product name.
+- `apps/server/src/provider/ClaudeProvider.ts` — product name.
+- `apps/server/src/provider/CodexAuthCallbackPage.ts` — product name.
+- `apps/server/src/provider/CodexChatGptAuth.test.ts` — product name.
+- `apps/server/src/provider/CodexChatGptAuth.ts` — product name.
+- `apps/server/src/provider/CodexInstallation.ts` — product name.
+- `apps/server/src/provider/CodexManagedRuntime.ts` — product name.
+- `apps/server/src/provider/CodexProvider.ts` — product name.
+- `apps/server/src/provider/Drivers/ClaudeHome.test.ts` — CLI command `agentd-next`.
+- `apps/server/src/provider/Drivers/ClaudeHome.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/provider/Drivers/ClaudeSkills.ts` — product name.
+- `apps/server/src/provider/ProviderAuthService.ts` — product name.
+- `apps/server/src/provider/acp/AntigravityAcpSupport.test.ts` — CLI command `agentd-next`.
+- `apps/server/src/provider/acp/AntigravityAcpSupport.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/provider/managedRelease.ts` — product name.
+- `apps/server/src/provider/providerCompatibility.ts` — product name.
+- `apps/server/src/provider/providerInstallation.ts` — product name.
+- `apps/server/src/provider/providerMaintenanceRunner.test.ts` — product name.
+- `apps/server/src/provider/providerMaintenanceRunner.ts` — product name.
+- `apps/server/src/pullRequest/PullRequestService.test.ts` — product name.
+- `apps/server/src/serverOwnership.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/serverRuntimeStartup.ts` — product name.
+- `apps/server/src/serverRuntimeState.test.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/serviceLauncher.test.ts` — product name.
+- `apps/server/src/serviceLauncher.ts` — product name.
+- `apps/server/src/speech/SpeechModelStore.ts` — product name.
+- `apps/server/src/startupAccess.ts` — product name.
+- `apps/server/src/terminal/Manager.ts` — product name.
+- `apps/server/src/textGeneration/OpenCode2TextGeneration.fixture.ts` — product name.
+- `apps/server/src/textGeneration/textGeneratorDrivers.ts` — product name.
+- `apps/server/src/triage/triagePrompt.test.ts` — product name.
+- `apps/server/src/triage/triagePrompt.ts` — product name, CLI command `agentd-next`.
+- `apps/server/src/vcs/GitVcsDriver.ts` — product name.
+- `apps/server/src/vcs/GitVcsDriverCore.ts` — product name.
+- `apps/server/src/vcs/VcsStatusBroadcaster.ts` — product name.
+- `apps/server/src/ws.ts` — product name.
+- `apps/web/index.html` — product name.
+- `apps/web/public/manifest.webmanifest` — product name.
+- `apps/web/src/authBootstrap.test.ts` — product name.
+- `apps/web/src/branding.ts` — product name.
+- `apps/web/src/cloud/linkEnvironment.ts` — product name.
+- `apps/web/src/components/BranchToolbarBranchSelector.tsx` — product name.
+- `apps/web/src/components/ChatView.tsx` — product name.
+- `apps/web/src/components/CommandPalette.logic.test.ts` — product name.
+- `apps/web/src/components/CommandPalette.tsx` — product name.
+- `apps/web/src/components/DiffPanel.tsx` — product name.
+- `apps/web/src/components/EnvironmentContextChip.tsx` — product name.
+- `apps/web/src/components/HostedEmptyState.tsx` — product name, CLI command `agentd-next`.
+- `apps/web/src/components/RightPanelTabs.tsx` — product name.
+- `apps/web/src/components/ServerUpdateAction.tsx` — product name.
+- `apps/web/src/components/T3Wordmark.tsx` — sidebar wordmark AgentD + Next.
+- `apps/web/src/components/agentd/AgentdBackgroundTaskRow.tsx` — product name.
+- `apps/web/src/components/agentd/AgentdPage.tsx` — product name.
+- `apps/web/src/components/agentd/BackgroundTasksPane.browser.test.tsx` — product name.
+- `apps/web/src/components/agentd/BackgroundTasksPane.tsx` — product name.
+- `apps/web/src/components/auth/ConnectAgentSurface.tsx` — product name.
+- `apps/web/src/components/chat/McpAppFrame.tsx` — product name.
+- `apps/web/src/components/chat/MessagesTimeline.browser.test.tsx` — product name.
+- `apps/web/src/components/chat/MessagesTimeline.logic.ts` — product name.
+- `apps/web/src/components/chat/QueuedRunsControl.browser.test.tsx` — product name.
+- `apps/web/src/components/chat/QueuedRunsControl.tsx` — product name.
+- `apps/web/src/components/chat/RightPanelSurfaceContent.tsx` — product name.
+- `apps/web/src/components/chat/ThreadActivityAnnouncer.browser.test.tsx` — product name.
+- `apps/web/src/components/chat/TimelineUserMessageRow.tsx` — product name.
+- `apps/web/src/components/chat/TriageDraftHero.tsx` — product name.
+- `apps/web/src/components/chat/composerPromptHistory.test.ts` — product name.
+- `apps/web/src/components/chat/guestMessageStyle.tsx` — product name.
+- `apps/web/src/components/chat/turnDetailAnnouncement.test.ts` — product name.
+- `apps/web/src/components/chat/useSystemComposerBanners.tsx` — product name.
+- `apps/web/src/components/clerk/MobileClientsUserProfilePage.logic.ts` — product name.
+- `apps/web/src/components/clerk/MobileClientsUserProfilePage.tsx` — product name.
+- `apps/web/src/components/cloud/ConnectCliAuthSurface.tsx` — CLI command `agentd-next`.
+- `apps/web/src/components/cloud/RelayClientInstallDialog.tsx` — product name.
+- `apps/web/src/components/desktop/DesktopWebLinkCoordinator.browser.test.tsx` — product name.
+- `apps/web/src/components/desktop/SshPasswordPromptDialog.tsx` — product name.
+- `apps/web/src/components/desktopUpdate.logic.ts` — product name.
+- `apps/web/src/components/issue/IssuesPage.tsx` — product name.
+- `apps/web/src/components/mcp/UseInAnotherAppDialog.tsx` — product name, CLI command `agentd-next`.
+- `apps/web/src/components/mcp/mcpApps.test.ts` — product name.
+- `apps/web/src/components/mcp/mcpApps.ts` — product name.
+- `apps/web/src/components/mcp/mcpGate.test.ts` — product name.
+- `apps/web/src/components/onboarding/FirstRunGate.tsx` — product name.
+- `apps/web/src/components/onboarding/WelcomePage.import.browser.test.tsx` — product name.
+- `apps/web/src/components/onboarding/WelcomePage.tsx` — product name, CLI command `agentd-next`.
+- `apps/web/src/components/preview/PreviewPanel.tsx` — product name.
+- `apps/web/src/components/preview/PreviewView.tsx` — product name.
+- `apps/web/src/components/promptLinks/HostedPromptLinkLanding.tsx` — product name.
+- `apps/web/src/components/promptLinks/NewThreadLinkView.tsx` — product name.
+- `apps/web/src/components/promptLinks/linkedPrompt.ts` — product name.
+- `apps/web/src/components/pullRequest/PullRequestsPage.tsx` — product name.
+- `apps/web/src/components/settings/AcpRegistrySearchStep.browser.test.tsx` — product name.
+- `apps/web/src/components/settings/AcpSessionManagementSection.tsx` — product name.
+- `apps/web/src/components/settings/BrowserImportWizard.tsx` — product name.
+- `apps/web/src/components/settings/CaptureShortcutConfig.tsx` — product name.
+- `apps/web/src/components/settings/ChatGptWelcomeCoordinator.tsx` — product name.
+- `apps/web/src/components/settings/CliCommandSettingsRow.browser.test.tsx` — CLI command `agentd-next`.
+- `apps/web/src/components/settings/CliCommandSettingsRow.tsx` — product name, CLI command `agentd-next`.
+- `apps/web/src/components/settings/CodexSetupSection.tsx` — product name.
+- `apps/web/src/components/settings/ConnectionsSettings.tsx` — product name.
+- `apps/web/src/components/settings/DatabaseStorageNotice.tsx` — product name.
+- `apps/web/src/components/settings/DiagnosticsSettings.tsx` — product name.
+- `apps/web/src/components/settings/IntegrationsSettings.tsx` — product name.
+- `apps/web/src/components/settings/KeybindingsSettings.tsx` — product name.
+- `apps/web/src/components/settings/LabsSettingsPanel.tsx` — product name.
+- `apps/web/src/components/settings/LinkedEnvironmentsSettings.tsx` — product name, CLI command `agentd-next`.
+- `apps/web/src/components/settings/LocalEnvironmentSetting.tsx` — product name.
+- `apps/web/src/components/settings/MultipleAccountsNote.tsx` — product name.
+- `apps/web/src/components/settings/NotificationSettings.tsx` — product name.
+- `apps/web/src/components/settings/ProjectSettingsPanel.logic.test.ts` — product name.
+- `apps/web/src/components/settings/ProviderSettingsForm.tsx` — product name.
+- `apps/web/src/components/settings/ResourceTelemetryDiagnostics.tsx` — product name.
+- `apps/web/src/components/settings/SavedEnvironmentRows.tsx` — product name, CLI command `agentd-next`.
+- `apps/web/src/components/settings/ScheduledTasksSettings.tsx` — product name.
+- `apps/web/src/components/settings/SecretsSettings.tsx` — product name.
+- `apps/web/src/components/settings/SettingsPanels.logic.ts` — product name.
+- `apps/web/src/components/settings/SettingsPanels.tsx` — product name.
+- `apps/web/src/components/settings/SnapShotSettings.logic.test.ts` — product name.
+- `apps/web/src/components/settings/SnapShotSettings.tsx` — product name.
+- `apps/web/src/components/settings/SnapShotSetupDialog.tsx` — product name.
+- `apps/web/src/components/settings/StorageSettings.tsx` — product name.
+- `apps/web/src/components/settings/ThemeImportDialog.tsx` — product name.
+- `apps/web/src/components/settings/UpdateTrackSwitchDialog.tsx` — product name.
+- `apps/web/src/components/settings/providerStatus.ts` — product name.
+- `apps/web/src/components/settings/scheduledTasksSettings.logic.test.ts` — product name.
+- `apps/web/src/components/settings/scopedSettings.test.ts` — product name.
+- `apps/web/src/components/settings/scopedSettings.ts` — product name.
+- `apps/web/src/components/settings/settingsScope.test.ts` — product name.
+- `apps/web/src/components/settings/settingsScopeNavigation.test.ts` — product name.
+- `apps/web/src/components/settings/settingsSearch.ts` — product name, CLI command `agentd-next`.
+- `apps/web/src/components/sidebar/SidebarFolderDrop.tsx` — product name.
+- `apps/web/src/components/sidebar/SidebarUpdatePill.browser.test.tsx` — product name.
+- `apps/web/src/components/sidebar/updateEverything.logic.test.ts` — product name, CLI command `agentd-next`.
+- `apps/web/src/components/sidebar/updateEverything.logic.ts` — CLI command `agentd-next`.
+- `apps/web/src/components/sidebar/updateEverythingRun.tsx` — product name.
+- `apps/web/src/connection/clientMetadata.ts` — product name.
+- `apps/web/src/connection/platform.ts` — product name.
+- `apps/web/src/desktopAppActivation.ts` — product name.
+- `apps/web/src/hooks/useOpenLocalWorkspace.ts` — product name.
+- `apps/web/src/hooks/useStartTriage.ts` — product name.
+- `apps/web/src/index.css` — product name.
+- `apps/web/src/lib/assistantTextSelection.test.ts` — product name.
+- `apps/web/src/lib/bootError.test.ts` — CLI command `agentd-next`.
+- `apps/web/src/lib/bootError.ts` — product name, CLI command `agentd-next`.
+- `apps/web/src/onboarding/welcomePage.logic.ts` — product name.
+- `apps/web/src/shortcuts/chatRouteCommands.ts` — product name.
+- `apps/web/src/state/desktopCliCommand.ts` — CLI command `agentd-next`.
+- `apps/web/src/versionSkew.test.ts` — product name.
+- `apps/web/src/versionSkew.ts` — product name.
+- `docs/orchestration-v2/orchestrator-mcp-server.md` — MCP server name `agentd-next`.
+- `evals/mcp-tool-use/run.test.ts` — product name, MCP server name `agentd-next`.
+- `evals/mcp-tool-use/run.ts` — MCP server name `agentd-next`.
+- `oxlint-plugin-t3code/rules/no-untranslated-copy.ts` — product name.
+- `packages/client-runtime/src/authorization/layer.test.ts` — product name.
+- `packages/client-runtime/src/connection/compatibility.ts` — product name.
+- `packages/client-runtime/src/connection/diagnosis.test.ts` — product name, CLI command `agentd-next`.
+- `packages/client-runtime/src/connection/diagnosis.ts` — product name, CLI command `agentd-next`.
+- `packages/client-runtime/src/connection/errors.ts` — product name.
+- `packages/client-runtime/src/connection/hostFreeze.ts` — product name.
+- `packages/client-runtime/src/connection/model.ts` — product name.
+- `packages/client-runtime/src/connection/onboarding.test.ts` — product name.
+- `packages/client-runtime/src/connection/outdatedHostUpdate.ts` — product name.
+- `packages/client-runtime/src/connection/resolver.test.ts` — product name.
+- `packages/client-runtime/src/contractLabels.ts` — product name.
+- `packages/client-runtime/src/mcpApps/host.ts` — CLI command `agentd-next`.
+- `packages/client-runtime/src/relay/errorPresentation.ts` — product name.
+- `packages/client-runtime/src/state/device.ts` — product name.
+- `packages/client-runtime/src/state/peerPairingCode.ts` — product name.
+- `packages/client-runtime/src/state/projectGrouping.test.ts` — product name.
+- `packages/client-runtime/src/state/projectRemoval.ts` — product name.
+- `packages/client-runtime/src/state/pullRequestDiffHttp.ts` — product name.
+- `packages/client-runtime/src/state/threadRequests.ts` — product name.
+- `packages/client-runtime/src/userMessage.test.ts` — product name.
+- `packages/client-runtime/src/userMessage.ts` — product name.
+- `packages/client-runtime/src/work-log/t3ToolSentences.ts` — product name.
+- `packages/contracts/src/auth.ts` — product name.
+- `packages/contracts/src/browserImport.ts` — product name.
+- `packages/contracts/src/composerContext.ts` — product name.
+- `packages/contracts/src/device.ts` — product name.
+- `packages/contracts/src/managedPolicy.ts` — product name.
+- `packages/contracts/src/orchestrationV2.ts` — product name.
+- `packages/contracts/src/preview.ts` — product name.
+- `packages/contracts/src/pullRequest.ts` — product name.
+- `packages/contracts/src/relay.ts` — product name.
+- `packages/contracts/src/speech.ts` — product name.
+- `packages/contracts/src/t3ProjectFile.ts` — product name.
+- `packages/effect-acp/src/client.ts` — CLI command `agentd-next`.
+- `packages/effect-acp/test/fixtures/acp-mock-peer.ts` — CLI command `agentd-next`.
+- `packages/effect-codex-app-server/scripts/generate.ts` — product name.
+- `packages/provider-acp-registry/src/server/driver.ts` — product name.
+- `packages/provider-acp/src/server/adapter.ts` — product name, CLI command `agentd-next`.
+- `packages/provider-acp/src/server/mcpOverAcpBridge.ts` — product name, CLI command `agentd-next`.
+- `packages/provider-acp/src/server/runtimeModel.test.ts` — MCP server name `agentd-next`.
+- `packages/provider-acp/src/server/runtimeModel.ts` — MCP server name `agentd-next`.
+- `packages/provider-core/src/server/ProviderAdapter.ts` — product name.
+- `packages/provider-core/src/server/failure.test.ts` — product name.
+- `packages/provider-core/src/server/maintenance.ts` — product name.
+- `packages/provider-core/src/server/maintenanceResolver.test.ts` — product name.
+- `packages/provider-core/src/server/maintenanceResolver.ts` — product name.
+- `packages/provider-core/src/server/orchestrationInstructions.test.ts` — product name, MCP server name `agentd-next`.
+- `packages/provider-core/src/server/orchestrationInstructions.ts` — product name, MCP server name `agentd-next`.
+- `packages/provider-core/src/server/runtimeInstructions.ts` — product name.
+- `packages/provider-core/src/server/textGenerationPrompts.ts` — product name.
+- `packages/provider-cursor/src/server/adapter.test.ts` — product name, CLI command `agentd-next`.
+- `packages/provider-cursor/src/server/adapter.ts` — product name, CLI command `agentd-next`.
+- `packages/provider-cursor/src/server/auth.test.ts` — product name.
+- `packages/provider-cursor/src/server/auth.ts` — product name.
+- `packages/provider-cursor/src/server/driver.test.ts` — product name.
+- `packages/provider-cursor/src/server/status.test.ts` — product name.
+- `packages/provider-cursor/src/server/status.ts` — product name.
+- `packages/provider-cursor/src/server/textGeneration.ts` — product name.
+- `packages/provider-fx/src/server/status.ts` — product name.
+- `packages/provider-grok/src/server/status.ts` — product name.
+- `packages/provider-kiro/src/server/status.ts` — product name.
+- `packages/provider-muse/src/server/adapter.test.ts` — CLI command `agentd-next`.
+- `packages/provider-muse/src/server/adapter.ts` — product name, CLI command `agentd-next`.
+- `packages/provider-muse/src/server/sdk.ts` — product name.
+- `packages/provider-muse/src/server/status.ts` — product name.
+- `packages/provider-muse/src/server/textGeneration.ts` — product name.
+- `packages/provider-opencode/src/server/OpenCodeRuntime.ts` — product name.
+- `packages/provider-opencode/src/server/OpenCodeServerLedger.ts` — product name.
+- `packages/provider-opencode/src/server/adapter.ts` — CLI command `agentd-next`.
+- `packages/provider-opencode/src/server/status.ts` — product name.
+- `packages/provider-opencode/src/server/textGeneration.ts` — product name.
+- `packages/provider-opencode/src/server/v2/OpenCode2Service.ts` — product name.
+- `packages/provider-opencode/src/server/v2/adapter.ts` — product name, MCP server name `agentd-next`.
+- `packages/provider-opencode/src/server/v2/textGeneration.ts` — product name.
+- `packages/provider-opencode/src/server/versionProbe.ts` — product name.
+- `packages/provider-opencode/src/settings.ts` — product name.
+- `packages/provider-pi/src/server/adapter.test.ts` — MCP server name `agentd-next`.
+- `packages/provider-pi/src/server/adapter.ts` — product name.
+- `packages/provider-pi/src/server/mcpExtensionSource.test.ts` — MCP server name `agentd-next`.
+- `packages/provider-pi/src/server/mcpExtensionSource.ts` — product name, MCP server name `agentd-next`.
+- `packages/provider-pi/src/server/mcpInjection.test.ts` — product name.
+- `packages/provider-pi/src/server/mcpInjection.ts` — product name.
+- `packages/provider-pi/src/server/status.ts` — product name.
+- `packages/provider-testing/src/replayWorkspace.ts` — product name.
+- `packages/shared/src/codexAuthCallback.ts` — product name.
+- `packages/shared/src/codexAuthHandoff.ts` — product name.
+- `packages/shared/src/desktopIdentity.ts` — `CLI_COMMAND_NAME = "agentd-next"`, adds `LEGACY_CLI_COMMAND_NAME`; scheme, folder and service names unchanged.
+- `packages/shared/src/managedPolicyFile.test.ts` — product name.
+- `packages/shared/src/managedPolicyFile.ts` — product name.
+- `packages/shared/src/markdownPipeline.test.ts` — product name.
+- `packages/shared/src/nodeRuntime.test.ts` — product name.
+- `packages/shared/src/otelEnvironment.ts` — product name.
+- `packages/shared/src/promptLinks.ts` — product name.
+- `packages/shared/src/promptLinksCopy.ts` — product name.
+- `packages/shared/src/relayClient.ts` — product name.
+- `packages/shared/src/t3McpToolPresentation.test.ts` — expects the new server name and the rewrite to it.
+- `packages/shared/src/t3McpToolPresentation.ts` — MCP server `agentd-next` / `agentd-next-direct`; aliases and parsers; legacy `mcp__t3-code__t3_*` entries rewrite to `mcp__agentd-next__*`.
+- `packages/shared/src/t3McpToolPresentationCopy.ts` — product name.
+- `packages/shared/src/themeCss.ts` — product name.
+- `packages/shared/src/threadLinks.ts` — product name.
+- `packages/shared/src/usageLimits.ts` — product name.
+- `packages/source-control-forgejo/src/server/ForgejoPullRequestProvider.ts` — product name.
+- `packages/source-control-gitcafe/src/server/GitCafePullRequestProvider.ts` — product name.
+- `packages/source-control-github/src/server/GitHubAppSignIn.ts` — product name.
+- `packages/source-control-github/src/server/githubStackRebase.ts` — product name.
+- `packages/source-control-github/src/shared/definition.ts` — product name.
+- `packages/ssh/src/auth.ts` — product name.
+- `packages/ssh/src/tunnel.ts` — product name.
+- `packages/tailscale/src/tailscale.ts` — product name.
+- `scripts/build-desktop-artifact.test.ts` — product name.
+- `scripts/build-desktop-artifact.ts` — artifactName `AgentD-Next-${version}-${arch}.${ext}` (AppImage too), product name and macOS usage strings; appId, package and executable names unchanged.
+- `scripts/lib/tagged-source-version.ts` — product name.
+- `apps/server/src/provider/agentContextBudget.json` — measured context sizes after the shorter name.

@@ -56,10 +56,10 @@ export function SubscriptionUsage(props: SubscriptionUsageProps, environment: Wi
       };
   // English until the app publishes its first snapshot in the UI language.
   const text = props.text ?? {
-    refresh: "Open AgentD Desktop to refresh",
+    refresh: "Open AgentD Next to refresh",
     left: "left",
     asOf: "As of {time}",
-    tapToConnect: "Tap to connect in AgentD Desktop",
+    tapToConnect: "Tap to connect in AgentD Next",
     moreInApp: {} as Record<string, string>,
   };
   const providers = props.providers ?? [
@@ -344,7 +344,7 @@ export function SubscriptionUsage(props: SubscriptionUsageProps, environment: Wi
           {hidden > 0 ? (
             <Text color={colors.muted} maxLines={1} style={{ fontSize: 10 }}>
               {/* oxlint-disable-next-line t3code/no-untranslated-copy -- widget fallback until the app publishes translated text */}
-              {text.moreInApp[String(hidden)] ?? `${hidden} more in AgentD Desktop`}
+              {text.moreInApp[String(hidden)] ?? `${hidden} more in AgentD Next`}
             </Text>
           ) : null}
         </Column>

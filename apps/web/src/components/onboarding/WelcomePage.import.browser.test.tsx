@@ -591,7 +591,7 @@ it("stays busy while setup saves after an import with nothing to open", async ()
   expect(state.createProject).toHaveBeenCalledOnce();
 });
 
-it("leaves projects already in AgentD Desktop out when the box is checked, unless they are all there", async () => {
+it("leaves projects already in AgentD Next out when the box is checked, unless they are all there", async () => {
   using _now = setup();
   const existing = ProjectId.make("existing");
   const justAdded = ProjectId.make("just-added");
@@ -611,7 +611,7 @@ it("leaves projects already in AgentD Desktop out when the box is checked, unles
     await vi.waitFor(() => expect(pageText()).toContain("Import 1 project and their threads"));
   }
 
-  // With every project already in AgentD Desktop, checking the box still picks them.
+  // With every project already in AgentD Next, checking the box still picks them.
   appAtomRegistry.set(candidatesAtom(), appAtomRegistry.get(candidatesAtom()).slice(0, 2));
   await using _screen = await mountWelcome();
   await pickProjects();
@@ -631,7 +631,7 @@ it("keeps the started projects checked when the page opens again after a quit", 
     await start();
     await vi.waitFor(() => expect(state.importThreads).toHaveBeenCalledOnce());
   }
-  // The app quit during the first project's history; it now exists in AgentD Desktop.
+  // The app quit during the first project's history; it now exists in AgentD Next.
   const [first] = appAtomRegistry.get(projectsAtom());
   appAtomRegistry.set(candidatesAtom(), [
     candidate("/projects/first", { alreadyImported: true, projectId: first!.id }),

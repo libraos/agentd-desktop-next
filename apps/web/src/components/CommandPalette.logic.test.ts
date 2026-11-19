@@ -647,9 +647,7 @@ describe("buildThreadActionItems", () => {
     });
     const items = buildThreadActionItems({
       threads: [idThread, titleThread],
-      projectByKey: new Map([
-        [`${LOCAL_ENVIRONMENT_ID}:${PROJECT_ID}`, { title: "AgentD Desktop" }],
-      ]),
+      projectByKey: new Map([[`${LOCAL_ENVIRONMENT_ID}:${PROJECT_ID}`, { title: "AgentD Next" }]]),
       icon: null,
       runThread: async (_thread) => undefined,
     });

@@ -27,9 +27,7 @@ export async function resolveTriageCommand(bridge: DesktopBridge | undefined) {
     const state = await bridge?.cliCommand.getState();
     // Windows reports onPath from its PATH entry alone; only an existing launcher proves it runs.
     if (state?.launcherPath) {
-      return state.onPath
-        ? "agentd-desktop triage"
-        : `${launcherCommand(state.launcherPath)} triage`;
+      return state.onPath ? "agentd-next triage" : `${launcherCommand(state.launcherPath)} triage`;
     }
   } catch (error) {
     console.warn("Could not read the desktop CLI state.", error);
@@ -235,7 +233,7 @@ function mountUpdateButton(
           : undefined;
     run?.then(
       (result) => render(result.state),
-      (error: unknown) => console.warn("Could not update AgentD Desktop.", error),
+      (error: unknown) => console.warn("Could not update AgentD Next.", error),
     );
   });
   // A pushed state is newer than the initial read, so the read must not overwrite it.
@@ -255,7 +253,7 @@ function mountUpdateButton(
 }
 
 export function showBootError(error: unknown) {
-  console.error("AgentD Desktop failed to start.", error);
+  console.error("AgentD Next failed to start.", error);
   const bootShell = document.getElementById("boot-shell");
   if (!bootShell) return;
 
@@ -274,7 +272,7 @@ export function showBootError(error: unknown) {
   };
 
   const message = element("div", {}, [
-    element("h1", { textContent: "AgentD Desktop failed to start" }),
+    element("h1", { textContent: "AgentD Next failed to start" }),
     element("p", {
       textContent: offline
         ? "This browser appears to be offline. Check the connection, then reload."
@@ -352,7 +350,7 @@ export function showBootError(error: unknown) {
     element("div", {}, [
       element("p", {
         textContent:
-          "Run this on the computer that runs AgentD Desktop. Your agent can check the local logs and help you file a bug report.",
+          "Run this on the computer that runs AgentD Next. Your agent can check the local logs and help you file a bug report.",
       }),
       element("div", { id: "boot-error-command" }, [command, copyCommand]),
     ]),

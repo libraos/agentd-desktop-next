@@ -3,14 +3,14 @@
   <id>ai.libraos.agentd-desktop</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
-  <name>AgentD Desktop</name>
+  <name>AgentD Next</name>
   <summary>Desktop GUI for coding agents</summary>
   <developer id="ai.libraos">
     <name>LibraOS</name>
   </developer>
   <description>
     <p>
-      AgentD Desktop is an open-source desktop app for coding agents. Work with your
+      AgentD Next is an open-source desktop app for coding agents. Work with your
       existing agent subscriptions, review code changes, and run commands in
       your projects.
     </p>

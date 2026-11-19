@@ -239,7 +239,7 @@ export function makeMcpAppHost(options: McpAppHostOptions): McpAppHost {
         respond(id, {
           protocolVersion:
             requested === MCP_APP_PROTOCOL_VERSION ? requested : MCP_APP_PROTOCOL_VERSION,
-          hostInfo: { name: "agentd-desktop", version: options.hostVersion },
+          hostInfo: { name: "agentd-next", version: options.hostVersion },
           hostCapabilities: {
             openLinks: {},
             serverTools: {},

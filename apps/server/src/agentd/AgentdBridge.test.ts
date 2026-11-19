@@ -349,7 +349,7 @@ describe("AgentdBridge", () => {
                 "result":"the GitHub App is not installed on owner/fork: the repository's owner installs it once for that repository"}
             }`),
             );
-          case "handoff done hof-abc456 --cancel --reason Stopped from AgentD Desktop":
+          case "handoff done hof-abc456 --cancel --reason Stopped from AgentD Next":
             return Effect.succeed(output("{}"));
           default:
             return Effect.die(`unexpected agentd ${input.args.join(" ")}`);
@@ -388,7 +388,7 @@ describe("AgentdBridge", () => {
       });
       expect(JSON.stringify(task)).not.toContain("/private/model-key");
       expect(
-        yield* bridge.stopTask({ id: "hof-abc456", reason: "Stopped from AgentD Desktop" }),
+        yield* bridge.stopTask({ id: "hof-abc456", reason: "Stopped from AgentD Next" }),
       ).toEqual({});
     }),
   );

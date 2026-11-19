@@ -38,7 +38,7 @@ function layerElectronApp(
 
   return Layer.succeed(ElectronApp.ElectronApp, {
     metadata: Effect.die("unexpected metadata read"),
-    name: Effect.succeed("AgentD Desktop"),
+    name: Effect.succeed("AgentD Next"),
     systemLocale: Effect.succeed("en-US"),
     preferredSystemLanguages: Effect.succeed(["en-US"]),
     whenReady: Effect.void,
@@ -260,16 +260,16 @@ describe("DesktopLifecycle", () => {
         return yield* Deferred.await(relaunched);
       }).pipe(
         Effect.provide(layer),
-        Effect.provideService(HostProcess.ExecutablePath, "/opt/AgentD Desktop/t3code"),
+        Effect.provideService(HostProcess.ExecutablePath, "/opt/AgentD Next/t3code"),
         Effect.provideService(HostProcess.Arguments, [
-          "/opt/AgentD Desktop/t3code",
+          "/opt/AgentD Next/t3code",
           "--no-sandbox",
           "AGENTD-DESKTOP://pair?token=spent",
           "agentd-desktop://new?prompt=hello",
         ]),
       );
 
-      assert.deepEqual(options, { execPath: "/opt/AgentD Desktop/t3code", args: ["--no-sandbox"] });
+      assert.deepEqual(options, { execPath: "/opt/AgentD Next/t3code", args: ["--no-sandbox"] });
     }),
   );
 

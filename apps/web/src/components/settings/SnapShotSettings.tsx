@@ -268,7 +268,7 @@ export function SnapShotSettings() {
   const shortcutStatus = recording
     ? gt("Press your shortcut. Esc cancels.")
     : candidateConflict
-      ? gt('AgentD Desktop already uses this for "{command}".', {
+      ? gt('AgentD Next already uses this for "{command}".', {
           command: commandLabel(candidateConflict, messages),
         })
       : shortcutCheck.status === "checking"

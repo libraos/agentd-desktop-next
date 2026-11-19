@@ -13,10 +13,10 @@ describe("resolveT3McpToolPresentation", () => {
     for (const tool of T3_MCP_TOOL_NAMES) {
       const presentation = resolveT3McpToolPresentation(tool);
       for (const prefix of [
-        "mcp__agentd-desktop__",
-        "mcp__agentd_desktop__",
-        "agentd-desktop-direct.",
-        "agentd-desktop.",
+        "mcp__agentd-next__",
+        "mcp__agentd_next__",
+        "agentd-next-direct.",
+        "agentd-next.",
         "mcp__t3-code__",
         "mcp__t3_code__",
         "mcp__t3code__",
@@ -48,7 +48,7 @@ describe("resolveT3McpToolPresentation", () => {
       expect(resolveT3McpToolPresentation(legacy), legacy).not.toBeNull();
     }
     expect(resolveT3McpToolPresentation("mcp__t3-code__t3_thread_list")).toEqual(
-      resolveT3McpToolPresentation("mcp__agentd-desktop__thread_list"),
+      resolveT3McpToolPresentation("mcp__agentd-next__thread_list"),
     );
   });
 
@@ -62,12 +62,12 @@ describe("resolveT3McpToolPresentation", () => {
 
 describe("normalizeLegacyAppMcpAllowedTool", () => {
   it("rewrites stored allow-list entries naming the legacy server or tools", () => {
-    expect(normalizeLegacyAppMcpAllowedTool("mcp__t3-code__*")).toBe("mcp__agentd-desktop__*");
+    expect(normalizeLegacyAppMcpAllowedTool("mcp__t3-code__*")).toBe("mcp__agentd-next__*");
     expect(normalizeLegacyAppMcpAllowedTool("mcp__t3-code__t3_thread_list")).toBe(
-      "mcp__agentd-desktop__thread_list",
+      "mcp__agentd-next__thread_list",
     );
     expect(normalizeLegacyAppMcpAllowedTool("mcp__t3-code__html_render")).toBe(
-      "mcp__agentd-desktop__html_render",
+      "mcp__agentd-next__html_render",
     );
     expect(normalizeLegacyAppMcpAllowedTool("mcp__other__t3_x")).toBe("mcp__other__t3_x");
     expect(normalizeLegacyAppMcpAllowedTool("Read")).toBe("Read");

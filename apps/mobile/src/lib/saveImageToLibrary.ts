@@ -15,7 +15,7 @@ export function canSaveImageToLibrary(mimeType: string): boolean {
   );
 }
 
-/** Adds a local image file to Photos on iOS or Pictures/AgentD Desktop on Android. */
+/** Adds a local image file to Photos on iOS or Pictures/AgentD Next on Android. */
 export function saveImageToLibrary(uri: string, mimeType: string, name: string): Promise<void> {
   return requireNativeModule<{
     saveImageToLibrary(uri: string, mimeType: string, name: string): Promise<void>;

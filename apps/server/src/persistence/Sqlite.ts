@@ -20,7 +20,7 @@ export class ServerOwnsDatabaseError extends Schema.TaggedError<ServerOwnsDataba
   { stateDir: Schema.String },
 ) {
   override get message(): string {
-    return `Another AgentD Desktop process, usually a running server, owns ${this.stateDir}, and this CLI would change its database schema. Use the \`t3\` that matches the running server, or stop that server, then retry. The database was not changed.`;
+    return `Another AgentD Next process, usually a running server, owns ${this.stateDir}, and this CLI would change its database schema. Use the \`t3\` that matches the running server, or stop that server, then retry. The database was not changed.`;
   }
 }
 
@@ -46,7 +46,7 @@ const damagedDatabaseError = (dbPath: string, cause: SqlError.SqlError) =>
     reason: new SqlError.UnknownError({
       cause,
       operation: "open",
-      message: `The AgentD Desktop database at ${dbPath} is damaged or is not a SQLite database, so AgentD Desktop cannot start. To recover, quit AgentD Desktop, then move that file and any -wal and -shm files next to it out of the folder, or replace them with a backup. AgentD Desktop creates a new database on the next start.`,
+      message: `The AgentD Next database at ${dbPath} is damaged or is not a SQLite database, so AgentD Next cannot start. To recover, quit AgentD Next, then move that file and any -wal and -shm files next to it out of the folder, or replace them with a backup. AgentD Next creates a new database on the next start.`,
     }),
   });
 

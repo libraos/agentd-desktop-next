@@ -37,7 +37,7 @@ const ALLOWED_PREVIEW_PERMISSIONS: ReadonlySet<string> = new Set([
   // Loopback requests already succeed in Electron 44; permission-aware sign-in widgets query first.
   "loopback-network",
   // Deny local-fonts to untrusted previews: it exposes installed-font fingerprints and file bytes.
-  // Deny notifications: pages could impersonate AgentD Desktop; app notifications use the default session.
+  // Deny notifications: pages could impersonate AgentD Next; app notifications use the default session.
 ]);
 
 const NEVER_EXTERNAL_PROTOCOLS: ReadonlySet<string> = new Set([
@@ -503,7 +503,7 @@ export const make = Effect.gen(function* BrowserSessionMake() {
                           m(msg("Could not trust the certificate for {host}"), { host }),
                           m(
                             msg(
-                              "AgentD Desktop could not save this approval, so the page stays blocked. Check that the disk is not full and its data folder is writable, then try again.",
+                              "AgentD Next could not save this approval, so the page stays blocked. Check that the disk is not full and its data folder is writable, then try again.",
                             ),
                           ),
                         ),

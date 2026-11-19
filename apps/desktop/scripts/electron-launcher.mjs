@@ -13,7 +13,7 @@ const repoRoot = NodePath.resolve(desktopDir, "..", "..");
 const devBundleIdSuffix = NodePath.basename(repoRoot)
   .toLowerCase()
   .replaceAll(/[^a-z0-9]+/g, "");
-const APP_DISPLAY_NAME = isDevelopment ? "AgentD Desktop (Dev)" : "AgentD Desktop";
+const APP_DISPLAY_NAME = isDevelopment ? "AgentD Next (Dev)" : "AgentD Next";
 const APP_BUNDLE_ID = isDevelopment
   ? `ai.libraos.agentd-desktop.dev.${devBundleIdSuffix || "local"}`
   : "ai.libraos.agentd-desktop";
@@ -269,9 +269,9 @@ function resolveMacBundleInfoPlistStrings(executableName) {
     CFBundleExecutable: executableName,
     CFBundleIconFile: "icon.icns",
     NSScreenCaptureUsageDescription:
-      "AgentD Desktop captures the active window when you use the snapshot shortcut.",
+      "AgentD Next captures the active window when you use the snapshot shortcut.",
     NSDocumentsFolderUsageDescription:
-      "AgentD Desktop reads project files you open in the desktop app.",
+      "AgentD Next reads project files you open in the desktop app.",
   };
 }
 

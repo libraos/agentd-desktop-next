@@ -63,8 +63,8 @@ const CLAUDE_HOST_SESSION_VARIABLES = [
 ];
 
 /**
- * Base env for the Claude processes AgentD Desktop runs, before `makeClaudeEnvironment`.
- * Claude Code reads its entrypoint from the process env, not its settings `env`, so AgentD Desktop applies that override itself.
+ * Base env for the Claude processes AgentD Next runs, before `makeClaudeEnvironment`.
+ * Claude Code reads its entrypoint from the process env, not its settings `env`, so AgentD Next applies that override itself.
  */
 export const mergeClaudeProcessEnvironment = Effect.fn("mergeClaudeProcessEnvironment")(function* (
   config: Pick<ClaudeSettings, "homePath">,
@@ -73,11 +73,11 @@ export const mergeClaudeProcessEnvironment = Effect.fn("mergeClaudeProcessEnviro
 ) {
   const baseEnvironment: NodeJS.ProcessEnv = {
     ...hostEnvironment,
-    CLAUDE_CODE_ENTRYPOINT: "agentd-desktop",
+    CLAUDE_CODE_ENTRYPOINT: "agentd-next",
   };
   for (const name of CLAUDE_HOST_SESSION_VARIABLES) delete baseEnvironment[name];
   // The desktop runs the server as Node through Electron. Commands Claude runs inherit its env, so
-  // an Electron app they start (AgentD Desktop itself, VS Code) would run as Node and exit.
+  // an Electron app they start (AgentD Next itself, VS Code) would run as Node and exit.
   delete baseEnvironment.ELECTRON_RUN_AS_NODE;
   const environment = yield* mergeProviderInstanceEnvironment(instanceEnvironment, baseEnvironment);
   const settingsEntrypoint = (yield* readClaudeSettingsEnv(config, undefined, environment))

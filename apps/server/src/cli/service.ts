@@ -170,8 +170,8 @@ function formatProtection(
     !protection.memoryControllerAvailable
       ? `  Memory protection: unavailable, ${MEMORY_CONTROLLER_DISABLED}`
       : protection.unprotected === undefined
-        ? `  Memory protection: on${protection.setByProtect ? " (agentd-desktop service protect)" : ""}`
-        : `  Memory protection: off, ${protection.unprotected} grants none. Run \`agentd-desktop service protect\`.`,
+        ? `  Memory protection: on${protection.setByProtect ? " (agentd-next service protect)" : ""}`
+        : `  Memory protection: off, ${protection.unprotected} grants none. Run \`agentd-next service protect\`.`,
     ...(protection.oomScoreAdj === undefined ? [] : [`  OOM score: ${protection.oomScoreAdj}`]),
   ];
 }
@@ -183,15 +183,15 @@ function formatServiceStatus(
   protection?: ServiceProtection.ServiceProtectionState,
 ): string {
   if (!status.supported) {
-    return "AgentD Desktop service\n  Status: unavailable on this machine\n  Supported on: Linux with systemd, macOS with launchd, Windows with Task Scheduler";
+    return "AgentD Next service\n  Status: unavailable on this machine\n  Supported on: Linux with systemd, macOS with launchd, Windows with Task Scheduler";
   }
   if (!status.installed) {
-    return `AgentD Desktop service\n  Status: not installed\n  Next: Run \`${commands.install}\`.`;
+    return `AgentD Next service\n  Status: not installed\n  Next: Run \`${commands.install}\`.`;
   }
   if (status.otherBaseDir !== undefined) {
     return [
-      "AgentD Desktop service",
-      "  Status: installed for another AgentD Desktop home",
+      "AgentD Next service",
+      "  Status: installed for another AgentD Next home",
       `  Base dir: ${status.otherBaseDir}`,
       `  Next: Pass \`${BootService.formatBootServiceBaseDirOption(status.otherBaseDir)}\` to manage it.`,
     ].join("\n");
@@ -206,7 +206,7 @@ function formatServiceStatus(
     compareExactServiceVersions(status.installedVersion, cliVersion) > 0
   ) {
     return [
-      "AgentD Desktop service",
+      "AgentD Next service",
       `  Status: installed · t3@${installedVersion} (newer than this t3@${cliVersion} CLI)`,
       `  Unit: ${status.unitPath}`,
       `  Logs: ${status.logPath}`,
@@ -216,7 +216,7 @@ function formatServiceStatus(
     ].join("\n");
   }
   return [
-    "AgentD Desktop service",
+    "AgentD Next service",
     `  Status: ${status.current ? `installed · t3@${installedVersion}` : "needs an update or repair"}`,
     `  Unit: ${status.unitPath}`,
     `  Logs: ${status.logPath}`,
@@ -245,7 +245,7 @@ const serviceReconcileFlags = {
 
 const serviceInstallCommand = Command.make("install", serviceReconcileFlags).pipe(
   Command.withDescription(
-    "Install AgentD Desktop as a background service for this user. `agentd-desktop up` also chooses how your other devices reach it.",
+    "Install AgentD Next as a background service for this user. `agentd-next up` also chooses how your other devices reach it.",
   ),
   Command.withHandler((flags) =>
     runServiceCommand(
@@ -254,7 +254,7 @@ const serviceInstallCommand = Command.make("install", serviceReconcileFlags).pip
         const result = yield* reconcileService({ allowDowngrade: flags.allowDowngrade });
         if (!result.changed) {
           yield* Console.log(
-            `AgentD Desktop service is already installed with t3@${packageJson.version} (${yield* resolveEntryPath}).`,
+            `AgentD Next service is already installed with t3@${packageJson.version} (${yield* resolveEntryPath}).`,
           );
           return;
         }
@@ -269,19 +269,19 @@ const serviceInstallCommand = Command.make("install", serviceReconcileFlags).pip
 );
 
 const serviceUpdateCommand = Command.make("update", serviceReconcileFlags).pipe(
-  Command.withDescription("Deprecated. Run `agentd-desktop update` to move to a newer release."),
+  Command.withDescription("Deprecated. Run `agentd-next update` to move to a newer release."),
   Command.unlisted,
   Command.withHandler((flags) =>
     runServiceCommand(
       flags,
       Effect.gen(function* () {
         yield* Console.log(
-          "`agentd-desktop service update` is deprecated: run `agentd-desktop update` to move to a newer release, or `agentd-desktop service install` to repair the service. Repairing now.",
+          "`agentd-next service update` is deprecated: run `agentd-next update` to move to a newer release, or `agentd-next service install` to repair the service. Repairing now.",
         );
         const result = yield* reconcileService({ allowDowngrade: flags.allowDowngrade });
         if (!result.changed) {
           yield* Console.log(
-            `AgentD Desktop service is already using t3@${packageJson.version} (${yield* resolveEntryPath}).`,
+            `AgentD Next service is already using t3@${packageJson.version} (${yield* resolveEntryPath}).`,
           );
           return;
         }
@@ -293,7 +293,7 @@ const serviceUpdateCommand = Command.make("update", serviceReconcileFlags).pipe(
 
 const serviceRestartCommand = Command.make("restart", projectLocationFlags).pipe(
   Command.withDescription(
-    "Restart the background service. Picks up a version installed by `agentd-desktop update` that was not restarted at the time.",
+    "Restart the background service. Picks up a version installed by `agentd-next update` that was not restarted at the time.",
   ),
   Command.withHandler((flags) =>
     runServiceCommand(
@@ -306,12 +306,12 @@ const serviceRestartCommand = Command.make("restart", projectLocationFlags).pipe
           status.installedVersion === undefined ? "" : ` on t3@${status.installedVersion}`;
         yield* Console.log(
           outcome === "restarted"
-            ? `Restarted the AgentD Desktop service${onVersion}.`
+            ? `Restarted the AgentD Next service${onVersion}.`
             : outcome === "queued"
-              ? `Queued a restart of the AgentD Desktop service${onVersion}. This session runs inside the service and disconnects when it goes down.\nLogs: ${status.logPath}`
+              ? `Queued a restart of the AgentD Next service${onVersion}. This session runs inside the service and disconnects when it goes down.\nLogs: ${status.logPath}`
               : status.otherBaseDir !== undefined
-                ? `The AgentD Desktop service serves ${status.otherBaseDir}, so it was not restarted. Pass \`${BootService.formatBootServiceBaseDirOption(status.otherBaseDir)}\` to restart it.`
-                : "AgentD Desktop service is not installed.",
+                ? `The AgentD Next service serves ${status.otherBaseDir}, so it was not restarted. Pass \`${BootService.formatBootServiceBaseDirOption(status.otherBaseDir)}\` to restart it.`
+                : "AgentD Next service is not installed.",
         );
       }),
     ),
@@ -319,7 +319,7 @@ const serviceRestartCommand = Command.make("restart", projectLocationFlags).pipe
 );
 
 const serviceUninstallCommand = Command.make("uninstall", projectLocationFlags).pipe(
-  Command.withDescription("Stop and remove the AgentD Desktop background service."),
+  Command.withDescription("Stop and remove the AgentD Next background service."),
   Command.withHandler((flags) =>
     runServiceCommand(
       flags,
@@ -337,15 +337,13 @@ const serviceUninstallCommand = Command.make("uninstall", projectLocationFlags).
           path.resolve(installedBaseDir) !== path.resolve(baseDir)
         ) {
           yield* Console.log(
-            `The AgentD Desktop service serves ${installedBaseDir}, so it was not removed. Pass \`${BootService.formatBootServiceBaseDirOption(installedBaseDir)}\` to remove it.`,
+            `The AgentD Next service serves ${installedBaseDir}, so it was not removed. Pass \`${BootService.formatBootServiceBaseDirOption(installedBaseDir)}\` to remove it.`,
           );
           return;
         }
         const removed = yield* service.uninstall;
         yield* Console.log(
-          removed
-            ? "Removed the AgentD Desktop service."
-            : "AgentD Desktop service is not installed.",
+          removed ? "Removed the AgentD Next service." : "AgentD Next service is not installed.",
         );
       }),
     ),
@@ -353,7 +351,7 @@ const serviceUninstallCommand = Command.make("uninstall", projectLocationFlags).
 );
 
 const serviceStatusCommand = Command.make("status", projectLocationFlags).pipe(
-  Command.withDescription("Show whether the AgentD Desktop background service is installed."),
+  Command.withDescription("Show whether the AgentD Next background service is installed."),
   Command.withHandler((flags) =>
     runServiceCommand(
       flags,
@@ -400,7 +398,7 @@ const serviceProtectCommand = Command.make("protect", {
   ),
 }).pipe(
   Command.withDescription(
-    "Protect the AgentD Desktop server from agents under memory pressure (Linux with systemd). Asks for sudo.",
+    "Protect the AgentD Next server from agents under memory pressure (Linux with systemd). Asks for sudo.",
   ),
   Command.withHandler((flags) =>
     Effect.gen(function* () {
@@ -409,7 +407,7 @@ const serviceProtectCommand = Command.make("protect", {
       // Before resolving config, which creates T3 directories that root would then own.
       if ((yield* HostProcess.UserId) === 0) {
         return yield* Console.log(
-          "Run `agentd-desktop service protect` as the user that runs AgentD Desktop, without sudo. It asks for sudo when it needs root.",
+          "Run `agentd-next service protect` as the user that runs AgentD Next, without sudo. It asks for sudo when it needs root.",
         );
       }
       return yield* runServiceCommand(
@@ -432,7 +430,7 @@ const serviceProtectCommand = Command.make("protect", {
               }),
             );
             if (installed === undefined) {
-              return yield* Console.log("AgentD Desktop service protection is not set up.");
+              return yield* Console.log("AgentD Next service protection is not set up.");
             }
             yield* Console.log(
               [
@@ -443,19 +441,19 @@ const serviceProtectCommand = Command.make("protect", {
                 ),
               ].join("\n"),
             );
-            if (!(yield* confirm(flags.yes, "Remove AgentD Desktop service protection?"))) return;
+            if (!(yield* confirm(flags.yes, "Remove AgentD Next service protection?"))) return;
             yield* ServiceProtection.removeProtection(installed);
             return yield* Console.log(
-              "Removed AgentD Desktop service protection. The server's OOM score returns to normal after `agentd-desktop service restart`.",
+              "Removed AgentD Next service protection. The server's OOM score returns to normal after `agentd-next service restart`.",
             );
           }
 
           yield* Console.log(
             [
-              "Keeps AgentD Desktop running when agents fill this machine's memory:",
-              "  - reserves memory for the AgentD Desktop server, so the kernel takes memory from agents first",
+              "Keeps AgentD Next running when agents fill this machine's memory:",
+              "  - reserves memory for the AgentD Next server, so the kernel takes memory from agents first",
               "  - makes the out-of-memory killer pick agents before the server",
-              "It adds systemd drop-in files and changes nothing else. Undo with `agentd-desktop service protect --undo`.",
+              "It adds systemd drop-in files and changes nothing else. Undo with `agentd-next service protect --undo`.",
             ].join("\n"),
           );
           const names = remote.map((unit) => unit.replace(/\.service$/, "")).join(" and ");
@@ -486,8 +484,8 @@ const serviceProtectCommand = Command.make("protect", {
           yield* ServiceProtection.applyProtection(plan);
           yield* Console.log(
             memoryController
-              ? "Protected AgentD Desktop. Memory protection applies now; the server takes its OOM score after `agentd-desktop service restart`. Undo with `agentd-desktop service protect --undo`."
-              : "Protected AgentD Desktop's OOM score; the server takes it after `agentd-desktop service restart`. Memory protection applies once the kernel's memory controller is enabled. Undo with `agentd-desktop service protect --undo`.",
+              ? "Protected AgentD Next. Memory protection applies now; the server takes its OOM score after `agentd-next service restart`. Undo with `agentd-next service protect --undo`."
+              : "Protected AgentD Next's OOM score; the server takes it after `agentd-next service restart`. Memory protection applies once the kernel's memory controller is enabled. Undo with `agentd-next service protect --undo`.",
           );
         }).pipe(Effect.provide(ProcessRunner.layer)),
       );
@@ -496,7 +494,7 @@ const serviceProtectCommand = Command.make("protect", {
 );
 
 export const serviceCommand = Command.make("service").pipe(
-  Command.withDescription("Manage the AgentD Desktop background service."),
+  Command.withDescription("Manage the AgentD Next background service."),
   Command.withSubcommands([
     serviceInstallCommand,
     serviceRestartCommand,

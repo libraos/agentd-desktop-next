@@ -1,6 +1,6 @@
-# AgentD Desktop
+# AgentD Next
 
-This repository is AgentD Desktop, a fork of T3 Code that keeps following upstream (`pingdotgg/t3code`). These rules come first; upstream's rules below still hold where they do not conflict.
+This repository is AgentD Next, a fork of T3 Code that keeps following upstream (`pingdotgg/t3code`). These rules come first; upstream's rules below still hold where they do not conflict.
 
 - agentd is the authority. The app reads tasks, approvals and worker state from agentd and keeps no copy of its own as the truth.
 - No upstream name, icon or hosted service (app.t3.codes, T3 Connect, update feeds, stores) ships in our builds.

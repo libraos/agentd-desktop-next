@@ -420,13 +420,13 @@ const rule = (action: string, effect: Rule["effect"]): Rule => ({ action, resour
 
 /** OpenCode hides tools for names over 64 chars and rejects names over 100; hash long thread IDs. */
 export const t3McpServerName = Effect.fn("t3McpServerName")(function* (threadId: string) {
-  const name = `agentd-desktop-${threadId.replaceAll(/[^a-zA-Z0-9_-]/g, "_")}`;
+  const name = `agentd-next-${threadId.replaceAll(/[^a-zA-Z0-9_-]/g, "_")}`;
   if (name.length <= 64) return name;
   const crypto = yield* Digest.Digest;
   const digest = yield* crypto
     .digest(Digest.sha256, new TextEncoder().encode(threadId))
     .pipe(Effect.orDie);
-  return `agentd-desktop-${Hex.encode(digest).slice(0, 16)}`;
+  return `agentd-next-${Hex.encode(digest).slice(0, 16)}`;
 });
 
 // Last match wins: deny all threads' T3 servers, then allow only this thread's.
@@ -434,7 +434,7 @@ const mcpRules = (mcpServerName: string | null): ReadonlyArray<Rule> =>
   mcpServerName === null
     ? []
     : [
-        { action: "agentd-desktop-*", resource: "*", effect: "deny" },
+        { action: "agentd-next-*", resource: "*", effect: "deny" },
         { action: "t3-code-*", resource: "*", effect: "deny" }, // legacy server name of older sessions
         { action: `${mcpServerName}_*`, resource: "*", effect: "allow" },
       ];
@@ -614,7 +614,7 @@ const isUsageLimit = (error: {
   claudeUsageLimit(error.message) !== undefined;
 
 const INTERRUPT_TIMEOUT = 10_000;
-const INSTRUCTIONS_KEY = "agentd-desktop";
+const INSTRUCTIONS_KEY = "agentd-next";
 const RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = "2 seconds";
 const RECONCILE_TIMEOUT = "15 seconds";
@@ -658,7 +658,7 @@ class OpenCode2ServerExitedError extends Schema.TaggedError<OpenCode2ServerExite
   {},
 ) {}
 const LOST_BACKGROUND =
-  "AgentD Desktop lost its connection to OpenCode while this subagent ran, so its result is not shown.";
+  "AgentD Next lost its connection to OpenCode while this subagent ran, so its result is not shown.";
 const INVENTORY_TIMEOUT = "5 seconds";
 const MCP_TOOL_RELOAD_SETTLE = "250 millis";
 const ACTIVE_CHECK_TIMEOUT = "5 seconds";
@@ -716,7 +716,7 @@ const boundaryAfter = (
       new ProviderAdapter.ProviderAdapterProtocolError({
         driver: OPENCODE_PROVIDER,
         detail:
-          "This OpenCode conversation has turns from an earlier AgentD Desktop version, so it can't be cut there.",
+          "This OpenCode conversation has turns from an earlier AgentD Next version, so it can't be cut there.",
       }),
     );
   }
@@ -1455,7 +1455,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
           turnItem: {
             ...itemBase(state, turn, pageId, "completed", startedAt, updatedAt, updatedAt),
             type: "dynamic_tool",
-            toolName: `agentd-desktop.${HTML_RENDER_TOOL_NAME}`,
+            toolName: `agentd-next.${HTML_RENDER_TOOL_NAME}`,
             input: { title: page.title, height: page.height },
             output: { htmlRender: page },
           },
@@ -2417,7 +2417,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
       yield* finishTurn(state, {
         status: "failed",
         failure: makeProviderFailure({
-          message: "OpenCode is waiting on a request AgentD Desktop couldn't answer.",
+          message: "OpenCode is waiting on a request AgentD Next couldn't answer.",
           class: "provider_error",
         }),
       });
@@ -2662,7 +2662,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
         );
       }
       // Cancel reports user Stop; record failure here and skip that execution end.
-      yield* Effect.logWarning("Declined an OpenCode form AgentD Desktop cannot show.", {
+      yield* Effect.logWarning("Declined an OpenCode form AgentD Next cannot show.", {
         reason: mapped.unsupported,
       });
       const cancelled = yield* deliver(
@@ -2675,7 +2675,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
       yield* finishTurn(asker, {
         status: "failed",
         failure: makeProviderFailure({
-          message: `OpenCode asked for ${mapped.unsupported}, which AgentD Desktop can't show. The question was declined.`,
+          message: `OpenCode asked for ${mapped.unsupported}, which AgentD Next can't show. The question was declined.`,
           class: "provider_error",
         }),
       });
@@ -3688,7 +3688,7 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
                       status: "failed",
                       failure: makeProviderFailure({
                         message:
-                          "OpenCode ended the turn with an error while AgentD Desktop was reconnecting.",
+                          "OpenCode ended the turn with an error while AgentD Next was reconnecting.",
                         class: "provider_error",
                       }),
                     }
@@ -4322,10 +4322,9 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
             Effect.timeout(INVENTORY_TIMEOUT),
             Effect.as(true),
             Effect.catchCause((cause) =>
-              Effect.logWarning(
-                "Could not add AgentD Desktop's MCP server to OpenCode.",
-                cause,
-              ).pipe(Effect.as(false)),
+              Effect.logWarning("Could not add AgentD Next's MCP server to OpenCode.", cause).pipe(
+                Effect.as(false),
+              ),
             ),
           );
         if (mcpAvailable) state.mcp = wanted;

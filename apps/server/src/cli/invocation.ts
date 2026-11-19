@@ -133,7 +133,7 @@ function suggestedPackageSpec(version: string): string {
   return channel === undefined ? "t3" : `t3@${channel}`;
 }
 
-const CLI_COMMAND = "agentd-desktop";
+const CLI_COMMAND = "agentd-next";
 
 function formatCliCommand(input: {
   readonly subcommand: string;

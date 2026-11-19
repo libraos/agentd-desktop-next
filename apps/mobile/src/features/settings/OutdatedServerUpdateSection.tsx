@@ -60,7 +60,7 @@ export function OutdatedServerUpdateSection({
       gt("Update {environment}?", { environment: label }),
       gt(
         "Install {product} {version}. {product} restarts on that machine and reconnects. Running threads may be interrupted.",
-        { product: "AgentD Desktop", version: targetVersion },
+        { product: "AgentD Next", version: targetVersion },
       ),
       [
         { text: gt("Cancel"), style: "cancel" },
@@ -80,7 +80,7 @@ export function OutdatedServerUpdateSection({
   }
 
   return (
-    <SettingsSection title="AgentD Desktop">
+    <SettingsSection title="AgentD Next">
       <View className="gap-1 p-4">
         <Text className="text-base text-foreground">
           {release
@@ -99,7 +99,7 @@ export function OutdatedServerUpdateSection({
                 ? gt("Version {version} is available.", { version: release.targetVersion })
                 : gt("No newer version is available yet.")
               : gt("This app needs a newer version of {product} on this machine.", {
-                  product: "AgentD Desktop",
+                  product: "AgentD Next",
                 })}
         </Text>
         {error || state.status === "failed" ? (

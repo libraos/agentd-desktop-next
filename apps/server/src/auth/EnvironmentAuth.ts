@@ -89,7 +89,7 @@ export interface McpClientSession {
   readonly sessionId: AuthSessionId;
   readonly label: string;
   readonly access: AuthMcpClientAccess;
-  /** Another AgentD Desktop environment's link, whose work here stays within it. */
+  /** Another AgentD Next environment's link, whose work here stays within it. */
   readonly peerLink: boolean;
 }
 

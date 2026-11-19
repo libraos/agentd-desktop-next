@@ -2918,7 +2918,7 @@ export function resolvePackageManagerUserAgent(packageManager: string): string {
 }
 
 export function resolveDesktopProductName(version: string): string {
-  const productName = desktopPackageJson.productName ?? "AgentD Desktop";
+  const productName = desktopPackageJson.productName ?? "AgentD Next";
   return resolveDesktopUpdateChannel(version) === "nightly"
     ? `${productName} (Nightly)`
     : productName;
@@ -2944,10 +2944,10 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     afterPack: (yield* Path.Path).join(yield* RepoRoot, "scripts/prepare-server-compile-cache.cjs"),
     appId: DESKTOP_APP_ID,
     productName: resolveDesktopProductName(version),
-    artifactName: "AgentD-Desktop-${version}-${arch}.${ext}",
+    artifactName: "AgentD-Next-${version}-${arch}.${ext}",
     extraMetadata: {
       name: "agentd-desktop",
-      description: "AgentD Desktop is a desktop app for coding agents.",
+      description: "AgentD Next is a desktop app for coding agents.",
       author: { name: "LibraOS" },
       homepage: "https://github.com/libraos/agentd-desktop-next",
       ...(platform === "linux" ? { desktopName: `${DESKTOP_APP_ID}.desktop` } : {}),
@@ -3004,19 +3004,19 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
         // macOS 26 offers Messages/Mail codes in every text field unless opted out.
         NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac: true,
         NSLocalNetworkUsageDescription:
-          "AgentD Desktop connects to devices on your local network for remote environments and commands run by terminals and coding agents.",
+          "AgentD Next connects to devices on your local network for remote environments and commands run by terminals and coding agents.",
         NSCalendarsUsageDescription:
-          "Commands you run in AgentD Desktop may need access to your calendars.",
+          "Commands you run in AgentD Next may need access to your calendars.",
         NSCalendarsFullAccessUsageDescription:
-          "Commands you run in AgentD Desktop may need to read and write your calendar events.",
+          "Commands you run in AgentD Next may need to read and write your calendar events.",
         NSCalendarsWriteOnlyAccessUsageDescription:
-          "Commands you run in AgentD Desktop may need to add events to your calendars.",
+          "Commands you run in AgentD Next may need to add events to your calendars.",
         NSScreenCaptureUsageDescription:
-          "AgentD Desktop captures the active window when you use the window capture shortcut.",
+          "AgentD Next captures the active window when you use the window capture shortcut.",
         NSCameraUsageDescription:
-          "AgentD Desktop lets commands run by terminals and coding agents use the camera.",
+          "AgentD Next lets commands run by terminals and coding agents use the camera.",
         NSMicrophoneUsageDescription:
-          "AgentD Desktop lets commands run by terminals and coding agents use the microphone.",
+          "AgentD Next lets commands run by terminals and coding agents use the microphone.",
         // macOS lists an app under Default web browser only when it opens web
         // pages as documents as well as http and https links (see protocols).
         CFBundleDocumentTypes: [
@@ -3104,8 +3104,8 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       buildConfig.appImage = {
         artifactName:
           updateChannel === "nightly"
-            ? "AgentD-Desktop-Nightly-${arch}.${ext}"
-            : "AgentD-Desktop-${arch}.${ext}",
+            ? "AgentD-Next-Nightly-${arch}.${ext}"
+            : "AgentD-Next-${arch}.${ext}",
       };
     }
     buildConfig.deb = {
