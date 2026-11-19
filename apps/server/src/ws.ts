@@ -31,6 +31,8 @@ import {
   AuthAccessStreamError,
   type AuthAccessStreamEvent,
   AuthOrchestrationOperateScope,
+  AuthProvidersManageScope,
+  isLibraosGatewayInstanceId,
   type AuthEnvironmentScope,
   type ScheduledTaskListResult,
   AuthSessionId,
@@ -243,7 +245,6 @@ import * as AgentdBridge from "./agentd/AgentdBridge.ts";
 import * as AgentdTeamNode from "./agentd/AgentdTeamNode.ts";
 import * as AgentdInit from "./agentd/agentdInit.ts";
 import * as LibraosGateway from "./gateway/LibraosGateway.ts";
-import { isGatewayInstanceId } from "./gateway/gatewaySetup.ts";
 import * as ProcessDiagnostics from "./diagnostics/ProcessDiagnostics.ts";
 import * as ProcessResourceMonitor from "./diagnostics/ProcessResourceMonitor.ts";
 import * as ResourceTelemetry from "./resourceTelemetry/ResourceTelemetry.ts";
@@ -2493,9 +2494,11 @@ export const layerWsRpc = (
               yield* providerRegistry.refreshModelCatalog;
               return { providers: [] };
             }
+            // It rewrites the Gateway agents' settings, which only a provider manager may change.
             if (
               input.refreshModels &&
-              (input.instanceId === undefined || isGatewayInstanceId(input.instanceId))
+              currentSession.scopes.includes(AuthProvidersManageScope) &&
+              (input.instanceId === undefined || isLibraosGatewayInstanceId(input.instanceId))
             ) {
               yield* libraosGateway.refreshModels;
             }

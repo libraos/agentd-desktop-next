@@ -450,6 +450,7 @@ function makeMutableServerSettingsService(
           yield* PubSub.publish(changes, next);
           return next;
         }),
+      updateProviderInstances: () => Effect.die("Unexpected provider instance rewrite"),
       withSettingsSnapshot: (use) => Ref.get(settingsRef).pipe(Effect.flatMap(use)),
       get streamChanges() {
         return Stream.fromPubSub(changes);
@@ -1536,7 +1537,8 @@ it.layer(
       const emptyCatalogProvider = {
         ...refreshedProvider,
         status: "warning",
-        message: "OpenCode 2 is running, but it did not list any models yet.",
+        message:
+          "OpenCode 2 is running, but it lists no models. Check that the provider's key or account allows a model, then refresh to ask again.",
         slashCommands: [],
         skills: [],
       } satisfies ServerProvider;

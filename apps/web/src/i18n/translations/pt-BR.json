@@ -3352,14 +3352,14 @@
   "168a996246dfcd04": "Model access",
   "715f60441697c965": "Your subscription (needs AgentD v0.1.14 or later)",
   "75a0a0ea5970711f": "Your subscription",
+  "2ae0b42ad8251297": "Worker time and inference are both billed to LibraOS credits.",
   "0d575788064a43d5": "Enter at least one absolute key file path on this environment’s machine. Do not paste the API key itself.",
   "83af98b27cd62acf": "Salve a chave em uma linha separada de um arquivo de texto e selecione esse arquivo.",
-  "e17f9689603be8f4": "Procurar…",
-  "256f4ab9a895674d": "Isso parece ser a própria chave. Salve-a em um arquivo e selecione esse arquivo.",
   "07420cedda5d2275": "Anthropic key file path",
   "553eb762abefeda2": "OpenAI key file path",
   "7d7bb753c7e99807": "Worker time is billed to LibraOS credits. Your provider bills inference separately; it isn’t covered by this dollar cap.",
-  "2ae0b42ad8251297": "Worker time and inference are both billed to LibraOS credits.",
+  "e17f9689603be8f4": "Procurar…",
+  "256f4ab9a895674d": "Isso parece ser a própria chave. Salve-a em um arquivo e selecione esse arquivo.",
   "0faf657712a9d10a": "Plan",
   "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
   "53150504b20565ec": "Needs a newer AgentD. Run agentd upgrade to use your Claude plan.",
@@ -6446,6 +6446,15 @@
   "560b12dcbd292d26": "Not available yet",
   "afe41e4541b9846e": "Connect to an environment first.",
   "76b6067a87335bac": "LibraOS Gateway connected.",
+  "a8cffafcbdba01d6": [
+    "O LibraOS Gateway recusou esta chave, então seus agentes não listam modelos:",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "4f0f4f5c393e4a73": [
     "Models: ",
     {
@@ -9515,6 +9524,7 @@
     ", que não está disponível nesta build. A configuração dela é preservada."
   ],
   "b534d4cd528ede39": "As preferências de modelo e os modelos personalizados são salvos no ambiente selecionado e compartilhados entre os dispositivos conectados.",
+  "a48023474bd3fb52": "Estes são os modelos que sua chave do LibraOS Gateway permite. Altere-os no Console e depois atualize.",
   "caaef21e8722857d": "Modo rápido",
   "a860db2b1bb3aa31": "Sem raciocínio",
   "3b67fce5df949e14": "Informe o slug de um modelo.",

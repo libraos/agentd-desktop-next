@@ -19,6 +19,7 @@ import * as Result from "effect/Result";
 import { Fragment, useState, type ReactElement, type ReactNode } from "react";
 import { T, useGT, useMessages, Var } from "gt-react";
 import {
+  isLibraosGatewayInstanceId,
   isProviderDriverKind,
   resolveProviderInstanceEnabled,
   type ProviderInstanceConfig,
@@ -906,6 +907,8 @@ export function ProviderInstanceCard({
       return onUpdate({ ...rest, config: nextConfig } as ProviderInstanceConfig);
     },
   );
+  // The Gateway serves only the key's models, so another slug would fail at the first turn.
+  const gatewayModels = isLibraosGatewayInstanceId(instanceId);
   const modelsForDisplay = deriveProviderModelsForDisplay({
     liveModels: liveProvider?.models,
     customModels,
@@ -1493,8 +1496,16 @@ export function ProviderInstanceCard({
                 across connected devices.
               </T>
             </p>
+            {gatewayModels ? (
+              <p className="mb-3 text-xs text-muted-foreground">
+                <T>
+                  These are the models your LibraOS Gateway key allows. Change them in Console, then
+                  refresh.
+                </T>
+              </p>
+            ) : null}
             <ProviderModelsSection
-              canManageCustomModels={!readOnly}
+              canManageCustomModels={!readOnly && !gatewayModels}
               canWritePreferences={canWriteSettings}
               instanceId={instanceId}
               driverKind={driverKind}

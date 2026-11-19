@@ -1393,6 +1393,7 @@
   "d2b4bc575d7d99d8": "Modelo desactivado para este proyecto",
   "be1bc7fa9d199f70": "Vuelve a activarlo desde la web o el escritorio, o elige otro modelo.",
   "b994adb6050417c2": "Modelo de {provider} no disponible",
+  "1bf8f6045a7bdf0b": "Tu clave de LibraOS Gateway ya no permite este modelo. Elige otro modelo.",
   "587c7245ff60b79f": "Configura {provider} en la web o el escritorio, o elige otro modelo.",
   "6d84c8851d691303": "El servidor no devolvió un PDF. Comprueba la conexión y vuelve a intentarlo.",
   "6ab96e26bda35288": "Pensando",

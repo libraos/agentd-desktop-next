@@ -3350,14 +3350,14 @@
   "168a996246dfcd04": "Model access",
   "715f60441697c965": "Your subscription (needs AgentD v0.1.14 or later)",
   "75a0a0ea5970711f": "Your subscription",
+  "2ae0b42ad8251297": "Worker time and inference are both billed to LibraOS credits.",
   "0d575788064a43d5": "Enter at least one absolute key file path on this environment’s machine. Do not paste the API key itself.",
   "83af98b27cd62acf": "テキストファイルの1行にキーだけを保存してから、そのファイルを選択してください。",
-  "e17f9689603be8f4": "参照…",
-  "256f4ab9a895674d": "キーそのものが入力されているようです。ファイルに保存して、そのファイルを選択してください。",
   "07420cedda5d2275": "Anthropic key file path",
   "553eb762abefeda2": "OpenAI key file path",
   "7d7bb753c7e99807": "Worker time is billed to LibraOS credits. Your provider bills inference separately; it isn’t covered by this dollar cap.",
-  "2ae0b42ad8251297": "Worker time and inference are both billed to LibraOS credits.",
+  "e17f9689603be8f4": "参照…",
+  "256f4ab9a895674d": "キーそのものが入力されているようです。ファイルに保存して、そのファイルを選択してください。",
   "0faf657712a9d10a": "Plan",
   "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
   "53150504b20565ec": "Needs a newer AgentD. Run agentd upgrade to use your Claude plan.",
@@ -6433,6 +6433,15 @@
   "560b12dcbd292d26": "Not available yet",
   "afe41e4541b9846e": "Connect to an environment first.",
   "76b6067a87335bac": "LibraOS Gateway connected.",
+  "a8cffafcbdba01d6": [
+    "LibraOS Gateway がこのキーを拒否したため、そのエージェントにはモデルが表示されません:",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "4f0f4f5c393e4a73": [
     "Models: ",
     {
@@ -9484,6 +9493,7 @@
     " を使用していますが、このビルドでは利用できません。設定は保持されます。"
   ],
   "b534d4cd528ede39": "モデルの設定とカスタムモデルは選択した環境に保存され、接続されているデバイス間で共有されます。",
+  "a48023474bd3fb52": "これは LibraOS Gateway キーで使えるモデルです。Console で変更してから更新してください。",
   "caaef21e8722857d": "高速モード",
   "a860db2b1bb3aa31": "推論なし",
   "3b67fce5df949e14": "モデルのスラッグを入力してください。",

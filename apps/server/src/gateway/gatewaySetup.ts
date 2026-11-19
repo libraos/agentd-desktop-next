@@ -1,4 +1,5 @@
 import {
+  LIBRAOS_GATEWAY_INSTANCE_IDS,
   LIBRAOS_GATEWAY_ORIGIN,
   ProviderDriverKind,
   ProviderInstanceId,
@@ -18,16 +19,14 @@ const KEY_SHAPE = /^lk_[A-Za-z0-9_-]{8,512}$/;
 /** Codex reads the key from this variable of its own process (`model_providers.*.env_key`). */
 const KEY_ENV = "LIBRAOS_API_KEY";
 const PROVIDER_ID = "libraos";
+const OPENCODE_CONFIG_ENV = "OPENCODE_CONFIG_CONTENT";
 const DISPLAY_SUFFIX = "LibraOS Gateway";
 
 export const GATEWAY_INSTANCE_IDS = {
-  claude: ProviderInstanceId.make("libraosClaude"),
-  codex: ProviderInstanceId.make("libraosCodex"),
-  opencode: ProviderInstanceId.make("libraosOpencode"),
+  claude: ProviderInstanceId.make(LIBRAOS_GATEWAY_INSTANCE_IDS.claude),
+  codex: ProviderInstanceId.make(LIBRAOS_GATEWAY_INSTANCE_IDS.codex),
+  opencode: ProviderInstanceId.make(LIBRAOS_GATEWAY_INSTANCE_IDS.opencode),
 } as const;
-
-export const isGatewayInstanceId = (instanceId: ProviderInstanceId): boolean =>
-  Object.values(GATEWAY_INSTANCE_IDS).includes(instanceId);
 
 /** A trimmed key of the shape Console issues, or why it is not one. */
 export function readGatewayKey(raw: string): { key: string } | { problem: string } {
@@ -62,6 +61,9 @@ export function gatewayRefusal(status: number, body: unknown): string {
   const message = Option.isSome(parsed) ? parsed.value.error.message.trim() : "";
   return message === "" ? `LibraOS Gateway answered HTTP ${status}.` : message;
 }
+
+/** A key the Gateway will not serve at all, as opposed to a Gateway that is down or busy. */
+export const isKeyRefusal = (status: number): boolean => status === 401 || status === 403;
 
 // Claude Code asks for `claude-…` and Codex for `gpt-…`, as agentd's workers do; the Gateway's ids
 // carry the model family in front.
@@ -155,7 +157,7 @@ export function gatewayProviderInstances(
         enabled: true,
         environment: [
           secret(KEY_ENV, key),
-          plain("OPENCODE_CONFIG_CONTENT", opencodeGatewayConfig(models)),
+          plain(OPENCODE_CONFIG_ENV, opencodeGatewayConfig(models)),
         ],
         config: { enabled: true },
       },
@@ -163,47 +165,54 @@ export function gatewayProviderInstances(
   ];
 }
 
-type GatewayInstance = ReturnType<typeof gatewayProviderInstances>[number];
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const plainEnvironment = (instance: ProviderInstanceConfig) =>
-  JSON.stringify(
-    (instance.environment ?? [])
-      .filter((variable) => !variable.sensitive)
-      .map((variable) => [variable.name, variable.value]),
-  );
-
 /**
- * The Gateway agents still present whose models no longer match the key's list. Each keeps what the
- * user set on it (enabled, colour, other config fields); a removed agent is not brought back.
+ * The Gateway agents still present with the key's models: only their model lists change, so the
+ * user's launch arguments, variables and credentials stay. `models: null` (Gateway not asked yet)
+ * keeps their lists and only marks Claude and Codex as limited to them, as #80 agents were not.
+ * Returns `current` itself when nothing changes.
  */
-export function gatewayInstanceUpdates(
+export function withGatewayModels(
   current: ProviderInstanceConfigMap,
-  key: string,
-  models: ReadonlyArray<LibraosGatewayModel>,
-): ReadonlyArray<GatewayInstance> {
-  return gatewayProviderInstances(key, models).flatMap(({ instanceId, instance }) => {
+  models: ReadonlyArray<LibraosGatewayModel> | null,
+): ProviderInstanceConfigMap {
+  const next: Record<string, ProviderInstanceConfig> = { ...current };
+  let changed = false;
+  const set = (instanceId: ProviderInstanceId, instance: ProviderInstanceConfig) => {
+    if (JSON.stringify(instance) === JSON.stringify(current[instanceId])) return;
+    next[instanceId] = instance;
+    changed = true;
+  };
+  for (const [instanceId, family] of [
+    [GATEWAY_INSTANCE_IDS.claude, "anthropic"],
+    [GATEWAY_INSTANCE_IDS.codex, "openai"],
+  ] as const) {
     const existing = current[instanceId];
-    if (existing === undefined) return [];
-    const config = {
-      ...(isRecord(existing.config) ? existing.config : {}),
-      ...(isRecord(instance.config) ? instance.config : {}),
-    };
-    const unchanged =
-      JSON.stringify(config) === JSON.stringify(existing.config ?? {}) &&
-      plainEnvironment(instance) === plainEnvironment(existing);
-    if (unchanged) return [];
-    return [
-      {
-        instanceId,
-        instance: {
-          ...existing,
-          environment: instance.environment ?? [],
-          config,
-        },
+    if (existing === undefined) continue;
+    const config = isRecord(existing.config) ? existing.config : {};
+    set(instanceId, {
+      ...existing,
+      config: {
+        ...config,
+        ...(models === null ? {} : { customModels: familyModels(models, family) }),
+        onlyCustomModels: true,
       },
-    ];
-  });
+    });
+  }
+  const opencode = current[GATEWAY_INSTANCE_IDS.opencode];
+  if (opencode !== undefined && models !== null) {
+    const value = opencodeGatewayConfig(models);
+    const environment = opencode.environment ?? [];
+    set(GATEWAY_INSTANCE_IDS.opencode, {
+      ...opencode,
+      environment: environment.some((variable) => variable.name === OPENCODE_CONFIG_ENV)
+        ? environment.map((variable) =>
+            variable.name === OPENCODE_CONFIG_ENV ? { ...variable, value } : variable,
+          )
+        : [...environment, plain(OPENCODE_CONFIG_ENV, value)],
+    });
+  }
+  return changed ? next : current;
 }

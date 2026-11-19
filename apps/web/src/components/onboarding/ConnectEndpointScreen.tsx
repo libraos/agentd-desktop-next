@@ -211,6 +211,14 @@ function GatewayConnectPanel({
         <p className="font-medium text-foreground">
           <T>LibraOS Gateway connected.</T>
         </p>
+        {status.refusal ? (
+          <p role="alert" className="text-destructive-foreground">
+            <T>
+              LibraOS Gateway refused this key, so its agents list no models:{" "}
+              <Var>{status.refusal}</Var>
+            </T>
+          </p>
+        ) : null}
         {shown.length > 0 ? (
           <p className="text-muted-foreground">
             <T>

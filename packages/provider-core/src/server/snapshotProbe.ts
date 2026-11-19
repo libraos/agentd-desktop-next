@@ -245,7 +245,7 @@ function onlyCustomProviderModels(
 }
 
 export const NO_SERVED_MODELS_MESSAGE =
-  "No models: the key this agent uses allows none of its models. Add one to the key, then refresh.";
+  "No models: the key this agent uses allows none of its models, or was refused. Check the key, then refresh.";
 
 /** A provider limited to its endpoint's models says why its list is empty. */
 export function withNoServedModelsNotice(

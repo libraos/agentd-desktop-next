@@ -1393,6 +1393,7 @@
   "d2b4bc575d7d99d8": "Modellen är avstängd för det här projektet",
   "be1bc7fa9d199f70": "Slå på den igen från webben eller skrivbordet, eller välj en annan modell.",
   "b994adb6050417c2": "Modellen för {provider} är inte tillgänglig",
+  "1bf8f6045a7bdf0b": "Din LibraOS Gateway-nyckel tillåter inte längre den här modellen. Välj en annan modell.",
   "587c7245ff60b79f": "Konfigurera {provider} på webben eller skrivbordet, eller välj en annan modell.",
   "6d84c8851d691303": "Servern returnerade ingen PDF. Kontrollera anslutningen och försök igen.",
   "6ab96e26bda35288": "Tänker",

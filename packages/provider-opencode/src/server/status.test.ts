@@ -618,6 +618,9 @@ it.layer(layerTest)("checkOpenCodeProviderStatus", (it) => {
       NodeAssert.equal(empty.status, "warning");
       NodeAssert.equal(empty.auth.status, "unknown");
       NodeAssert.deepEqual(empty.models, []);
+      // A key that allows no models lists none for good, so the warning does not promise more.
+      NodeAssert.ok(!empty.message?.includes("yet"));
+      NodeAssert.match(empty.message ?? "", /key or account allows a model/);
 
       upstream.models = {
         "gpt-5.4": { id: "gpt-5.4", name: "GPT-5.4", variants: {} },

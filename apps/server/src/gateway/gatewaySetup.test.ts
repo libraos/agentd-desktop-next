@@ -3,9 +3,10 @@ import { describe, expect, it } from "@effect/vitest";
 
 import {
   codexGatewayLaunchArgs,
-  gatewayInstanceUpdates,
   gatewayProviderInstances,
+  GATEWAY_INSTANCE_IDS,
   gatewayRefusal,
+  withGatewayModels,
 } from "./gatewaySetup.ts";
 
 describe("gatewaySetup", () => {
@@ -57,7 +58,7 @@ describe("gatewaySetup", () => {
     }
   });
 
-  it("updates only the Gateway agents still present whose models changed", () => {
+  it("changes only the model lists of the Gateway agents still present", () => {
     const key = "lk_test_key_123456";
     const before = [{ id: "anthropic/claude-opus-5-5" }, { id: "openai/gpt-5.5" }];
     const current = Object.fromEntries(
@@ -65,11 +66,78 @@ describe("gatewaySetup", () => {
         .filter(({ instanceId }) => instanceId !== "libraosOpencode")
         .map(({ instanceId, instance }) => [instanceId, instance]),
     );
-    expect(gatewayInstanceUpdates(current, key, before)).toEqual([]);
+    expect(withGatewayModels(current, before)).toBe(current);
 
-    const updates = gatewayInstanceUpdates(current, key, [{ id: "openai/gpt-5.5" }]);
-    expect(updates.map((update) => update.instanceId)).toEqual(["libraosClaude"]);
-    expect(updates[0]?.instance.config).toEqual({ customModels: [], onlyCustomModels: true });
+    // The user's own launch option and proxy on the Codex agent.
+    const codex = current[GATEWAY_INSTANCE_IDS.codex]!;
+    const userArgs = `${codexGatewayLaunchArgs()} -c 'model_reasoning_summary="none"'`;
+    const proxy = { name: "HTTPS_PROXY", value: "http://proxy:3128", sensitive: false };
+    const edited = {
+      ...current,
+      [GATEWAY_INSTANCE_IDS.codex]: {
+        ...codex,
+        environment: [...(codex.environment ?? []), proxy],
+        config: { ...(codex.config as object), launchArgs: userArgs },
+      },
+    };
+    const next = withGatewayModels(edited, [{ id: "openai/gpt-6-luna" }]);
+    expect(next[GATEWAY_INSTANCE_IDS.codex]?.config).toEqual({
+      setupMode: "existing",
+      launchArgs: userArgs,
+      customModels: [{ slug: "gpt-6-luna" }],
+      onlyCustomModels: true,
+    });
+    expect(next[GATEWAY_INSTANCE_IDS.codex]?.environment).toEqual(
+      edited[GATEWAY_INSTANCE_IDS.codex]?.environment,
+    );
+    expect(next[GATEWAY_INSTANCE_IDS.claude]?.config).toEqual({
+      customModels: [],
+      onlyCustomModels: true,
+    });
+    expect(next[GATEWAY_INSTANCE_IDS.claude]?.environment).toBe(
+      current[GATEWAY_INSTANCE_IDS.claude]?.environment,
+    );
+    expect(next).not.toHaveProperty(GATEWAY_INSTANCE_IDS.opencode);
+  });
+
+  it("gives opencode the new list without touching its other variables", () => {
+    const key = "lk_test_key_123456";
+    const opencode = gatewayProviderInstances(key, [{ id: "openai/gpt-5.5" }]).find(
+      ({ instanceId }) => instanceId === "libraosOpencode",
+    )!.instance;
+    const proxy = { name: "HTTPS_PROXY", value: "http://proxy:3128", sensitive: false };
+    const next = withGatewayModels(
+      {
+        [GATEWAY_INSTANCE_IDS.opencode]: {
+          ...opencode,
+          environment: [...opencode.environment!, proxy],
+        },
+      },
+      [{ id: "openai/gpt-6-luna" }],
+    );
+    const environment = next[GATEWAY_INSTANCE_IDS.opencode]?.environment ?? [];
+    expect(environment.map((variable) => variable.name)).toEqual([
+      "LIBRAOS_API_KEY",
+      "OPENCODE_CONFIG_CONTENT",
+      "HTTPS_PROXY",
+    ]);
+    const config = JSON.parse(String(environment[1]?.value));
+    expect(Object.keys(config.provider.libraos.models)).toEqual(["openai/gpt-6-luna"]);
+  });
+
+  it("limits agents connected before #117 to the models they already list", () => {
+    const { onlyCustomModels: _flag, ...config } = gatewayProviderInstances("lk_test_key_123456", [
+      { id: "openai/gpt-5.5" },
+    ]).find(({ instanceId }) => instanceId === "libraosCodex")!.instance.config as Record<
+      string,
+      unknown
+    >;
+    const codex = { driver: "codex", enabled: true, config } as never;
+    const next = withGatewayModels({ [GATEWAY_INSTANCE_IDS.codex]: codex }, null);
+    expect(next[GATEWAY_INSTANCE_IDS.codex]?.config).toEqual({
+      ...config,
+      onlyCustomModels: true,
+    });
   });
 
   it("shows the Gateway's own message for a refused key", () => {

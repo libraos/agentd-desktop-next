@@ -6,6 +6,7 @@ import {
   keepUnknownOverrideKeys,
   ProjectSettingsOverrides,
   type ProviderInstanceConfig,
+  type ProviderInstanceConfigMap,
   type ProviderInstanceMutation,
   defaultInstanceIdForDriver,
   isProviderDriverKind,
@@ -272,6 +273,11 @@ export class ServerSettingsService extends Context.Service<
       patch?: ServerSettingsPatch,
     ) => Effect.Effect<ServerSettings, ServerSettingsError>;
 
+    /** Rewrites provider instances from the stored ones within one write, so a concurrent edit or removal stands. */
+    readonly updateProviderInstances: (
+      update: (current: ProviderInstanceConfigMap) => ProviderInstanceConfigMap,
+    ) => Effect.Effect<ServerSettings, ServerSettingsError>;
+
     readonly withSettingsSnapshot: <A, E, R>(
       use: (settings: ServerSettings) => Effect.Effect<A, E, R>,
     ) => Effect.Effect<A, E | ServerSettingsError, R>;
@@ -335,6 +341,13 @@ const makeTest = Effect.fn("serverSettings.makeTest")(function* (
           yield* ensureProviderInstanceMutationAllowed(currentSettings, mutation, "test settings");
           const patched = applyServerSettingsPatch(currentSettings, patch);
           return applyProviderInstanceMutation(patched, mutation);
+        }),
+      ),
+    updateProviderInstances: (update) =>
+      updateTestSettings((currentSettings) =>
+        Effect.succeed({
+          ...currentSettings,
+          providerInstances: update(currentSettings.providerInstances),
         }),
       ),
     withSettingsSnapshot: (use) =>
@@ -1389,6 +1402,10 @@ const make = Effect.gen(function* () {
           const patched = applyServerSettingsPatch(current, patch);
           return applyProviderInstanceMutation(patched, mutation);
         }),
+      ),
+    updateProviderInstances: (update) =>
+      updateAndPersistSettings({}, (current) =>
+        Effect.succeed({ ...current, providerInstances: update(current.providerInstances) }),
       ),
     withSettingsSnapshot,
     get streamChanges() {

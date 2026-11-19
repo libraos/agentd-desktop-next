@@ -14,6 +14,7 @@ import type {
   ServerConfig as T3ServerConfig,
 } from "@t3tools/contracts";
 import {
+  isLibraosGatewayInstanceId,
   isManagedDriverAllowed,
   isProviderDriverKind,
   resolveProjectProviderInstanceEnabled,
@@ -182,6 +183,18 @@ export function serverConfigForCwd<C extends T3ServerConfig | null | undefined>(
   return providers === config.providers ? config : { ...config, providers };
 }
 
+// A LibraOS Gateway agent serves only its key's models; one the key dropped fails at the first turn.
+function isDroppedGatewayModel(
+  provider: T3ServerConfig["providers"][number] | undefined,
+  selection: ModelSelection,
+): boolean {
+  return (
+    provider !== undefined &&
+    isLibraosGatewayInstanceId(selection.instanceId) &&
+    !provider.models.some((model) => model.slug === selection.model)
+  );
+}
+
 /** Require explicit projectId or null so omissions cannot bypass project provider disablement. */
 export function isModelSelectionUnavailable(
   config: T3ServerConfig | null | undefined,
@@ -200,6 +213,9 @@ export function isModelSelectionUnavailable(
   const driver =
     provider?.driver ?? config.settings?.providerInstances[selection.instanceId]?.driver;
   if (isDriverDisallowed(config, driver)) {
+    return true;
+  }
+  if (isDroppedGatewayModel(provider, selection)) {
     return true;
   }
   return (
@@ -238,10 +254,22 @@ export function describeUnavailableModelSelection(
       ),
     };
   }
-  return isDisabledForProject(config, provider, selection.instanceId, projectId)
+  if (isDisabledForProject(config, provider, selection.instanceId, projectId)) {
+    return {
+      title: m(msg("Model turned off for this project")),
+      detail: m(msg("Turn it back on from web or desktop, or choose another model.")),
+    };
+  }
+  return isDroppedGatewayModel(provider, selection)
     ? {
-        title: m(msg("Model turned off for this project")),
-        detail: m(msg("Turn it back on from web or desktop, or choose another model.")),
+        title: m(
+          msg("{provider} model unavailable", {
+            provider: provider?.displayName ?? selection.instanceId,
+          }),
+        ),
+        detail: m(
+          msg("Your LibraOS Gateway key no longer allows this model. Choose another model."),
+        ),
       }
     : {
         title: m(msg("{provider} model unavailable", { provider: "Antigravity" })),

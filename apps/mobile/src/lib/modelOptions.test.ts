@@ -381,6 +381,37 @@ describe("mobile model options", () => {
     expect(resolveSelectableModelSelection(null, disabled, null)).toBe(disabled);
   });
 
+  it("marks a model the LibraOS Gateway key dropped unavailable instead of offering it", () => {
+    const instanceId = ProviderInstanceId.make("libraosCodex");
+    const config = {
+      providers: [
+        {
+          instanceId,
+          driver: "codex",
+          displayName: "Codex · LibraOS Gateway",
+          enabled: true,
+          installed: true,
+          auth: { status: "authenticated" },
+          models: [{ slug: "gpt-6-luna", name: "GPT-6-Luna", isCustom: true, capabilities: null }],
+        },
+      ],
+    } as unknown as ServerConfig;
+    const dropped = { instanceId, model: "gpt-6-astra" };
+
+    expect(isModelSelectionUnavailable(config, dropped, null)).toBe(true);
+    expect(
+      buildModelOptions(config, dropped, undefined, null).find(
+        (option) => option.key === `${instanceId}:gpt-6-astra`,
+      ),
+    ).toMatchObject({ isUnavailable: true });
+    expect(describeUnavailableModelSelection(config, dropped, null).detail).toContain(
+      "LibraOS Gateway key",
+    );
+    expect(isModelSelectionUnavailable(config, { instanceId, model: "gpt-6-luna" }, null)).toBe(
+      false,
+    );
+  });
+
   describe("Antigravity selections", () => {
     const selection = {
       instanceId: ProviderInstanceId.make("google_work"),

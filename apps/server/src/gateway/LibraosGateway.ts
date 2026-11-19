@@ -25,11 +25,12 @@ import * as ProcessRunner from "../processRunner.ts";
 import { ServerSettingsService } from "../serverSettings.ts";
 import {
   GATEWAY_INSTANCE_IDS,
-  gatewayInstanceUpdates,
   gatewayProviderInstances,
   gatewayRefusal,
+  isKeyRefusal,
   parseGatewayModels,
   readGatewayKey,
+  withGatewayModels,
 } from "./gatewaySetup.ts";
 
 export class LibraosGateway extends Context.Service<
@@ -40,7 +41,10 @@ export class LibraosGateway extends Context.Service<
     readonly connect: (key: string) => Effect.Effect<LibraosGatewayStatus, LibraosGatewayError>;
     /** Removes the key, its agentd key file and the Gateway agents. */
     readonly disconnect: Effect.Effect<LibraosGatewayStatus, LibraosGatewayError>;
-    /** Asks the Gateway for the key's models again and gives the Gateway agents the new list. */
+    /**
+     * Asks the Gateway for the key's models again and gives the Gateway agents the new list; a
+     * refused key leaves them none. An unreachable Gateway leaves the last list.
+     */
     readonly refreshModels: Effect.Effect<void>;
   }
 >()("t3/gateway/LibraosGateway") {}
@@ -49,6 +53,11 @@ const SECRET_NAME = "libraos-gateway-key";
 const CHECK_TIMEOUT = Duration.seconds(15);
 const INIT_TIMEOUT = Duration.minutes(3);
 const OUTPUT_LIMIT = 8 * 1024;
+
+/** The Gateway answered that the key may not list models (revoked, deleted, not allowed). */
+class KeyRefusedError extends Schema.TaggedError<KeyRefusedError>()("KeyRefusedError", {
+  message: Schema.String,
+}) {}
 
 class KeyFileError extends Schema.TaggedError<KeyFileError>()("KeyFileError", {
   detail: Schema.String,
@@ -73,6 +82,7 @@ export const make = Effect.fn("LibraosGateway.make")(function* () {
   const lock = yield* Semaphore.make(1);
   const models = yield* Ref.make<ReadonlyArray<LibraosGatewayModel> | null>(null);
   const agentdSetup = yield* Ref.make<LibraosGatewayAgentdSetup | null>(null);
+  const refusal = yield* Ref.make<string | null>(null);
   // agentd reads the key from this file, which only it and the app read.
   const keyFile = path.join(stateDir, "agentd", SECRET_NAME);
 
@@ -104,7 +114,10 @@ export const make = Effect.fn("LibraosGateway.make")(function* () {
     );
     const body = yield* response.json.pipe(Effect.orElseSucceed((): unknown => undefined));
     if (response.status < 200 || response.status >= 300) {
-      return yield* fail(gatewayRefusal(response.status, body));
+      const message = gatewayRefusal(response.status, body);
+      return yield* isKeyRefusal(response.status)
+        ? new KeyRefusedError({ message })
+        : fail(message);
     }
     const list = parseGatewayModels(body);
     if (list === null)
@@ -190,7 +203,7 @@ export const make = Effect.fn("LibraosGateway.make")(function* () {
 
   const status: LibraosGateway["Service"]["status"] = Effect.gen(function* () {
     const key = yield* readKey;
-    if (Option.isNone(key)) return { connected: false, models: [], agentd: null };
+    if (Option.isNone(key)) return { connected: false, models: [], agentd: null, refusal: null };
     let list = yield* Ref.get(models);
     // An unreachable Gateway is asked again on the next read rather than remembered as no models.
     if (list === null) {
@@ -199,7 +212,12 @@ export const make = Effect.fn("LibraosGateway.make")(function* () {
         Effect.orElseSucceed((): ReadonlyArray<LibraosGatewayModel> => []),
       );
     }
-    return { connected: true, models: list, agentd: yield* Ref.get(agentdSetup) };
+    return {
+      connected: true,
+      models: list,
+      agentd: yield* Ref.get(agentdSetup),
+      refusal: yield* Ref.get(refusal),
+    };
   }).pipe(Effect.withSpan("LibraosGateway.status"));
 
   const connect: LibraosGateway["Service"]["connect"] = (raw) =>
@@ -209,7 +227,9 @@ export const make = Effect.fn("LibraosGateway.make")(function* () {
           const parsed = readGatewayKey(raw);
           if ("problem" in parsed) return yield* fail(parsed.problem);
           const key = parsed.key;
-          const list = yield* listModels(key);
+          const list = yield* listModels(key).pipe(
+            Effect.catchTags({ KeyRefusedError: (error) => fail(error.message) }),
+          );
           yield* secrets
             .set(SECRET_NAME, textEncoder.encode(key))
             .pipe(Effect.catch(storageFailure("store the LibraOS Gateway key")));
@@ -220,6 +240,7 @@ export const make = Effect.fn("LibraosGateway.make")(function* () {
               .pipe(Effect.catch(storageFailure("add the LibraOS Gateway agents")));
           }
           yield* Ref.set(models, list);
+          yield* Ref.set(refusal, null);
           yield* Ref.set(agentdSetup, yield* runAgentdInit);
           return yield* status;
         }),
@@ -245,32 +266,63 @@ export const make = Effect.fn("LibraosGateway.make")(function* () {
           .remove(SECRET_NAME)
           .pipe(Effect.catch(storageFailure("remove the LibraOS Gateway key")));
         yield* Ref.set(models, null);
+        yield* Ref.set(refusal, null);
         yield* Ref.set(agentdSetup, null);
         return yield* status;
       }),
     )
     .pipe(Effect.withSpan("LibraosGateway.disconnect"));
 
-  // A Gateway that cannot be asked leaves the agents' last list in place.
+  // Patches the stored agents in the same write, so an agent removed or edited meanwhile stays so.
+  const applyModels = Effect.fn("LibraosGateway.applyModels")(function* (
+    list: ReadonlyArray<LibraosGatewayModel> | null,
+  ) {
+    const snapshot = yield* settings.getSettings;
+    if (withGatewayModels(snapshot.providerInstances, list) === snapshot.providerInstances) return;
+    yield* settings.updateProviderInstances((current) => withGatewayModels(current, list));
+  });
+
   const refreshModels: LibraosGateway["Service"]["refreshModels"] = lock
     .withPermits(1)(
       Effect.gen(function* () {
         const key = yield* readKey;
         if (Option.isNone(key)) return;
-        const list = yield* listModels(key.value);
-        yield* Ref.set(models, list);
-        const current = yield* settings.getSettings;
-        for (const update of gatewayInstanceUpdates(current.providerInstances, key.value, list)) {
-          yield* settings.updateProviderInstance({ operation: "upsert", ...update });
+        const asked = yield* listModels(key.value).pipe(
+          Effect.map((list) => ({ list, refused: null })),
+          Effect.catchTags({
+            KeyRefusedError: (error) => Effect.succeed({ list: [], refused: error.message }),
+          }),
+          Effect.tapError((cause) =>
+            Effect.logWarning("LibraOS Gateway: could not refresh the key's models", { cause }),
+          ),
+          Effect.option,
+        );
+        if (Option.isSome(asked)) {
+          yield* Ref.set(models, asked.value.list);
+          yield* Ref.set(refusal, asked.value.refused);
         }
+        // Unreachable: the agents keep their last list, still limited to it.
+        yield* applyModels(Option.isSome(asked) ? asked.value.list : null);
       }),
     )
     .pipe(
       Effect.catch((cause) =>
-        Effect.logWarning("LibraOS Gateway: could not refresh the key's models", { cause }),
+        Effect.logWarning("LibraOS Gateway: could not update the Gateway agents' models", {
+          cause,
+        }),
       ),
       Effect.withSpan("LibraosGateway.refreshModels"),
     );
+
+  // Agents added by an older build listed the agent's whole catalog; a key changed in Console since the
+  // last start shows without waiting for a manual refresh.
+  yield* settings.ready.pipe(
+    Effect.andThen(refreshModels),
+    Effect.catch((cause) =>
+      Effect.logWarning("LibraOS Gateway: startup refresh failed", { cause }),
+    ),
+    Effect.forkScoped,
+  );
 
   return LibraosGateway.of({ status, connect, disconnect, refreshModels });
 });

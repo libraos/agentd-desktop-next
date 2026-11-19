@@ -360,6 +360,10 @@ function flattenOpenCodeModels(
   return markOpenCodeLegacy(entries).toSorted((left, right) => left.name.localeCompare(right.name));
 }
 
+// An empty list may be a cold start or a key that allows no models (a LibraOS Gateway key).
+const NO_MODELS_HINT =
+  "Check that the provider's key or account allows a model, then refresh to ask again.";
+
 /** Undefined when OpenCode lists no models, so callers can keep the catalog they have. */
 export function openCodeProviderModels(
   settings: Pick<OpenCodeSettings, "customModels">,
@@ -766,7 +770,7 @@ const checkOpenCode2 = Effect.fn("checkOpenCode2")(function* (
             "ready",
             `OpenCode ${version} lists ${result.value.length} model${result.value.length === 1 ? "" : "s"}.`,
           )
-        : probe("warning", "OpenCode 2 is running, but it did not list any models yet."),
+        : probe("warning", `OpenCode 2 is running, but it lists no models. ${NO_MODELS_HINT}`),
   });
 });
 
@@ -951,7 +955,7 @@ export const checkOpenCodeProviderStatus = Effect.fn("checkOpenCodeProviderStatu
         },
         message:
           connectedCount > 0 && !catalogReady
-            ? "OpenCode upstream providers are connected, but it did not list any models yet."
+            ? `OpenCode upstream providers are connected, but they list no models. ${NO_MODELS_HINT}`
             : connectedCount > 0
               ? `${connectedCount} upstream provider${connectedCount === 1 ? "" : "s"} connected through ${isExternalServer ? "the configured OpenCode server" : "OpenCode"}.`
               : isExternalServer
