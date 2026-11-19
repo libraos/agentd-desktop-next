@@ -7,10 +7,11 @@ import * as NodeFS from "node:fs";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
 
+// Each runs under this Node: Windows cannot spawn the `.bin/gt` shim (a `.cmd`) without a shell.
 // Desktop only depends on gt-i18n, so the gt CLI hides `generate` there; its script adds it back.
 const GENERATE: Record<string, readonly [string, ...string[]]> = {
-  "apps/web": ["node_modules/.bin/gt", "generate"],
-  "apps/mobile": ["node_modules/.bin/gt", "generate"],
+  "apps/web": [process.execPath, "node_modules/gt/bin/main.js", "generate"],
+  "apps/mobile": [process.execPath, "node_modules/gt/bin/main.js", "generate"],
   "apps/desktop": [process.execPath, "scripts/i18n-generate.mjs"],
 };
 const APPS = Object.keys(GENERATE);
@@ -43,7 +44,9 @@ for (const [app, [command, ...args]] of Object.entries(GENERATE)) {
       encoding: "utf8",
     });
     if (gt.status !== 0) {
-      problems.push(`${app}: gt generate failed\n${gt.stdout}${gt.stderr}`);
+      problems.push(
+        `${app}: gt generate failed\n${gt.error ?? ""}${gt.stdout ?? ""}${gt.stderr ?? ""}`,
+      );
       continue;
     }
     const generated: Catalog = readJson(NodePath.join(tmp, `${config.defaultLocale}.json`));

@@ -33,14 +33,20 @@ it.each([
   const config = await loadConfig(value);
   expect(config.ios?.bundleIdentifier).toBe(identifier);
   expect(config.android?.package).toBe(identifier);
-  // The app config still lists upstream's hosted app; this build copies no links to it.
-  const host = "app.t3.codes";
-  expect(config.ios?.associatedDomains).toContain(`applinks:${host}`);
   expect(appleAppSiteAssociation.applinks.details[0]?.appIDs).toContain(
     `${config.ios?.appleTeamId}.${identifier}`,
   );
-  expect(config.android?.intentFilters?.[0]?.data).toEqual([
-    { scheme: "https", host, pathPrefix: "/threads/" },
-  ]);
+  // Neither the hosted relay's sign-in domain nor a hosted web app is linked by default.
+  expect(config.ios?.associatedDomains).toEqual([]);
+  expect(config.android?.intentFilters).toEqual([]);
   expect(assetLinks.map((link) => link.target.package_name)).toContain(identifier);
+});
+
+it("links copied thread URLs of a hosted web app only when HOSTED_APP_HOST names one", async () => {
+  vi.stubEnv("HOSTED_APP_HOST", "app.example.test");
+  const config = await loadConfig("production");
+  expect(config.ios?.associatedDomains).toEqual(["applinks:app.example.test"]);
+  expect(config.android?.intentFilters?.[0]?.data).toEqual([
+    { scheme: "https", host: "app.example.test", pathPrefix: "/threads/" },
+  ]);
 });

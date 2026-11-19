@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 
 import { hasCloudPublicConfig } from "./publicConfig.ts";
 
+vi.mock("@t3tools/shared/hostedRelay", () => ({ HOSTED_RELAY_ENABLED: true }));
+
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();

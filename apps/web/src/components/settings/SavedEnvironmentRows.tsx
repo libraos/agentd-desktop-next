@@ -490,7 +490,7 @@ function CloudLinkSwitch({
   const gt = useGT();
   const control = (
     <Switch
-      aria-label={ariaLabel ?? gt("Enable T3 Connect")}
+      aria-label={ariaLabel ?? gt("Enable the hosted relay")}
       checked={checked}
       disabled={disabled}
       {...(onCheckedChange ? { onCheckedChange } : {})}
@@ -602,7 +602,7 @@ function ConfiguredCloudLinkRow({
 
   const disabledReason = canManageRelay
     ? null
-    : gt("Your session does not have permission to manage T3 Connect access.");
+    : gt("Your session does not have permission to manage the hosted relay access.");
   const isBusy = isUpdating || isUpdatingPreference;
   const switchDisabled =
     !canManageRelay ||
@@ -655,15 +655,15 @@ function ConfiguredCloudLinkRow({
       toastManager.add({
         type: "success",
         title: enabled
-          ? gt("T3 Connect linked")
+          ? gt("Hosted relay linked")
           : publishAgentActivity
-            ? gt("T3 Connect tunnel disabled")
-            : gt("T3 Connect unlinked"),
+            ? gt("Hosted relay tunnel disabled")
+            : gt("Hosted relay unlinked"),
         description: enabled
-          ? gt("This environment is available through T3 Connect.")
+          ? gt("This environment is available through the hosted relay.")
           : publishAgentActivity
             ? gt("The managed tunnel was removed. Agent activity publishing stays on.")
-            : gt("This environment is no longer available through T3 Connect."),
+            : gt("This environment is no longer available through the hosted relay."),
       });
     }
     setIsUpdating(false);
@@ -698,7 +698,7 @@ function ConfiguredCloudLinkRow({
         title: enabled ? gt("Webhooks held while offline") : gt("Webhooks no longer held"),
         description: enabled
           ? gt(
-              "T3 Connect keeps webhook requests for up to 24 hours while this environment is offline.",
+              "The hosted relay keeps webhook requests for up to 24 hours while this environment is offline.",
             )
           : gt(
               "Requests to an offline environment now fail. Anything already held is still delivered.",
@@ -718,24 +718,28 @@ function ConfiguredCloudLinkRow({
               ? connectDenial
               : signedOut
                 ? gt(
-                    "Sign in to make this environment available to your other devices through T3 Connect.",
+                    "Sign in to make this environment available to your other devices through the hosted relay.",
                   )
                 : linkRevoked
-                  ? gt("This environment was removed from T3 Connect. Turn it on to link it again.")
+                  ? gt(
+                      "This environment was removed from the hosted relay. Turn it on to link it again.",
+                    )
                   : managedTunnelActive
                     ? reachability?.status === "unreachable"
-                      ? gt("T3 Connect is on, but other devices cannot reach this environment.")
+                      ? gt(
+                          "The hosted relay is on, but other devices cannot reach this environment.",
+                        )
                       : reachability?.status === "reachable"
                         ? gt(
-                            "This environment is available to your other devices through T3 Connect.",
+                            "This environment is available to your other devices through the hosted relay.",
                           )
-                        : gt("T3 Connect is on. Reachability has not been checked yet.")
+                        : gt("The hosted relay is on. Reachability has not been checked yet.")
                     : managedTunnelOutOfSync
                       ? gt(
-                          "T3 Connect is out of sync. This environment is linked only to publish agent activity, so other devices cannot connect. Turn T3 Connect on to repair it.",
+                          "The hosted relay is out of sync. This environment is linked only to publish agent activity, so other devices cannot connect. Turn the hosted relay on to repair it.",
                         )
                       : gt(
-                          "Make this environment available to your other devices through T3 Connect.",
+                          "Make this environment available to your other devices through the hosted relay.",
                         )
           }
           status={operationError ?? cloudLinkState.error ?? reachabilityStatus}
@@ -761,7 +765,7 @@ function ConfiguredCloudLinkRow({
         <SettingsRow
           title={setting("t3-connect").title}
           description={gt(
-            "This environment was removed from T3 Connect. Run `agentd-desktop connect link` on the host to link it again.",
+            "This environment was removed from the hosted relay. Run `agentd-desktop connect link` on the host to link it again.",
           )}
         />
       ) : isElectron ? (
@@ -778,7 +782,9 @@ function ConfiguredCloudLinkRow({
           description={
             signedOut
               ? gt("Sign in to send activity to mobile notifications and Live Activities.")
-              : gt("Send activity to mobile notifications and Live Activities without T3 Connect.")
+              : gt(
+                  "Send activity to mobile notifications and Live Activities without the hosted relay.",
+                )
           }
           managed={connectDenial}
           control={
@@ -800,7 +806,7 @@ function ConfiguredCloudLinkRow({
         <SettingsRow
           title={setting("hold-webhooks-while-offline").title}
           description={gt(
-            "Keep webhook requests for up to 24 hours while this environment is offline, then deliver them. Off: T3 Connect only forwards requests and stores nothing.",
+            "Keep webhook requests for up to 24 hours while this environment is offline, then deliver them. Off: the hosted relay only forwards requests and stores nothing.",
           )}
           managed={connectDenial}
           control={
@@ -818,12 +824,12 @@ function ConfiguredCloudLinkRow({
         <SettingsRow
           title={setting("connect-device-approval").title}
           description={gt(
-            "Devices that sign in to your T3 Connect account wait until someone already connected here approves them.",
+            "Devices that sign in to your hosted relay account wait until someone already connected here approves them.",
           )}
           managed={connectDenial}
           control={
             <CloudLinkSwitch
-              ariaLabel={gt("Require approval for new T3 Connect devices")}
+              ariaLabel={gt("Require approval for new hosted relay devices")}
               checked={connectDeviceApproval.required}
               disabled={!connectDeviceApproval.canManage}
               disabledReason={
@@ -864,7 +870,7 @@ export function CloudLinkRow({
   if (!canReadRelay) {
     return (
       <SettingsRow
-        title={gt("T3 Connect")}
+        title={gt("Hosted relay")}
         description={gt(
           "To edit these settings, pair this connection with both View relay and Manage relay permissions.",
         )}
@@ -894,7 +900,7 @@ function EmptyRemoteEnvironments({ cloudEnabled = true }: { readonly cloudEnable
         <EmptyDescription>
           {cloudEnabled
             ? gt(
-                "Click “Add environment” to pair another environment, or connect one from T3 Connect.",
+                "Click “Add environment” to pair another environment, or connect one from the hosted relay.",
               )
             : gt("Click “Add environment” to pair another environment.")}
         </EmptyDescription>

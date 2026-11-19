@@ -17,6 +17,7 @@ import {
   codexRoutesSpendNativeQuota,
   makeCodexSkillsProbe,
   mapCodexModelCapabilities,
+  codexProbeFailureMessage,
 } from "./CodexProvider.ts";
 
 function makeFakeCodexAppServers() {
@@ -339,4 +340,18 @@ it("reports native quota only for an OpenAI login on a native route", () => {
   );
   assert.strictEqual(codexCustomEndpoint({ openai_base_url: "https://chatgpt.com/x" }), undefined);
   assert.strictEqual(codexCustomEndpoint({}), undefined);
+});
+
+it.each([
+  [
+    "spawn /opt/homebrew/lib/node_modules/@openai/codex/node_modules/@openai/codex-darwin-arm64/vendor/aarch64-apple-darwin/codex/codex ENOENT",
+    "Codex is installed without its native binary (npm skipped an optional dependency). Reinstall it with: npm install -g @openai/codex --include=optional",
+  ],
+  [
+    "spawn C:\\Users\\me\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\node_modules\\@openai\\codex-win32-x64\\vendor\\x86_64-pc-windows-msvc\\codex\\codex.exe ENOENT",
+    "Codex is installed without its native binary (npm skipped an optional dependency). Reinstall it with: npm install -g @openai/codex --include=optional",
+  ],
+  ["unauthorized (401)", "Codex app-server provider probe failed: unauthorized (401)."],
+])("codexProbeFailureMessage(%j)", (error, message) => {
+  assert.strictEqual(codexProbeFailureMessage(error), message);
 });

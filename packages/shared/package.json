@@ -219,6 +219,10 @@
       "types": "./src/relayAuth.ts",
       "import": "./src/relayAuth.ts"
     },
+    "./hostedRelay": {
+      "types": "./src/hostedRelay.ts",
+      "import": "./src/hostedRelay.ts"
+    },
     "./relayUrl": {
       "types": "./src/relayUrl.ts",
       "import": "./src/relayUrl.ts"

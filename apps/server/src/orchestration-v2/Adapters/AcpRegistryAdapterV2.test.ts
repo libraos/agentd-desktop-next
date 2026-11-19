@@ -1360,7 +1360,7 @@ describe("AcpRegistryAdapterV2", () => {
       const plainHttp = (authorization: string) => [
         {
           type: "http",
-          name: "t3-code",
+          name: "agentd-desktop",
           url: endpoint,
           headers: [{ name: "Authorization", value: authorization }],
         },
@@ -1368,7 +1368,7 @@ describe("AcpRegistryAdapterV2", () => {
       const http = (authorization: string) => [
         {
           type: "http",
-          name: "t3-code",
+          name: "agentd-desktop",
           url: endpoint,
           headers: [
             { name: "Authorization", value: authorization },
@@ -1378,7 +1378,7 @@ describe("AcpRegistryAdapterV2", () => {
       ];
       const stdio = (authorization: string) => [
         {
-          name: "t3-code",
+          name: "agentd-desktop",
           command: selfInvocation.command,
           args: [...selfInvocationArgs(selfInvocation, ["acp-mcp-bridge"])],
           env: [
@@ -1393,7 +1393,7 @@ describe("AcpRegistryAdapterV2", () => {
         yield* sessionMcpServers({ agentId: "github-copilot-cli" }, { T3_ACP_MCP_HTTP: "1" }),
         { new: http("Bearer opened-token"), load: http("Bearer rotated-token") },
       );
-      const acp = [{ type: "acp", name: "t3-code", serverId: "t3-code" }];
+      const acp = [{ type: "acp", name: "agentd-desktop", serverId: "agentd-desktop" }];
       assert.deepEqual(
         yield* sessionMcpServers(
           { agentId: "github-copilot-cli" },
@@ -2977,7 +2977,7 @@ describe("AcpRegistryAdapterV2", () => {
               event.turnItem.nativeItemRef?.nativeId ===
                 "agent-1:session:grandchild:tool:terminal-tool" &&
               event.turnItem.threadId === row.subagent.childThreadId &&
-              event.turnItem.toolName === "t3-code.orchestrator_capabilities",
+              event.turnItem.toolName === "agentd-desktop.orchestrator_capabilities",
           ),
           "embedded agent-terminal commands preserve nested MCP identity",
         );

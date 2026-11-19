@@ -1,10 +1,14 @@
-import { afterEach, describe, expect, it, vi } from "@effect/vitest";
+import { afterEach, describe, expect, it } from "@effect/vitest";
+import { vi } from "vite-plus/test";
 import { withRelayClientTracing } from "@t3tools/shared/relayTracing";
 import * as Effect from "effect/Effect";
 import * as Tracer from "effect/Tracer";
 // Load the runtime's module graph once at collection, outside the per-test timeout;
 // each case re-evaluates it from that cache after vi.resetModules().
 import "./runtime";
+
+// The relay's telemetry is only configured in builds with the hosted relay on.
+vi.mock("@t3tools/shared/hostedRelay", () => ({ HOSTED_RELAY_ENABLED: true }));
 
 afterEach(() => {
   vi.unstubAllEnvs();

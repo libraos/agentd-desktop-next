@@ -100,7 +100,7 @@ function UseInAnotherAppDialog({ requested }: { readonly requested: EnvironmentI
                 title={
                   environment === null
                     ? gt("Connect to an environment first.")
-                    : gt("T3 Connect is not available in this build.")
+                    : gt("The hosted relay is not available in this build.")
                 }
               />
             </WizardPanel>
@@ -319,7 +319,7 @@ function useGate(environment: EnvironmentPresentation) {
   );
   const runReachabilityCheck = async () => {
     setCheck("running");
-    // A saved machine's address comes from T3 Connect's list, which can be stale.
+    // A saved machine's address comes from the hosted relay's list, which can be stale.
     if (!thisMachine) void refreshDiscovery();
     const prior = readCachedCloudLinkState({ environmentId });
     const result = await runCheck({ target: { environmentId } });
@@ -349,11 +349,11 @@ function useGate(environment: EnvironmentPresentation) {
   useEffect(() => {
     if (canCheck) queueMicrotask(checkOnce);
   }, [canCheck]);
-  // T3 Connect lists machines only once something asks, and a saved machine's gate reads that list.
+  // The hosted relay lists machines only once something asks, and a saved machine's gate reads that list.
   const discoverIfUnasked = useEffectEvent(() => {
     if (!thisMachine && !discovery.listed && !discovery.refreshing) void refreshDiscovery();
   });
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- asks T3 Connect for its machine list once the wizard opens signed in
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- asks the hosted relay for its machine list once the wizard opens signed in
   useEffect(() => {
     if (isSignedIn) discoverIfUnasked();
   }, [isSignedIn]);
@@ -401,29 +401,34 @@ function GateScreen({
       <T>Check again</T>
     </Button>
   );
-  const offlineTitle = gt("{environment}''s T3 Connect is offline", { environment: name });
-  const cannotCheckTitle = gt("Can't check T3 Connect on {environment}", { environment: name });
+  const offlineTitle = gt("{environment}''s hosted relay is offline", { environment: name });
+  const cannotCheckTitle = gt("Can't check the hosted relay on {environment}", {
+    environment: name,
+  });
   const checkAgain = retry(() => void check());
   switch (gate.kind) {
     case "checking":
       return (
         <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
           <Spinner size="sm" tone="muted" />
-          <T>Checking T3 Connect…</T>
+          <T>Checking the hosted relay…</T>
         </p>
       );
     case "sign-in":
       return (
         <GateMessage
-          title={gt("Sign in to T3 Connect")}
+          title={gt("Sign in to the hosted relay")}
           lines={[
             gt(
               "Apps like Poke and Claude run in the cloud. They need a public address to reach {environment}.",
               { environment: name },
             ),
-            gt("T3 Connect gives {environment} that address. Each app still needs your approval.", {
-              environment: name,
-            }),
+            gt(
+              "The hosted relay gives {environment} that address. Each app still needs your approval.",
+              {
+                environment: name,
+              },
+            ),
           ]}
         >
           {/* Clerk's sign-in is its own modal, so this dialog closes first. */}
@@ -433,7 +438,7 @@ function GateScreen({
               openAuthPrompt();
             }}
           >
-            <T>Sign in to T3 Connect</T>
+            <T>Sign in to the hosted relay</T>
           </Button>
         </GateMessage>
       );
@@ -483,7 +488,7 @@ function GateScreen({
       }
       return (
         <GateMessage
-          title={gt("Turn on T3 Connect for {environment}", { environment: name })}
+          title={gt("Turn on the hosted relay for {environment}", { environment: name })}
           lines={[
             gt("{environment} gets a public https address, with no router setup.", {
               environment: name,
@@ -502,7 +507,7 @@ function GateScreen({
               {tunnelLimit !== null ? (
                 <>
                   <p className="text-sm text-destructive-foreground">
-                    <T>Your T3 Connect account is out of tunnels.</T>
+                    <T>Your hosted relay account is out of tunnels.</T>
                   </p>
                   <ManageAccessButton environment={environment} label={gt("Manage tunnels")} />
                 </>
@@ -618,10 +623,10 @@ function ConnectStep({
       <p className="text-sm text-muted-foreground">
         {app === null
           ? gt(
-              "When the app opens the sign-in page, choose what it may do and approve with your T3 Connect account.",
+              "When the app opens the sign-in page, choose what it may do and approve with your hosted relay account.",
             )
           : gt(
-              "When {app} opens the sign-in page, choose what it may do and approve with your T3 Connect account.",
+              "When {app} opens the sign-in page, choose what it may do and approve with your hosted relay account.",
               { app: app.name },
             )}
       </p>
@@ -914,7 +919,7 @@ function LinkedLine({
   );
 }
 
-/** Opens Sharing & access on this environment, where its clients and T3 Connect tunnels live. */
+/** Opens Sharing & access on this environment, where its clients and the hosted relay tunnels live. */
 function ManageAccessButton({
   environment,
   label,

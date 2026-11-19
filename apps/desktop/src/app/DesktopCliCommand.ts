@@ -3,6 +3,7 @@ import * as NodeFSP from "node:fs/promises";
 
 import type { DesktopCliCommandState } from "@t3tools/contracts";
 import * as HostProcess from "@t3tools/shared/HostProcess";
+import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -15,7 +16,7 @@ import * as Stream from "effect/Stream";
 import * as ChildProcess from "effect/process/ChildProcess";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
-import { CLI_COMMAND_NAME } from "@t3tools/shared/desktopIdentity";
+import { CLI_COMMAND_ALIAS, CLI_COMMAND_NAME } from "@t3tools/shared/desktopIdentity";
 import { pathSetup, readUserLoginShell } from "@t3tools/shared/shell";
 
 import * as DesktopCliShim from "./DesktopCliShim.ts";
@@ -288,6 +289,43 @@ export const make = Effect.gen(function* () {
     })),
   );
 
+  const windowsAlias = path.join(binDirectory, `${CLI_COMMAND_ALIAS}.cmd`);
+  /** The alias is the same launcher under another name; a `t3` the app did not write stays. */
+  const installAlias = Effect.fn("DesktopCliCommand.installAlias")(
+    function* (directory: string) {
+      const alias = windows ? windowsAlias : path.join(directory, CLI_COMMAND_ALIAS);
+      if (windows) {
+        const existing = yield* fs.readFileString(alias).pipe(Effect.option);
+        if (Option.isSome(existing) && !existing.value.includes(DesktopCliShim.MARKER)) return;
+        yield* fs.writeFileString(alias, yield* fs.readFileString(launcher), { mode: 0o755 });
+        return;
+      }
+      const present =
+        (yield* exists(alias)) || Option.isSome(yield* fs.readLink(alias).pipe(Effect.option));
+      if (present) {
+        if (!(yield* isOurLink(alias)) || (yield* leadsHere(alias))) return;
+        yield* fs.remove(alias);
+      }
+      yield* fs.symlink(launcher, alias);
+    },
+    Effect.catchCause((cause) =>
+      logWarning("could not install the t3 alias", { cause: Cause.pretty(cause) }),
+    ),
+  );
+  const removeAlias = Effect.fn("DesktopCliCommand.removeAlias")(
+    function* (directory: string) {
+      const alias = windows ? windowsAlias : path.join(directory, CLI_COMMAND_ALIAS);
+      if (windows) {
+        const existing = yield* fs.readFileString(alias).pipe(Effect.option);
+        if (Option.isNone(existing) || !existing.value.includes(DesktopCliShim.MARKER)) return;
+      } else if (!(yield* isOurLink(alias))) return;
+      yield* fs.remove(alias);
+    },
+    Effect.catchCause((cause) =>
+      logWarning("could not remove the t3 alias", { cause: Cause.pretty(cause) }),
+    ),
+  );
+
   const ensureLauncher = DesktopCliShim.install.pipe(
     Effect.provideService(DesktopEnvironment.DesktopEnvironment, environment),
     Effect.provideService(FileSystem.FileSystem, fs),
@@ -322,13 +360,17 @@ export const make = Effect.gen(function* () {
             ),
           );
       }
+      yield* installAlias(binDirectory);
       return yield* state;
     }
     const candidates = userCandidates(environment.homeDirectory);
     const replaced = Option.getOrUndefined(yield* installedAt);
     if (replaced !== undefined) {
       const target = yield* fs.readLink(replaced).pipe(Effect.option);
-      if (Option.getOrUndefined(target) === launcher) return yield* state;
+      if (Option.getOrUndefined(target) === launcher) {
+        yield* installAlias(path.dirname(replaced));
+        return yield* state;
+      }
     }
     const shadowedBy = yield* foreignFirstOnPath;
     // Our own link into another T3 home runs first too; it is the one this install updates.
@@ -375,6 +417,7 @@ export const make = Effect.gen(function* () {
       if (replaced !== undefined && replaced !== link) {
         yield* fs.remove(replaced).pipe(Effect.ignore);
       }
+      yield* installAlias(directory);
       return yield* state;
     }
     return yield* fail(
@@ -392,6 +435,7 @@ export const make = Effect.gen(function* () {
         if (kept.length !== entries.length) yield* writeUserPath(kept.join(";"));
         yield* fs.remove(ownedPathMarker).pipe(Effect.ignore);
       }
+      yield* removeAlias(binDirectory);
       return yield* state;
     }
     for (const directory of knownLocations(environment.homeDirectory, environment.platform)) {
@@ -399,6 +443,7 @@ export const make = Effect.gen(function* () {
       if (yield* isOurLink(link)) {
         yield* fs.remove(link).pipe(Effect.mapError(() => fail(`Could not remove ${link}.`)));
       }
+      yield* removeAlias(directory);
     }
     return yield* state;
   }).pipe(Effect.withSpan("desktop.cliCommand.uninstall"));

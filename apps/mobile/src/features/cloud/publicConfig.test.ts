@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import { resolveCloudPublicConfig } from "./publicConfig";
 
+vi.mock("@t3tools/shared/hostedRelay", () => ({ HOSTED_RELAY_ENABLED: true }));
+
 vi.mock("expo-constants", () => ({
   default: {
     expoConfig: {

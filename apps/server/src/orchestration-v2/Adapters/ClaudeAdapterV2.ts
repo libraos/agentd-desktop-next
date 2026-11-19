@@ -88,6 +88,11 @@ import * as HostProcess from "@t3tools/shared/HostProcess";
 import { applyClaudePromptEffortPrefix } from "@t3tools/shared/model";
 import { compareSemverVersions } from "@t3tools/shared/semver";
 import {
+  APP_MCP_SERVER_NAME,
+  LEGACY_APP_MCP_SERVER_NAME,
+  normalizeLegacyAppMcpAllowedTool,
+} from "@t3tools/shared/t3McpToolPresentation";
+import {
   CLAUDE_RESUME_COMPACTION_COMPACT_ANSWER,
   CLAUDE_RESUME_COMPACTION_NEVER_ANSWER,
   formatClaudeResumeCompactionQuestion,
@@ -2140,12 +2145,12 @@ function parseClaudeInteger(text: string): number {
 }
 
 // Claude Code defers MCP tools behind ToolSearch, so the agent only finds
-// t3_background_wait when the system prompt says when to reach for it.
+// background_wait when the system prompt says when to reach for it.
 const CLAUDE_BACKGROUND_WAIT_INSTRUCTIONS = `
 
 ### Background work you wait on
 
-To wait for a background command or Monitor you started (tests, a build), call \`t3_background_wait\` with its task ID before you end your turn. Do not mark work you leave running, or PRs. T3 MCP tools are deferred: load one with ToolSearch before you call it.
+To wait for a background command or Monitor you started (tests, a build), call \`background_wait\` with its task ID before you end your turn. Do not mark work you leave running, or PRs. T3 MCP tools are deferred: load one with ToolSearch before you call it.
 `;
 
 // Claude 5.1+ returns text written before a tool call as a progress update, which the API
@@ -2446,27 +2451,27 @@ export const readClaudeLaunchArgSettings = Effect.fn("ClaudeAdapterV2.readLaunch
   },
 );
 
-export const CLAUDE_T3_MCP_TOOL_WILDCARD = "mcp__t3-code__*";
+export const CLAUDE_T3_MCP_TOOL_WILDCARD = `mcp__${APP_MCP_SERVER_NAME}__*`;
 
 // Keep in sync with OrchestratorToolkit Tool.Readonly annotations; ClaudeAdapterV2.test.ts checks this.
 export const CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS: ReadonlyArray<string> = [
-  "mcp__t3-code__orchestrator_capabilities",
-  "mcp__t3-code__list_scheduled_tasks",
-  "mcp__t3-code__t3_background_wait",
-  "mcp__t3-code__t3_thread_list",
-  "mcp__t3-code__t3_thread_wait",
-  "mcp__t3-code__t3_worktree_status",
-  "mcp__t3-code__t3_worktree_list",
-  "mcp__t3-code__t3_project_list",
-  "mcp__t3-code__t3_project_read",
-  "mcp__t3-code__t3_thread_search",
-  "mcp__t3-code__t3_preview_list",
-  "mcp__t3-code__t3_environment_read",
-  "mcp__t3-code__t3_environment_links",
-  "mcp__t3-code__t3_theme_read",
-  "mcp__t3-code__html_preview",
-  "mcp__t3-code__html_render",
-  "mcp__t3-code__send_to_user",
+  `mcp__${APP_MCP_SERVER_NAME}__orchestrator_capabilities`,
+  `mcp__${APP_MCP_SERVER_NAME}__list_scheduled_tasks`,
+  `mcp__${APP_MCP_SERVER_NAME}__background_wait`,
+  `mcp__${APP_MCP_SERVER_NAME}__thread_list`,
+  `mcp__${APP_MCP_SERVER_NAME}__thread_wait`,
+  `mcp__${APP_MCP_SERVER_NAME}__worktree_status`,
+  `mcp__${APP_MCP_SERVER_NAME}__worktree_list`,
+  `mcp__${APP_MCP_SERVER_NAME}__project_list`,
+  `mcp__${APP_MCP_SERVER_NAME}__project_read`,
+  `mcp__${APP_MCP_SERVER_NAME}__thread_search`,
+  `mcp__${APP_MCP_SERVER_NAME}__preview_list`,
+  `mcp__${APP_MCP_SERVER_NAME}__environment_read`,
+  `mcp__${APP_MCP_SERVER_NAME}__environment_links`,
+  `mcp__${APP_MCP_SERVER_NAME}__theme_read`,
+  `mcp__${APP_MCP_SERVER_NAME}__html_preview`,
+  `mcp__${APP_MCP_SERVER_NAME}__html_render`,
+  `mcp__${APP_MCP_SERVER_NAME}__send_to_user`,
 ];
 
 // request_secret can wait an hour; exceed Claude's default 60 s timeout.
@@ -2485,15 +2490,22 @@ export function claudeMcpQueryOverrides(input: {
 } {
   const session = input.mcpSession;
   if (session === undefined) {
-    return input.allowedTools === undefined ? {} : { allowedTools: input.allowedTools };
+    return input.allowedTools === undefined
+      ? {}
+      : { allowedTools: input.allowedTools.map(normalizeLegacyAppMcpAllowedTool) };
   }
   const mcpAllowedTools = input.readOnlySandbox
     ? CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS
     : [CLAUDE_T3_MCP_TOOL_WILDCARD];
   return {
-    allowedTools: Array.from(new Set([...(input.allowedTools ?? []), ...mcpAllowedTools])),
+    allowedTools: Array.from(
+      new Set([
+        ...(input.allowedTools ?? []).map(normalizeLegacyAppMcpAllowedTool),
+        ...mcpAllowedTools,
+      ]),
+    ),
     mcpServers: {
-      "t3-code": {
+      [APP_MCP_SERVER_NAME]: {
         type: "http",
         url: session.endpoint,
         headers: {
@@ -4355,7 +4367,7 @@ export function permissionResultFromDecision(input: {
   readonly toolUseID: string;
   readonly suggestions?: Parameters<CanUseTool>[2]["suggestions"];
   readonly feedback?: string;
-  /** Under an administrator's ceiling, T3 Code's mode is the only one; Claude cannot switch it. */
+  /** Under an administrator's ceiling, AgentD Desktop's mode is the only one; Claude cannot switch it. */
   readonly managedCeiling?: boolean;
 }): PermissionResult {
   if (input.decision === "accept" || input.decision === "acceptForSession") {
@@ -8665,7 +8677,8 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
             const { liveQuery, toolCall } = input;
             if (
               !toolCall.toolName.startsWith("mcp__") ||
-              toolCall.toolName.startsWith("mcp__t3-code__") ||
+              toolCall.toolName.startsWith(`mcp__${APP_MCP_SERVER_NAME}__`) ||
+              toolCall.toolName.startsWith(`mcp__${LEGACY_APP_MCP_SERVER_NAME}__`) ||
               !claudeSupportsMcpApps(liveQuery.capabilities)
             ) {
               return undefined;
@@ -13345,7 +13358,7 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
                 }
                 const nativeItemId = `bypass-policy-downgrade:${context.providerTurnId}`;
                 const notice =
-                  "T3 could not confirm Claude bypass permissions here, so Full access is running with approval checks.";
+                  "AgentD Desktop could not confirm Claude bypass permissions here, so Full access is running with approval checks.";
                 yield* emitProviderEvent({
                   type: "turn_item.updated",
                   driver: CLAUDE_PROVIDER,

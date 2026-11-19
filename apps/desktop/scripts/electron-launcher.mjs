@@ -269,8 +269,9 @@ function resolveMacBundleInfoPlistStrings(executableName) {
     CFBundleExecutable: executableName,
     CFBundleIconFile: "icon.icns",
     NSScreenCaptureUsageDescription:
-      "T3 Code captures the active window when you use the snapshot shortcut.",
-    NSDocumentsFolderUsageDescription: "T3 Code reads project files you open in the desktop app.",
+      "AgentD Desktop captures the active window when you use the snapshot shortcut.",
+    NSDocumentsFolderUsageDescription:
+      "AgentD Desktop reads project files you open in the desktop app.",
   };
 }
 

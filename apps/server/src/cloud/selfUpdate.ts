@@ -195,7 +195,7 @@ export const make = Effect.fn("cloud.server_self_update.make")(function* () {
         );
       }
       return yield* failWith(
-        "This server is managed by the AgentD Desktop desktop app on its machine; update the desktop app to update it.",
+        "This server is managed by the AgentD Desktop app on its machine; update the desktop app to update it.",
       );
     }
     // The target must accept the launcher that will run it, which can be older than this server.

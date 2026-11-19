@@ -45,6 +45,8 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { configureAndroidAgentNotifications } from "./androidNotifications";
 
+vi.mock("@t3tools/shared/hostedRelay", () => ({ HOSTED_RELAY_ENABLED: true }));
+
 vi.mock("./androidNotifications", () => ({
   supportsAndroidAgentNotifications: vi.fn(() => true),
   configureAndroidAgentNotifications: vi.fn(),

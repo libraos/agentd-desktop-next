@@ -18,7 +18,7 @@
   "8bdea08e03ec690f": "本次启动 AgentD Desktop 将使用 Windows 后端，并在下次启动应用时重试 WSL。",
   "b5435aa5b470bafd": "WSL 后端无法启动",
   "71794daf3152e8f3": "正在回退到 Windows 后端，以便打开 AgentD Desktop。修复 WSL 发行版后，请在“设置 > 共享与访问”中重新启用 WSL 后端。",
-  "923cb81fd7ac467d": "另一个 AgentD Desktop 服务器（例如后台服务）正在使用此数据目录，或者为它设置了旧版后台服务。请停止该服务器，或尝试 `agentd-desktop update`。如果旧版启动器无法更新，请运行 `agentd-desktop service uninstall`，并可选择用当前版本的 CLI 运行 `agentd-desktop service install` 重新安装。如果缺少 `t3` 或版本过旧，请使用 `npx t3@latest`，并在每条命令中用 `--base-dir` 传入该服务的 T3 主目录。然后重新打开 AgentD Desktop。你也可以设置单独的 T3CODE_HOME，并与正在运行的服务器配对。",
+  "e946924d024a563a": "另一个 AgentD Desktop 服务器（例如后台服务）正在使用此数据目录，或者为它设置了旧版后台服务。请停止该服务器，或尝试 `agentd-desktop update`。如果旧版启动器无法更新，请运行 `agentd-desktop service uninstall`，并可选择用当前版本的 CLI 运行 `agentd-desktop service install` 重新安装。如果缺少 `t3` 或版本过旧，请使用 `npx t3@latest`，并在每条命令中用 `--base-dir` 传入该服务的 数据目录。然后重新打开 AgentD Desktop。你也可以设置单独的 T3CODE_HOME，并与正在运行的服务器配对。",
   "89c319764aa0a095": "AgentD Desktop 后台服务正在使用此 AgentD Desktop 主目录（PID {pid}，端口 {port}，版本 {version}）。请运行 `agentd-desktop service uninstall` 并用 `--base-dir` 传入此主目录来停止它，然后重新打开 AgentD Desktop。你也可以设置单独的 T3CODE_HOME，并与正在运行的服务器配对。",
   "773fdfb46d6335d6": "AgentD Desktop 后台服务正在使用此 AgentD Desktop 主目录（PID {pid}，端口 {port}）。请运行 `agentd-desktop service uninstall` 并用 `--base-dir` 传入此主目录来停止它，然后重新打开 AgentD Desktop。你也可以设置单独的 T3CODE_HOME，并与正在运行的服务器配对。",
   "bb36e4a6051b2915": "另一个 AgentD Desktop 服务器（例如 `agentd-desktop serve`，或通过 SSH 启动的服务器）正在使用此 AgentD Desktop 主目录（PID {pid}，端口 {port}，版本 {version}）。如果它是另一台机器上的 AgentD Desktop 通过 SSH 启动的，那个应用会重新启动它：请在那边移除或断开该 SSH 环境，或退出那个应用。然后停止该服务器，并重新打开 AgentD Desktop。你也可以设置单独的 T3CODE_HOME，并与正在运行的服务器配对。",

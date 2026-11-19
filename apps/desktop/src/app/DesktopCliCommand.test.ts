@@ -121,8 +121,11 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
         path.join(home, ".agentd-desktop", "bin", "agentd-desktop"),
       );
       expect((yield* command.install).installedPath).toBe(link);
-      // A `t3` on PATH is T3 Code's command, never ours.
-      expect(yield* fs.exists(path.join(home, ".local", "bin", "t3"))).toBe(false);
+      // The `t3` alias is the same launcher under the old name.
+      const alias = path.join(home, ".local", "bin", "t3");
+      expect(yield* fs.readLink(alias)).toBe(
+        path.join(home, ".agentd-desktop", "bin", "agentd-desktop"),
+      );
 
       // Add to PATH appends one line, once, and keeps a final line with no newline intact.
       const zshrc = path.join(home, ".zshrc");
@@ -140,6 +143,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
 
       expect((yield* command.uninstall).installedPath).toBeNull();
       expect(yield* fs.exists(link)).toBe(false);
+      expect(yield* fs.exists(alias)).toBe(false);
       expect(yield* fs.exists(path.join(home, ".agentd-desktop", "bin", "agentd-desktop"))).toBe(
         true,
       );
@@ -212,6 +216,23 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       expect((yield* Effect.flip(command.install)).message).toContain("Could not set up");
       yield* command.uninstall;
       expect(yield* fs.readFileString(launcher)).toBe("npm's t3\n");
+    }),
+  );
+
+  it.effect("leaves a t3 it did not create when installing and removing", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const home = yield* fs.makeTempDirectoryScoped();
+      const theirs = path.join(home, ".local", "bin", "t3");
+      yield* fs.makeDirectory(path.dirname(theirs), { recursive: true });
+      yield* fs.writeFileString(theirs, "npm's t3\n");
+      const command = yield* commandIn({ home });
+
+      yield* command.install;
+      expect(yield* fs.readFileString(theirs)).toBe("npm's t3\n");
+      yield* command.uninstall;
+      expect(yield* fs.readFileString(theirs)).toBe("npm's t3\n");
     }),
   );
 
@@ -422,8 +443,11 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       ).replace(/[\\/]agentd-desktop\.cmd$/, "");
       yield* command.install;
       expect(registry.path).toBe(`${userPath};${launcherDir}`);
+      const windowsAlias = `${launcherDir}${launcherDir.includes("\\") ? "\\" : "/"}t3.cmd`;
+      expect(yield* fs.readFileString(windowsAlias)).toContain(DesktopCliShim.MARKER);
       yield* command.uninstall;
       expect(registry.path).toBe(userPath);
+      expect(yield* fs.exists(windowsAlias)).toBe(false);
 
       // A `;` in the folder would split it into two PATH entries, so nothing is written.
       const split = fakePowerShell(userPath);

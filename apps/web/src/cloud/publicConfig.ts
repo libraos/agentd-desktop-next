@@ -2,6 +2,7 @@ import {
   clerkFrontendApiHostnameFromPublishableKey,
   relayClerkTokenOptions,
 } from "@t3tools/shared/relayAuth";
+import { HOSTED_RELAY_ENABLED } from "@t3tools/shared/hostedRelay";
 import { normalizeSecureRelayUrl } from "@t3tools/shared/relayUrl";
 import * as Schema from "effect/Schema";
 
@@ -40,7 +41,15 @@ function normalizeSecureUrl(value: string): string | null {
   }
 }
 
+const DISABLED_CLOUD_PUBLIC_CONFIG: CloudPublicConfig = {
+  clerkPublishableKey: null,
+  clerkJwtTemplate: null,
+  relayUrl: null,
+  relayTracing: { tracesUrl: null, tracesDataset: null, tracesToken: null },
+};
+
 export function resolveCloudPublicConfig(): CloudPublicConfig {
+  if (!HOSTED_RELAY_ENABLED) return DISABLED_CLOUD_PUBLIC_CONFIG;
   return {
     clerkPublishableKey: trimNonEmpty(
       import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined,

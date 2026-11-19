@@ -48,6 +48,8 @@ const relayClientInstallDialog = vi.hoisted(() => ({
   finish: vi.fn(),
 }));
 
+vi.mock("@t3tools/shared/hostedRelay", () => ({ HOSTED_RELAY_ENABLED: true }));
+
 vi.mock("./relayClientInstallDialog", () => ({
   requestRelayClientInstallConfirmation: relayClientInstallDialog.requestConfirmation,
   reportRelayClientInstallProgress: relayClientInstallDialog.reportProgress,
@@ -279,7 +281,7 @@ describe("web cloud link environment client", () => {
       expect(error).toMatchObject({
         _tag: "CloudEnvironmentLinkError",
         message:
-          "Disconnected locally, but T3 Connect did not confirm it removed this environment: Relay encountered an internal error (upstream_unavailable).",
+          "Disconnected locally, but the hosted relay did not confirm it removed this environment: Relay encountered an internal error (upstream_unavailable).",
         traceId: "trace-unlink",
       });
     }),

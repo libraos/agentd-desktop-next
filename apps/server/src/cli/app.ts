@@ -61,7 +61,7 @@ export class DesktopAppUnreachableError extends Schema.TaggedError<DesktopAppUnr
   },
 ) {
   override get message(): string {
-    return "Could not reach the AgentD Desktop desktop app. Start or update the desktop app on this machine, then run `agentd-desktop app` again. A running AgentD Desktop server is not enough.";
+    return "Could not reach the AgentD Desktop app. Start or update the desktop app on this machine, then run `agentd-desktop app` again. A running AgentD Desktop server is not enough.";
   }
 }
 
@@ -277,6 +277,6 @@ export const appCommand = Command.make("app", {
     Argument.optional,
   ),
 }).pipe(
-  Command.withDescription("Open a project in the running AgentD Desktop desktop app."),
+  Command.withDescription("Open a project in the running AgentD Desktop app."),
   Command.withHandler(runAppCommand),
 );

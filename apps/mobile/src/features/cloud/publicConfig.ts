@@ -1,4 +1,5 @@
 import Constants from "expo-constants";
+import { HOSTED_RELAY_ENABLED } from "@t3tools/shared/hostedRelay";
 import { relayClerkTokenOptions } from "@t3tools/shared/relayAuth";
 import { normalizeSecureRelayUrl } from "@t3tools/shared/relayUrl";
 import * as Schema from "effect/Schema";
@@ -57,6 +58,7 @@ function normalizeSecureUrl(value: unknown): string | null {
 }
 
 export function resolveCloudPublicConfig(extra: ExpoExtra = Constants.expoConfig?.extra) {
+  if (!HOSTED_RELAY_ENABLED) extra = undefined;
   return {
     clerk: {
       publishableKey: trimNonEmpty(extra?.clerk?.publishableKey),

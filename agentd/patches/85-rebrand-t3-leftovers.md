@@ -1,0 +1,516 @@
+# 85: Remove the T3 names a person or an agent can see
+
+Upstream T3 Code names still showed to agents (tool names), in the CLI, in T3 Connect / t3.chat entry points, and in visible text. This patch changes what is seen and leaves internal identifiers alone.
+
+## Renamed
+
+- **App MCP server and tools.** Agents now see `mcp__agentd-desktop__<tool>` and tool names have no `t3_` prefix (`mcp__t3-code__t3_thread_list` → `mcp__agentd-desktop__thread_list`). Covered: Claude (`mcpServers` key, `allowedTools` wildcard and read-only list), Codex (`mcp_servers.agentd-desktop` and `agentd-desktop-direct`), opencode v1 (`agentd-desktop`) and v2 (`agentd-desktop-<thread>`, permission rules), ACP (`acpServers`/`mcpServers` name and MCP-over-ACP server id), Antigravity, Cursor, Muse, Pi (`mcp__agentd-desktop__` and hidden `mcp__agentd_desktop__`), Kiro/Hermes title parsing, `CLAUDE_CODE_ENTRYPOINT`, MCP client/host names. Tool definitions (`apps/server/src/mcp/toolkits/*/tools.ts`), prompts, tool-search text, docs and `evals/mcp-tool-use` cases use the new names.
+- **Old names keep working.**
+  - `normalizeLegacyAppMcpAllowedTool` (`packages/shared/src/t3McpToolPresentation.ts`) rewrites a stored or launch-argument allow-list entry naming `mcp__t3-code__…` / `t3_…` to the new form before Claude gets it.
+  - The tool presentation resolver maps every old server alias (`t3-code`, `t3_code`, `t3code`, `t3-code-direct`, opencode `t3-code-<thread>`) and `t3_`-prefixed names to the current tool, so earlier threads still show their tool rows and icons.
+  - The MCP-over-ACP bridge accepts server id `t3-code` too. opencode v2 denies the legacy `t3-code-*` prefix as well as `agentd-desktop-*`.
+  - A resumed session gets the new server config, and the model calls the tools by the names it is now given. The server does not answer calls to the old names.
+- **CLI.** The settings row installs `agentd-desktop` and a `t3` alias next to it: a symlink on macOS and Linux, a marked `t3.cmd` on Windows. Removing removes both. A `t3` that is not ours is never replaced or removed. The branch prefix example is `agentd/`.
+- **Text.** "T3 Code" is now "AgentD Desktop" in web, desktop (GNOME extension, macOS usage strings), mobile (app names, widget text, permission strings, native clipboard/folder labels), server CLI, notification and error text, runtime instructions, marketing, recorded replay fixtures and `.github/triage/PLAYBOOK.md` (kept byte-identical to `triagePrompt.ts`). The icon id for app tools is now `agentd-desktop`; it is derived and never stored.
+
+## Hidden behind a flag (off by default)
+
+- **Flag:** `HOSTED_RELAY_ENABLED = false` in `packages/shared/src/hostedRelay.ts` (`@t3tools/shared/hostedRelay`).
+- **How it hides things:** web, mobile and server `publicConfig` return no hosted-relay config while the flag is off. Every T3 Connect / t3.chat entry point already gated on that config.
+  - Web/desktop: Clerk sign-in is not mounted. Hidden: the sidebar sign-in, account and t3.chat profile pages, linking an environment, public URL, the cloud environment list, connect onboarding, the relay client install dialog, "Use in another app" relay section, and guest share.
+  - Mobile: hidden are the T3 Connect profile page, the auth and notification settings entries, cloud environment rows, onboarding and device registration. App links to the hosted app are only added when `HOSTED_APP_HOST` is set, and the iOS associated domains for the relay's sign-in domain (`clerk.t3.codes`) only when the flag is on, so iOS does not fetch from it on install.
+  - Server: the CLI link/up/connect flows and startup link recovery are skipped.
+- **What is still contacted:** nothing found. Relay discovery only runs with a managed session, and none exists without sign-in.
+- **What stays:** SSH, reachable-address and Tailscale routes are untouched. The triage prompt's `app.t3.codes` lines are gone. Remaining wording says "hosted relay".
+- **To re-enable:** set `HOSTED_RELAY_ENABLED` to `true` and supply the existing relay and sign-in build config (`VITE_CLERK_*`, `VITE_T3CODE_RELAY_URL`; mobile Expo `extra`; server `T3CODE_*`). Without that config nothing shows, even with the flag on.
+
+## Kept, and why
+
+- `t3code:` / `t3:` storage keys, the `t3-code` theme id, `T3CODE_*` env vars, the `t3_session` cookie and `t3-thread://` links. Renaming them would drop saved settings and sessions.
+- `@t3tools/*` package names, the `t3` server package name, lint rule names (`t3code/…`), and file, component and native module names.
+- The mobile Expo `slug`, bundle ids and URL schemes. Changing them breaks installs and EAS links.
+- Prompt tag names such as `<t3_code_instructions>` (their text now says AgentD Desktop), and MCP tool titles such as "Create T3 threads".
+- Text on the hosted relay and T3 Chat pages that only render with the flag on (for example "Link T3 Chat") names the upstream service they link to; it is never shown while the flag is off.
+- Maintainer-only scripts (`apps/server/scripts`, `apps/mobile/scripts`) and the marketing site's legal pages, which are not part of the app.
+- The standalone server CLI self-install (`npx t3` → `t3`, `apps/server/src/cli/install.ts`) still installs and names `t3`. Renaming that runtime layout is outside this patch.
+
+## Not verified per platform
+
+- **Linux:** typecheck of web and server, the server adapter, provider, triage and testkit replay tests, shared presentation tests, the web settings browser tests, desktop CLI tests (with a fake PowerShell), and the touched mobile unit tests.
+- **macOS:** the alias symlink path is covered by unit tests only. No packaged app was run.
+- **Windows:** `t3.cmd` was not run on a real machine.
+- **Mobile:** no device run. Display-name changes in `app.config.ts` were not built.
+- **Hosted relay:** no build with the relay config, so the re-enable path is untested. No visual check of web or mobile.
+- **i18n:** new and changed strings are not in the catalogs yet; `i18n:generate` is left to the lead.
+
+## Upstream files
+
+- `.github/triage/PLAYBOOK.md` — hosted relay wording / no t3.chat or app.t3.codes; "AgentD Desktop" for "T3 Code".
+- `apps/desktop/gnome-extension/captureFeedback.js` — "AgentD Desktop" for "T3 Code".
+- `apps/desktop/gnome-extension/metadata.json` — "AgentD Desktop" for "T3 Code".
+- `apps/desktop/scripts/electron-launcher.mjs` — "AgentD Desktop" for "T3 Code".
+- `apps/desktop/src/app/DesktopCliCommand.test.ts` — alias install, foreign `t3` left alone, uninstall removes both, Windows `t3.cmd`.
+- `apps/desktop/src/app/DesktopCliCommand.ts` — installs and removes the `t3` alias beside `agentd-desktop` (symlink on macOS/Linux, marked `t3.cmd` on Windows).
+- `apps/desktop/src/app/DesktopLegacyLocalStorage.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/desktop/src/app/DesktopUserData.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/i18n/de.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/i18n/en.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/i18n/es.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/i18n/fr.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/i18n/ja.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/i18n/ko.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/i18n/pt-BR.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/i18n/ru.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/i18n/zh.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/layouts/Layout.astro` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/lib/seo.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/lib/tweets.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/pages/404.astro` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/pages/95.astro` — MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/pages/[...locale]/download.astro` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/pages/[...locale]/index.astro` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/pages/legal.astro` — "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/pages/llms.txt.ts` — hosted relay wording / no t3.chat or app.t3.codes; "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/pages/privacy-policy.astro` — hosted relay wording / no t3.chat or app.t3.codes; "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/pages/security-policy.astro` — hosted relay wording / no t3.chat or app.t3.codes; "AgentD Desktop" for "T3 Code".
+- `apps/marketing/src/pages/terms-of-service.astro` — hosted relay wording / no t3.chat or app.t3.codes; "AgentD Desktop" for "T3 Code".
+- `apps/marketing/vercel.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/README.md` — hosted relay wording / no t3.chat or app.t3.codes; "AgentD Desktop" for "T3 Code".
+- `apps/mobile/app.config.ts` — "AgentD Desktop" for "T3 Code"; hosted app link domain only with `HOSTED_APP_HOST`; relay sign-in associated domains only with `HOSTED_RELAY_ENABLED`.
+- `apps/mobile/app.config.test.ts` — no hosted link domains by default; `HOSTED_APP_HOST` opts in.
+- `apps/mobile/modules/t3-composer-editor/android/src/main/java/expo/modules/t3composereditor/T3ComposerEditorModule.kt` — hosted relay wording / no t3.chat or app.t3.codes; "AgentD Desktop" for "T3 Code".
+- `apps/mobile/modules/t3-composer-editor/ios/T3ComposerEditor.podspec` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/modules/t3-composer-editor/ios/T3ComposerEditorModule.swift` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/modules/t3-highlights/T3HighlightsNative.podspec` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/modules/t3-native-controls/android/src/main/java/expo/modules/t3nativecontrols/T3NativeControlsModule.kt` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/modules/t3-native-controls/ios/T3NativeControls.podspec` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/modules/t3-native-controls/ios/T3NativeControlsModule.swift` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/modules/t3-native-controls/ios/T3NativeImageViewer.swift` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/modules/t3-review-diff/T3ReviewDiffNative.podspec` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/modules/t3-source-text/T3SourceText.podspec` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/modules/t3-source-text/UPSTREAM.md` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/modules/t3-terminal/T3TerminalNative.podspec` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/modules/t3-voice-transcription/ios/T3VoiceTranscription.podspec` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/modules/t3-web-socket/ios/T3WebSocket.podspec` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/scripts/measure-renders.mts` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/Stack.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/components/BrandMark.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/components/CompactBrandTitle.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/components/T3Wordmark.tsx` — accessibility label says AgentD Desktop.
+- `apps/mobile/src/components/ui/segmentedControlColors.ts` — MCP server/client name `agentd-desktop`.
+- `apps/mobile/src/connection/platform.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/features/agent-awareness/remoteRegistration.test.ts` — turns the hosted-relay flag on for a test that needs the live config.
+- `apps/mobile/src/features/agent-awareness/remoteRegistration.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/cloud/ConnectOnboardingRouteScreen.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/features/cloud/T3ConnectProfilePage.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/features/cloud/linkEnvironment.test.ts` — turns the hosted-relay flag on for a test that needs the live config.
+- `apps/mobile/src/features/cloud/publicConfig.hostedRelayOff.test.ts` — new: with the flag off no hosted-relay config, so no entry, even when the build carries one.
+- `apps/mobile/src/features/cloud/publicConfig.test.ts` — turns the hosted-relay flag on for tests of the live config.
+- `apps/mobile/src/features/cloud/publicConfig.ts` — returns no hosted-relay config while `HOSTED_RELAY_ENABLED` is off.
+- `apps/mobile/src/features/connection/CloudEnvironmentRows.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/features/connection/ConnectDeviceApprovalCoordinator.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/features/connection/ConnectionEnvironmentRow.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/features/connection/ConnectionsNewRouteScreen.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/features/connection/PullRequestRoutingSettings.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/features/connection/connectDeviceApproval.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/features/connection/environmentSections.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/features/diagnostics/SettingsDiagnosticsRouteScreen.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/diagnostics/crash-log-model.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/home/HomeRouteScreen.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/issues/IssuesScreen.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/layout/workspace/ListSearchToolbar.android.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/layout/workspace/WorkspaceListHeader.android.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/layout/workspace/WorkspaceListHeader.types.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/pull-requests/pullRequestAgentTasks.ts` — model-facing text says AgentD Desktop.
+- `apps/mobile/src/features/settings/OutdatedServerUpdateSection.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/settings/SettingsAuthRouteScreen.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/settings/SettingsNotificationsRouteScreen.tsx` — hosted relay wording / no t3.chat or app.t3.codes; "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/settings/SettingsScheduledTasksRouteScreen.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/settings/SettingsVoiceRouteScreen.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/settings/ThreadSettingsSections.tsx` — no "T3 home" in visible text.
+- `apps/mobile/src/features/settings/VoiceModelSection.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/settings/components/SourceControlSignInSection.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/settings/environmentUpdateCheck.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/showcase/showcaseAgentActivity.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/terminal/terminalTheme.ts` — MCP server/client name `agentd-desktop`.
+- `apps/mobile/src/features/threads/LinkRequestCard.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/features/threads/ThreadComposer.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/threads/ThreadFeed.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/threads/ThreadQueueControl.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/threads/guestMessageStyle.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/features/threads/thread-work-log.tsx` — MCP server/client name `agentd-desktop`.
+- `apps/mobile/src/features/voice-input/voiceDestination.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/lib/appLinking.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/lib/authClientMetadata.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/lib/mobileTheme.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/lib/saveImageToLibrary.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/lib/threadActivity.ts` — MCP server/client name `agentd-desktop`.
+- `apps/mobile/src/state/peerLinks.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/state/use-remote-environment-registry.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/mobile/src/state/use-thread-composer-state.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/widgets/AgentActivityWidget.tsx` — "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/widgets/SubscriptionUsage.android.tsx` — widget text says AgentD Desktop.
+- `apps/mobile/src/widgets/SubscriptionUsage.tsx` — widget text says AgentD Desktop.
+- `apps/mobile/src/widgets/agentActivityWidgetTimeline.ts` — hosted relay wording / no t3.chat or app.t3.codes; "AgentD Desktop" for "T3 Code".
+- `apps/mobile/src/widgets/subscriptionUsageSnapshot.ts` — widget text says AgentD Desktop.
+- `apps/server/README.md` — "AgentD Desktop" for "T3 Code".
+- `apps/server/integration/TransferBudgetReport.integration.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/scripts/acp-mock-agent.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/auth/EnvironmentAuth.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/auth/EnvironmentAuth.ts` — hosted relay wording / no t3.chat or app.t3.codes; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/auth/EnvironmentAuthAdmin.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/auth/McpOAuth.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/auth/McpOAuth.ts` — hosted relay wording / no t3.chat or app.t3.codes; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/auth/PairingGrantStore.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/auth/RpcAuthorization.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/auth/SessionStore.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/auth/mcpOAuthHttp.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/binCli.test.ts` — app tool names without `t3_`.
+- `apps/server/src/binCli.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cli/app.ts` — visible text without T3.
+- `apps/server/src/cli/auth.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cli/config.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cli/connect.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cli/connect.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cli/environment.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cli/pair.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cli/thread.test.ts` — app tool names without `t3_`.
+- `apps/server/src/cli/thread.ts` — app tool names without `t3_`.
+- `apps/server/src/cli/up.connect.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cli/up.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cli/up.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cliAuthFormat.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cloud/CliTokenManager.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cloud/CloudLink.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cloud/CloudLink.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cloud/ConnectReachability.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cloud/ConnectReachability.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cloud/ManagedEndpointRuntime.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cloud/cliAuthHtml.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cloud/linkChecks.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cloud/managedTunnelStartup.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cloud/publicConfig.ts` — no hosted-relay config while `HOSTED_RELAY_ENABLED` is off, so CLI link/up/connect and startup link recovery are skipped.
+- `apps/server/src/cloud/relayResponse.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cloud/relayTracing.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cloud/relayTracing.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cloud/selfUpdate.ts` — visible text without T3.
+- `apps/server/src/cloud/traceRelayRequest.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/cloud/traceRelayRequest.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/desktopUpdate/DesktopAppUpdate.ts` — visible text without T3.
+- `apps/server/src/device/DeviceHubProxy.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/device/SimlockDeviceHost.ts` — visible text without T3.
+- `apps/server/src/environment/ServerEnvironmentLabel.ts` — fallback label "AgentD Desktop environment".
+- `apps/server/src/guest/GuestShareService.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/guest/GuestShareService.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/mcp/AcpMcpStdioBridge.ts` — MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/mcp/McpHttpServer.test.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/McpHttpServer.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/McpInvocationContext.ts` — hosted relay wording / no t3.chat or app.t3.codes; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/mcp/OrchestratorMcpService.test.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/OrchestratorMcpService.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/OrchestratorMcpToolkit.integration.test.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/WorktreeMcpService.test.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/advertisedJsonSchema.test.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/linkOrigin.test.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/threadAccess.test.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/threadAccess.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/attachment/handlers.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/attachment/tools.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/core.test.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/environment/handlers.test.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/environment/handlers.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/environment/tools.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/orchestrator/handlers.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/orchestrator/tools.test.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/orchestrator/tools.ts` — app tool names without `t3_`; hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/mcp/toolkits/previewControls/handlers.test.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/previewControls/handlers.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/previewControls/tools.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/project/handlers.test.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/project/handlers.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/project/tools.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/pullRequests/handlers.test.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/pullRequests/tools.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/theme/handlers.test.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/theme/handlers.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/theme/tools.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/thread/handlers.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/thread/tools.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/toolSearch/tools.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/worktree/handlers.ts` — app tool names without `t3_`.
+- `apps/server/src/mcp/toolkits/worktree/tools.ts` — app tool names without `t3_`.
+- `apps/server/src/orchestration-v2/Adapters/AcpAdapterV2.test.ts` — app tool names without `t3_`.
+- `apps/server/src/orchestration-v2/Adapters/ClaudeAdapterV2.test.ts` — app tool names without `t3_`; MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/Adapters/ClaudeAdapterV2.ts` — MCP server `agentd-desktop`; stored allow-list entries with old names rewritten; `t3_` dropped; visible text.
+- `apps/server/src/orchestration-v2/Adapters/CodexAdapterV2.test.ts` — app tool names without `t3_`.
+- `apps/server/src/orchestration-v2/Adapters/CodexAdapterV2.ts` — app tool names without `t3_`; MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/Adapters/OpenCode2AdapterV2.test.ts` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/ContextHandoffBudget.test.ts` — app tool names without `t3_`.
+- `apps/server/src/orchestration-v2/ContextHandoffDelivery.ts` — app tool names without `t3_`.
+- `apps/server/src/orchestration-v2/ContextHandoffService.test.ts` — app tool names without `t3_`.
+- `apps/server/src/orchestration-v2/ContextHandoffService.ts` — app tool names without `t3_`.
+- `apps/server/src/orchestration-v2/DelegatedCompletionDelivery.test.ts` — app tool names without `t3_`.
+- `apps/server/src/orchestration-v2/DelegatedTaskQuestionReactor.ts` — app tool names without `t3_`.
+- `apps/server/src/orchestration-v2/IdleCompactionService.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/Orchestrator.ts` — app tool names without `t3_`.
+- `apps/server/src/orchestration-v2/ProjectionStore.test.ts` — app tool names without `t3_`.
+- `apps/server/src/orchestration-v2/ProjectionStore.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/ProviderRuntimeRecoveryService.test.ts` — app tool names without `t3_`; MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/ProviderSessionManager.test.ts` — app tool names without `t3_`; MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/SelectionRestart.integration.test.ts` — app tool names without `t3_`.
+- `apps/server/src/orchestration-v2/ThreadFork.execution.test.ts` — app tool names without `t3_`.
+- `apps/server/src/orchestration-v2/runtimeLayer.test.ts` — app tool names without `t3_`.
+- `apps/server/src/orchestration-v2/testkit/ProviderSwitch.integration.test.ts` — app tool names without `t3_`; MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/codex_model_reroute/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/command_output_streaming/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/delegated_task_status/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/grok_auto_blocked_command/grok_transcript.ndjson` — MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/grok_background_bash/grok_transcript.ndjson` — MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/grok_background_bash_fast_wake/grok_transcript.ndjson` — MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/grok_background_subagent/grok_transcript.ndjson` — MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/grok_monitor/grok_transcript.ndjson` — MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/grok_prompt_error/grok_transcript.ndjson` — MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/kiro_subagent_interrupt/kiro_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/message_steering/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/multi_turn/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/multi_turn/grok_transcript.ndjson` — MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_background/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_command/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_compaction/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_fork/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_inbox/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_interrupt/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_missing_step_usage/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_nested_background/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_permission/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_question/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_resume_after_restart/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_revert/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_simple/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_skill/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_subagent/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/opencode2_tool_call/opencode_transcript.ndjson` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/orchestration-v2/testkit/fixtures/plan_questions/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/proposed_plan/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/proposed_plan/cursor_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/provider_thread_resume/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/queued_turn/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/queued_turn/grok_transcript.ndjson` — MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/simple/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/simple/grok_transcript.ndjson` — MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/subagent/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/subagent_continue/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/subagent_v2/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/subagent_v2_approval/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/subagent_v2_nested/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/subagent_v2_nested_approval/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/thread_fork_native_prior_turn/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/thread_merge_back_siblings/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/thread_rollback/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/thread_rollback_after_restart/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/thread_rollback_to_stopped_turn/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/todo_list/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/todo_list/grok_transcript.ndjson` — MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/tool_call_read_only_on_request/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/tool_call_read_only_on_request/grok_transcript.ndjson` — MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/tool_call_restricted_granular/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/tool_call_workspace_never/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/turn_interrupt/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/turn_interrupt/grok_transcript.ndjson` — MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/turn_interrupt_mid_tool/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/orchestration-v2/testkit/fixtures/web_search/codex_transcript.ndjson` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/peer/PeerForwarding.test.ts` — app tool names without `t3_`.
+- `apps/server/src/peer/PeerForwarding.ts` — app tool names without `t3_`; hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/peer/PeerLinkRequests.test.ts` — app tool names without `t3_`.
+- `apps/server/src/peer/PeerLinkRequests.ts` — app tool names without `t3_`.
+- `apps/server/src/peer/PeerLinks.ts` — app tool names without `t3_`; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/peer/PeerMcpClient.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/peer/RemoteDelegation.test.ts` — app tool names without `t3_`.
+- `apps/server/src/peer/RemoteDelegation.ts` — app tool names without `t3_`.
+- `apps/server/src/persistence/AuthConnectDevices.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/persistence/AuthPairingLinks.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/policy/managedLimits.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/policy/managedProviders.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/policy/policyTemplates.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/preview/PreviewBrowser.ts` — visible text without T3.
+- `apps/server/src/preview/ServerBrowser.ts` — app tool names without `t3_`.
+- `apps/server/src/provider/CodexAuthCallbackPage.ts` — brand on the sign-in callback page reads AgentD Desktop.
+- `apps/server/src/provider/CodexChatGptAuth.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/provider/CodexDeveloperInstructions.test.ts` — app tool names without `t3_`.
+- `apps/server/src/provider/CodexManagedRuntime.ts` — visible text without T3.
+- `apps/server/src/provider/CodexProvider.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/provider/Drivers/ClaudeHome.ts` — MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/provider/Drivers/ClaudeSkills.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/provider/acp/AntigravityAcpSupport.ts` — MCP server/client name `agentd-desktop`.
+- `apps/server/src/provider/managedRelease.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/relay/AgentAwarenessRelay.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/relay/HeldHooksWaker.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/scheduledTasks/webhookRoute.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/scheduledTasks/webhookRoute.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/server.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/speech/SpeechModelStore.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/telemetry/Identify.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/telemetry/ProviderDimensions.test.ts` — app tool names without `t3_`.
+- `apps/server/src/telemetry/ProviderDimensions.ts` — app tool names without `t3_`.
+- `apps/server/src/terminal/Manager.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/triage/TriageService.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/server/src/triage/triagePrompt.ts` — hosted relay wording / no t3.chat or app.t3.codes; "AgentD Desktop" for "T3 Code".
+- `apps/server/src/vcs/GitVcsDriver.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/vcs/GitVcsDriverCore.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/vcs/VcsStatusBroadcaster.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/server/src/ws.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/cloud/cloudLinkState.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/cloud/connectCliAuth.test.ts` — turns the hosted-relay flag on for a test that needs the live config.
+- `apps/web/src/cloud/linkEnvironment.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/cloud/linkEnvironment.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/cloud/publicConfig.hostedRelayOff.test.ts` — new: with the flag off no hosted-relay config, so no T3 Connect entry, even when the build carries one.
+- `apps/web/src/cloud/publicConfig.test.ts` — turns the hosted-relay flag on for tests of the live config.
+- `apps/web/src/cloud/publicConfig.ts` — returns no hosted-relay config while `HOSTED_RELAY_ENABLED` is off; every hosted-relay entry point already gates on it.
+- `apps/web/src/cloud/relayFailureReason.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/cloud/t3ConnectState.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/cloud/useCloudLinkController.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/cloud/useT3ConnectTurnOn.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/ConnectDeviceApprovalCoordinator.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/auth/ApproveAgentSurface.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/chat/McpAppFrame.tsx` — visible text without T3.
+- `apps/web/src/components/chat/TimelineToolActivityIcon.tsx` — MCP server/client name `agentd-desktop`.
+- `apps/web/src/components/chat/TimelineWorkEntryRow.logic.ts` — MCP server/client name `agentd-desktop`.
+- `apps/web/src/components/chat/guestShareAvailability.ts` — guest share needs the hosted-relay config.
+- `apps/web/src/components/clerk/MobileClientsUserProfilePage.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/clerk/RemoveT3ConnectEnvironmentDialog.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/clerk/T3ChatUserProfilePage.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/clerk/T3ConnectAccountPages.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/clerk/T3ConnectSidebarSignIn.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/clerk/T3ConnectUserProfilePage.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/clerk/useT3ChatLink.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/cloud/CloudEnvironmentConnectList.browser.test.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/cloud/CloudEnvironmentConnectList.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/cloud/ConnectCliAuthSurface.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/cloud/ConnectOnboardingDialog.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/cloud/RelayClientInstallDialog.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/cloud/TunnelUsage.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/mcp/UseInAnotherAppDialog.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/mcp/mcpGate.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/mcp/mcpGate.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/settings/AddEnvironmentDialog.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/settings/BranchNamingSettings.tsx` — branch prefix example uses `agentd/`.
+- `apps/web/src/components/settings/CliCommandSettingsRow.browser.test.tsx` — fixture paths use `agentd-desktop`.
+- `apps/web/src/components/settings/CliCommandSettingsRow.tsx` — says agentd-desktop and that it also installs `t3` as an alias.
+- `apps/web/src/components/settings/ConnectDeviceApprovalSettings.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/settings/ConnectionsSettings.logic.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/settings/ConnectionsSettings.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/settings/EnvironmentRow.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/settings/LabsSettingsPanel.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/settings/LinkMachineSelect.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/settings/ProviderSettingsPanel.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/settings/ResourceTelemetryDiagnostics.tsx` — visible text without T3.
+- `apps/web/src/components/settings/RevokeConnectDeviceDialog.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/settings/SavedEnvironmentRows.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/components/settings/settingsSearch.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/connection/platform.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/index.css` — "AgentD Desktop" for "T3 Code".
+- `apps/web/src/remoteOpen.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/state/connectMcpApproval.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/src/state/peerLinks.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/test/appScenarios.renders.tsx` — hosted relay wording / no t3.chat or app.t3.codes.
+- `apps/web/vercel.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `docs/internals/server-updates.md` — app tool names without `t3_`.
+- `docs/orchestration-v2/orchestrator-mcp-server.md` — app tool names without `t3_`; MCP server/client name `agentd-desktop`.
+- `docs/user/outside-agents.md` — app tool names without `t3_`.
+- `evals/mcp-tool-use/README.md` — app tool names without `t3_`.
+- `evals/mcp-tool-use/backgroundWait.ts` — app tool names without `t3_`.
+- `evals/mcp-tool-use/cases/background-wait.ndjson` — app tool names without `t3_`.
+- `evals/mcp-tool-use/cases/browser-routing.ndjson` — app tool names without `t3_`.
+- `evals/mcp-tool-use/cases/device-manager.ndjson` — app tool names without `t3_`.
+- `evals/mcp-tool-use/cases/orchestration.ndjson` — app tool names without `t3_`; "AgentD Desktop" for "T3 Code".
+- `evals/mcp-tool-use/cases/projects.ndjson` — app tool names without `t3_`; "AgentD Desktop" for "T3 Code".
+- `evals/mcp-tool-use/cases/pull-requests.ndjson` — app tool names without `t3_`.
+- `evals/mcp-tool-use/cases/secrets.ndjson` — app tool names without `t3_`.
+- `evals/mcp-tool-use/cases/side-chats.ndjson` — app tool names without `t3_`.
+- `evals/mcp-tool-use/cases/themes.ndjson` — app tool names without `t3_`; MCP server/client name `agentd-desktop`; "AgentD Desktop" for "T3 Code".
+- `evals/mcp-tool-use/cases/threads-vs-tasks.ndjson` — app tool names without `t3_`.
+- `evals/mcp-tool-use/cases/visual-preview.ndjson` — app tool names without `t3_`; "AgentD Desktop" for "T3 Code".
+- `evals/mcp-tool-use/device-grading.ts` — app tool names without `t3_`.
+- `evals/mcp-tool-use/run.test.ts` — app tool names without `t3_`; new and legacy Codex code-mode names both graded.
+- `evals/mcp-tool-use/run.ts` — app tool names without `t3_`; MCP server/client name `agentd-desktop`; Codex code mode names `mcp__agentd_desktop__*`, old `mcp__t3_code__*` captures still graded.
+- `evals/mcp-tool-use/secret-grading.test.ts` — app tool names without `t3_`.
+- `evals/mcp-tool-use/secret-grading.ts` — app tool names without `t3_`.
+- `packages/client-runtime/src/authorization/layer.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/authorization/remote.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/authorization/service.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/connection/diagnosis.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/connection/diagnosis.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/connection/errors.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/connection/errors.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/connection/model.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/connection/presentation.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/connection/presentation.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/connection/registry.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/connection/routes.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/connection/routes.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/connection/supervisor.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/connection/supervisor.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/contractLabels.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/errors/network.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/linkRequest.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/linkRequest.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/mcpApps/host.ts` — MCP server/client name `agentd-desktop`.
+- `packages/client-runtime/src/relay/errorPresentation.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/relay/managedRelayState.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/relay/managedRelayState.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/rpc/session.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/state/connectMcpApproval.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/state/environmentHttpAuth.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/t3ToolSummary.test.ts` — app tool names without `t3_`.
+- `packages/client-runtime/src/webhookAddress.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/client-runtime/src/work-log/presentation.test.ts` — app tool names without `t3_`.
+- `packages/contracts/src/auth.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/contracts/src/environment.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/contracts/src/environmentHttp.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/contracts/src/guestShare.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/contracts/src/managedPolicy.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/contracts/src/orchestrationV2.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/contracts/src/orchestratorMcp.ts` — app tool names without `t3_`; hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/contracts/src/previewAutomation.ts` — app tool names without `t3_`.
+- `packages/contracts/src/relay.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/contracts/src/settings.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/contracts/src/worktreeMcp.ts` — app tool names without `t3_`.
+- `packages/effect-acp/src/client.ts` — MCP server/client name `agentd-desktop`.
+- `packages/effect-acp/test/fixtures/acp-mock-peer.ts` — MCP server/client name `agentd-desktop`.
+- `packages/provider-acp-registry/src/server/adapter.ts` — "AgentD Desktop" for "T3 Code".
+- `packages/provider-acp/src/server/adapter.ts` — MCP server/client name `agentd-desktop`.
+- `packages/provider-acp/src/server/mcpOverAcpBridge.test.ts` — app tool names without `t3_`.
+- `packages/provider-acp/src/server/mcpOverAcpBridge.ts` — MCP server/client name `agentd-desktop`.
+- `packages/provider-acp/src/server/runtimeModel.test.ts` — app tool names without `t3_`; MCP server/client name `agentd-desktop`.
+- `packages/provider-acp/src/server/runtimeModel.ts` — MCP server/client name `agentd-desktop`.
+- `packages/provider-core/src/server/handoffBudget.ts` — app tool names without `t3_`.
+- `packages/provider-core/src/server/orchestrationInstructions.ts` — app tool names without `t3_`; MCP server/client name `agentd-desktop`.
+- `packages/provider-cursor/src/server/adapter.ts` — MCP server/client name `agentd-desktop`.
+- `packages/provider-muse/src/server/adapter.ts` — MCP server/client name `agentd-desktop`.
+- `packages/provider-opencode/src/server/adapter.ts` — MCP server/client name `agentd-desktop`.
+- `packages/provider-opencode/src/server/v2/adapter.ts` — per-thread server `agentd-desktop-<thread>`; denies both new and legacy server prefixes; instructions key renamed.
+- `packages/provider-pi/src/server/mcpExtensionSource.ts` — MCP server/client name `agentd-desktop`.
+- `packages/shared/package.json` — exports `./hostedRelay`.
+- `packages/shared/src/composerContextReferences.test.ts` — app tool names without `t3_`.
+- `packages/shared/src/composerContextReferences.ts` — app tool names without `t3_`.
+- `packages/shared/src/desktopIdentity.ts` — adds `CLI_COMMAND_ALIAS = "t3"`.
+- `packages/shared/src/hostedRelay.ts` — new: `HOSTED_RELAY_ENABLED = false`.
+- `packages/shared/src/orchestrationV2PendingBackgroundWork.ts` — app tool names without `t3_`.
+- `packages/shared/src/paletteSearch.test.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/shared/src/relayTracing.ts` — hosted relay wording / no t3.chat or app.t3.codes.
+- `packages/shared/src/t3McpToolPresentation.test.ts` — old-name compatibility: legacy history names resolve, stored allow-list entries are rewritten.
+- `packages/shared/src/t3McpToolPresentation.ts` — server-name constants, legacy `t3-code` / `t3_` names mapped to current ones for history and allow lists.
+- `packages/shared/src/t3McpToolPresentationCopy.ts` — MCP server/client name `agentd-desktop`.
+- `packages/shared/src/themeCss.ts` — app tool names without `t3_`.
+- `packages/shared/src/themePalettes.ts` — MCP server/client name `agentd-desktop`.
+- `packages/source-control-github/src/shared/definition.ts` — "AgentD Desktop" for "T3 Code".
+- `apps/desktop/src/backend/DesktopHomeOwner.ts` — "data directory" for "T3 home" in the ownership error.
+- `apps/desktop/src/wsl/DesktopWslBackend.ts` — "data directory" for "T3 home" in the ownership error.
+- `apps/mobile/src/features/settings/SettingsRouteScreen.tsx` — "Account" for "T3 Account".
+- `apps/mobile/src/features/settings/settings-search.test.ts` — fixture label "Account".
+- `apps/server/src/preview/PreviewBrowser.test.ts` — asserts the AgentD Desktop install error.
+- `packages/provider-cursor/src/server/adapter.test.ts` — MCP server name `agentd-desktop`.
+- `packages/provider-muse/src/server/adapter.test.ts` — MCP server name `agentd-desktop`.

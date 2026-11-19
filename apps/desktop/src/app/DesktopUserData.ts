@@ -31,7 +31,7 @@ export class DesktopUserDataInitializationError extends Schema.TaggedError<Deskt
   }
 }
 
-// Our own profile: nothing is read from or copied out of T3 Code's profiles.
+// Our own profile: nothing is read from or copied out of the upstream app's profiles.
 export const resolveUserDataPath = Effect.fn("desktop.userData.resolveUserDataPath")(
   function* (input: { readonly appDataDirectory: string; readonly isDevelopment: boolean }) {
     const path = yield* Path.Path;

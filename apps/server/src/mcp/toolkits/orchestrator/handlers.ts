@@ -41,7 +41,7 @@ const handlers = {
       return yield* service.cancelTask(scope, input);
     }),
   ),
-  t3_workflow_stop: McpToolAccess.writesThreads(
+  workflow_stop: McpToolAccess.writesThreads(
     (input) => [input.threadId],
     (input) =>
       Effect.gen(function* () {
@@ -61,10 +61,10 @@ const handlers = {
         );
       }),
   ),
-  t3_background_wait: McpToolAccess.actsAsCaller((input) =>
+  background_wait: McpToolAccess.actsAsCaller((input) =>
     Effect.gen(function* () {
       const { scope, threads } = yield* readCaller();
-      const caller = yield* McpInvocationContext.requireThreadScope(scope, "t3_background_wait");
+      const caller = yield* McpInvocationContext.requireThreadScope(scope, "background_wait");
       return yield* threads
         .awaitBackgroundTasks({
           threadId: caller.thread.threadId,
@@ -150,21 +150,21 @@ const handlers = {
       return yield* service.createThreads(scope, input);
     }),
   ),
-  t3_thread_list: McpToolAccess.reads((input) =>
+  thread_list: McpToolAccess.reads((input) =>
     Effect.gen(function* () {
       const scope = yield* McpInvocationContext.McpInvocationContext;
       const service = yield* OrchestratorMcpService.OrchestratorMcpService;
       return yield* service.listThreads(scope, input);
     }),
   ),
-  t3_thread_read: McpToolAccess.reads((input) =>
+  thread_read: McpToolAccess.reads((input) =>
     Effect.gen(function* () {
       const scope = yield* McpInvocationContext.McpInvocationContext;
       const service = yield* OrchestratorMcpService.OrchestratorMcpService;
       return yield* service.readThread(scope, input);
     }),
   ),
-  t3_thread_update: McpToolAccess.writesThreads(
+  thread_update: McpToolAccess.writesThreads(
     (input) => [input.threadId],
     (input) =>
       Effect.gen(function* () {
@@ -173,7 +173,7 @@ const handlers = {
         return yield* service.update(scope, input);
       }),
   ),
-  t3_thread_send: McpToolAccess.afterForwarding(
+  thread_send: McpToolAccess.afterForwarding(
     McpToolAccess.writesThreads(
       (input) => [input.threadId],
       (input) =>
@@ -191,14 +191,14 @@ const handlers = {
         return yield* remote.followUp(scope, environmentId, input, sent);
       }),
   ),
-  t3_thread_wait: McpToolAccess.reads((input) =>
+  thread_wait: McpToolAccess.reads((input) =>
     Effect.gen(function* () {
       const scope = yield* McpInvocationContext.McpInvocationContext;
       const service = yield* OrchestratorMcpService.OrchestratorMcpService;
       return yield* service.waitForThread(scope, input);
     }),
   ),
-  t3_environment_links: McpToolAccess.reads(() =>
+  environment_links: McpToolAccess.reads(() =>
     Effect.gen(function* () {
       const scope = yield* McpInvocationContext.McpInvocationContext;
       const forwarding = yield* PeerForwarding.PeerForwarding;
@@ -207,14 +207,14 @@ const handlers = {
   ),
   // A link lets every agent here reach the other environment, so it is an
   // environment setting: full access, and never for linked work.
-  t3_environment_link: McpToolAccess.writesEnvironment((input) =>
+  environment_link: McpToolAccess.writesEnvironment((input) =>
     Effect.gen(function* () {
       const scope = yield* McpInvocationContext.McpInvocationContext;
       const requests = yield* PeerLinkRequests.PeerLinkRequests;
       return yield* requests.request(scope, input);
     }),
   ),
-  t3_environment_unlink: McpToolAccess.writesEnvironment(({ environmentId }) =>
+  environment_unlink: McpToolAccess.writesEnvironment(({ environmentId }) =>
     Effect.gen(function* () {
       const links = yield* PeerLinks.PeerLinks;
       const removed = yield* links
@@ -228,7 +228,7 @@ const handlers = {
       return { environmentId, removed };
     }),
   ),
-  t3_thread_interrupt: McpToolAccess.writesThreads(
+  thread_interrupt: McpToolAccess.writesThreads(
     (input) => [input.threadId],
     (input) =>
       Effect.gen(function* () {

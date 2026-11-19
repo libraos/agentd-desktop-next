@@ -61,6 +61,17 @@ import * as HostProcess from "@t3tools/shared/HostProcess";
 import packageJson from "../../package.json" with { type: "json" };
 const isCodexAppServerSpawnError = Schema.is(CodexErrors.CodexAppServerSpawnError);
 
+// npm's `codex` launcher runs, but the platform package with the native binary
+// (@openai/codex-<platform>/vendor/…) was skipped, e.g. by --omit=optional.
+const CODEX_VENDOR_PATH = /[\\/]@openai[\\/]codex-[^\\/\s]+[\\/]vendor[\\/]/;
+
+export function codexProbeFailureMessage(errorMessage: string): string {
+  return errorMessage.includes("ENOENT") && CODEX_VENDOR_PATH.test(errorMessage)
+    ? "Codex is installed without its native binary (npm skipped an optional dependency). " +
+        "Reinstall it with: npm install -g @openai/codex --include=optional"
+    : `Codex app-server provider probe failed: ${errorMessage}.`;
+}
+
 type CodexRateLimitsProbe =
   | {
       readonly snapshot: CodexRateLimitSnapshot;
@@ -140,6 +151,7 @@ const CODEX_APP_SERVER_PROBE_FORCE_KILL_AFTER = "2 seconds" as const;
 const CODEX_CATALOG_REFRESH_TIMEOUT_MS = 3_000;
 const CODEX_CONFIG_PROBE_TIMEOUT_MS = 3_000;
 const CODEX_CATALOG_REFRESH_POLL = "100 millis" as const;
+// Codex tailors its model catalog to this originator: a wire id, not shown to people.
 const CODEX_CLIENT_NAME = "T3 Code";
 // Handshake plus account/models/skills requests can exceed the shared 10s probe budget.
 const CODEX_AUTH_PROBE_TIMEOUT_MS = 20_000;
@@ -1095,7 +1107,7 @@ export const checkCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(fu
         status: "error",
         auth: { status: "unknown" },
         message: installed
-          ? `Codex app-server provider probe failed: ${error.message}.`
+          ? codexProbeFailureMessage(error.message)
           : `Could not start Codex CLI (\`${codexSettings.binaryPath}\`). Check Settings → Providers → Codex → Binary path on the server.` +
             (codexSettings.binaryPath === "codex"
               ? " Installing ChatGPT or Codex desktop may not add codex to PATH."

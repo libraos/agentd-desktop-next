@@ -12,7 +12,9 @@ import { Button } from "../ui/button";
 // Above this, one slot per tunnel is too thin to read, so the bar fills instead.
 const MAX_SEGMENTS = 10;
 
-export const T3CHAT_SUBSCRIPTION_URL = "https://t3.chat/settings/subscription";
+/** Only shown while the hosted relay is enabled; the build supplies the plan page. */
+export const T3CHAT_SUBSCRIPTION_URL =
+  (import.meta.env.VITE_HOSTED_PLAN_SUBSCRIPTION_URL as string | undefined) ?? "#";
 
 /** Components pass `useMessages()` so the copy follows a language switch. */
 export function tunnelUpgradeCopy(
@@ -65,7 +67,7 @@ export function TunnelUsageMeter({
       </div>
       <div
         role="meter"
-        aria-label={gt("T3 Connect tunnels in use")}
+        aria-label={gt("Hosted relay tunnels in use")}
         aria-valuemin={0}
         aria-valuemax={limit}
         aria-valuenow={used}

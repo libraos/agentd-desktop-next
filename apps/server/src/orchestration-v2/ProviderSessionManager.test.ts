@@ -3399,7 +3399,7 @@ const openSessionWithBackgroundCommand = (fixtureName: string) =>
         completedAt: status === "completed" ? startedAt : null,
         updatedAt: startedAt,
         type: "dynamic_tool",
-        toolName: "mcp__t3-code__t3_worktree_handoff",
+        toolName: "mcp__t3-code__worktree_handoff",
         input: {},
       }) satisfies OrchestrationV2TurnItem;
     const seededToolCalls = {

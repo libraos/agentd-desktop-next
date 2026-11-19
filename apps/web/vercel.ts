@@ -1,9 +1,10 @@
 import { matchers, routes, type Transform, type VercelConfig } from "@vercel/config/v1";
 
-const ROUTER_HOST = "app.t3.codes";
+// The hosted web app deployment is optional; its host comes from the environment.
+const ROUTER_HOST = process.env.HOSTED_APP_ROUTER_HOST ?? "hosted-app.invalid";
 const HOSTED_WEB_CHANNEL_COOKIE = "t3code_web_channel";
-const LATEST_ORIGIN = "https://latest.app.t3.codes";
-const NIGHTLY_ORIGIN = "https://nightly.app.t3.codes";
+const LATEST_ORIGIN = `https://latest.${ROUTER_HOST}`;
+const NIGHTLY_ORIGIN = `https://nightly.${ROUTER_HOST}`;
 const CLEAN_CHANNEL_QUERY_TRANSFORMS = [
   {
     type: "request.query",

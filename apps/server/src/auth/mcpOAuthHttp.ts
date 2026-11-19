@@ -77,7 +77,7 @@ export const layer = HttpApiBuilder.group(
     const serverEnvironment = yield* ServerEnvironment.ServerEnvironmentIdentity;
     // Without a configured hosted app, approval happens only on this server's own page.
     const hostedAppUrl = yield* hostedAppUrlConfig.pipe(Effect.option);
-    // T3 Connect serves this host, so the owner can approve on the hosted app by signing in there.
+    // The hosted relay serves this host, so the owner can approve on the hosted app by signing in there.
     const hostedApprovalUrl = (issuer: string, search: string) =>
       cloudLink.linkState().pipe(
         Effect.flatMap((state) =>

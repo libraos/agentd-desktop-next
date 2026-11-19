@@ -4,11 +4,11 @@
 
 1. Pick the version: upstream's version in `apps/desktop/package.json`, then `-agentd.N`, with N one more than the last release on that upstream version (1 for a new upstream version).
 2. Tag the commit to release and push the tag to `origin`: `git tag v0.1.10-agentd.4`, then push `v0.1.10-agentd.4`. A tag whose upstream part differs from `apps/desktop/package.json` fails the run.
-3. `.github/workflows/release.yml` builds on GitHub-hosted runners, in parallel: Linux x64 (`ubuntu-latest`: AppImage and `.deb`), Windows x64 (`windows-latest`: NSIS `.exe`, MSVC on the runner), macOS arm64 (`macos-14`) and macOS x64 (`macos-15-intel`; GitHub retired `macos-13`): `.dmg` and `.zip`. Each runs `agentd/scripts/build-desktop.sh <platform> <arch>` with `AGENTD_BUILD_ON_HOST=1`.
+3. `.github/workflows/release.yml` builds on GitHub-hosted runners, in parallel: Linux x64 (`ubuntu-24.04`: AppImage and `.deb`), Windows x64 (`windows-latest`: NSIS `.exe`, MSVC on the runner), macOS arm64 (`macos-15`) and macOS x64 (`macos-15-intel`; GitHub retired `macos-13`): `.dmg` and `.zip`. Each runs `agentd/scripts/build-desktop.sh <platform> <arch>` with `AGENTD_BUILD_ON_HOST=1`.
 4. A last job checks that every installer is there, writes `SHA256SUMS` over them and creates a **draft** release for the tag, with notes on the unsigned builds and the agentd version inside.
 5. Review the draft on GitHub (download an installer, check it against `SHA256SUMS`), then publish it. Nothing is public until then.
 
-agentd inside: the `prepare` job resolves one libraos/agentd release for every build, the latest unless the `AGENTD_RELEASE` repository variable (or the dispatch input) names one, and each build downloads that release's asset for its target, `SKILL.md`, `SKILL-agentd.md` and `SHA256SUMS`. The packager refuses an asset that is missing or does not match `SHA256SUMS`.
+agentd inside: the `prepare` job resolves one libraos/agentd release for every build, using the dispatch input first, then the `AGENTD_RELEASE` repository variable, then the latest release, and each build downloads that release's asset for its target, `SKILL.md`, `SKILL-agentd.md` and `SHA256SUMS`. The packager refuses an asset that is missing or does not match `SHA256SUMS`.
 
 To try the build without a release, run the workflow by hand (Actions → Release → Run workflow) with N and, optionally, an agentd release: it builds the same files and uploads them, with `SHA256SUMS`, as workflow artifacts.
 

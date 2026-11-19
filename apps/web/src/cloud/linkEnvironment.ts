@@ -291,7 +291,7 @@ export const readCloudLinkState: (input: {
     );
   });
 
-/** Runs the environment's T3 Connect reachability check now; the link state then reports it. */
+/** Runs the environment's hosted relay reachability check now; the link state then reports it. */
 export const checkCloudReachability: (input: {
   readonly target: CloudLinkTarget;
 }) => Effect.Effect<EnvironmentConnectReachability, CloudEnvironmentLinkError, CloudLinkServices> =
@@ -306,8 +306,8 @@ export const checkCloudReachability: (input: {
         request: ({ client, headers }) => client.checkReachability({ headers }),
       },
       {
-        message: msg("Could not check T3 Connect."),
-        withDetail: msg("Could not check T3 Connect: {detail}"),
+        message: msg("Could not check the hosted relay."),
+        withDetail: msg("Could not check the hosted relay: {detail}"),
       },
     );
   });
@@ -375,7 +375,7 @@ export const unlinkEnvironmentFromCloud: (input: {
           decodedRelayClientError(
             m(
               msg(
-                "Disconnected locally, but T3 Connect did not confirm it removed this environment",
+                "Disconnected locally, but the hosted relay did not confirm it removed this environment",
               ),
             ),
           ),

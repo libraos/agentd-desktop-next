@@ -1305,12 +1305,12 @@ describe("extractMcpToolCallIdentity", () => {
       kind: "execute",
       title: "mcp.t3-code.orchestrator_capabilities",
       status: "in_progress",
-      rawInput: { server: "t3-code", tool: "orchestrator_capabilities", arguments: {} },
+      rawInput: { server: "agentd-desktop", tool: "orchestrator_capabilities", arguments: {} },
       _meta: { is_mcp_tool_call: true },
     });
 
     expect(extractMcpToolCallIdentity(toolCall)).toEqual({
-      server: "t3-code",
+      server: "agentd-desktop",
       tool: "orchestrator_capabilities",
     });
   });
@@ -1330,7 +1330,7 @@ describe("extractMcpToolCallIdentity", () => {
           '/usr/bin/node /srv/t3/bin.ts acp-mcp-call delegate_task {"task":"x"}',
         ],
       }),
-    ).toEqual({ server: "t3-code", tool: "delegate_task", input: { task: "x" } });
+    ).toEqual({ server: "agentd-desktop", tool: "delegate_task", input: { task: "x" } });
   });
 
   it("recovers T3 identity from pi-acp title-only fallback execs", () => {
@@ -1352,7 +1352,7 @@ describe("extractMcpToolCallIdentity", () => {
 
     expect(toolCall.title).toBe("Ran command");
     expect(extractMcpToolCallIdentity(toolCall)).toEqual({
-      server: "t3-code",
+      server: "agentd-desktop",
       tool: "orchestrator_capabilities",
       input: {},
     });
@@ -1377,7 +1377,7 @@ describe("extractMcpToolCallIdentity", () => {
     const merged = mergeToolCallState(created, completed);
 
     expect(extractMcpToolCallIdentity(merged)).toEqual({
-      server: "t3-code",
+      server: "agentd-desktop",
       tool: "orchestrator_capabilities",
     });
   });
@@ -1404,7 +1404,7 @@ describe("extractMcpToolCallIdentity", () => {
         status: "pending",
       });
       expect(extractMcpToolCallIdentity(toolCall), title).toEqual({
-        server: "t3-code",
+        server: "agentd-desktop",
         tool: "delegate_task",
       });
     }
@@ -1424,7 +1424,7 @@ describe("extractMcpToolCallIdentity", () => {
       );
 
     expect(identityFor("mcp__editor_t3_code_f6129534__html_render")).toEqual({
-      server: "t3-code",
+      server: "agentd-desktop",
       tool: "html_render",
     });
     expect(identityFor("mcp__editor_github_1234abcd__html_render")).toEqual({
@@ -1434,7 +1434,7 @@ describe("extractMcpToolCallIdentity", () => {
   });
 
   it("recovers T3 identity from Kiro's @-scoped titles", () => {
-    for (const tool of ["html_render", "t3_thread_read", "delegate_task"]) {
+    for (const tool of ["html_render", "thread_read", "delegate_task"]) {
       const toolCall = toolCallFromUpdate({
         sessionUpdate: "tool_call",
         toolCallId: "kiro-1",
@@ -1443,7 +1443,10 @@ describe("extractMcpToolCallIdentity", () => {
         status: "pending",
         rawInput: { tool_id: `t3-code::${tool}`, arguments: { threadId: "thread-1" } },
       });
-      expect(extractMcpToolCallIdentity(toolCall), tool).toEqual({ server: "t3-code", tool });
+      expect(extractMcpToolCallIdentity(toolCall), tool).toEqual({
+        server: "agentd-desktop",
+        tool,
+      });
     }
   });
 
@@ -1503,7 +1506,7 @@ describe("extractMcpToolCallIdentity", () => {
       rawInput: { path: "xd://mcp__t3_code_html_render" },
     });
 
-    const expected = { server: "t3-code", tool: "html_render", input: args };
+    const expected = { server: "agentd-desktop", tool: "html_render", input: args };
     expect(extractMcpToolCallIdentity(created), "pending write").toEqual(expected);
     expect(extractMcpToolCallIdentity(completed), "completed write").toEqual(expected);
     expect(extractMcpToolCallIdentity(docRead), "doc read").toBeUndefined();
@@ -1536,7 +1539,7 @@ describe("extractMcpToolCallIdentity", () => {
     });
 
     expect(extractMcpToolCallIdentity(toolCall)).toEqual({
-      server: "t3-code",
+      server: "agentd-desktop",
       tool: "task_status",
     });
   });
@@ -1549,12 +1552,12 @@ describe("extractMcpToolCallIdentity", () => {
       kind: "other",
       title: "unrelated display title",
       status: "pending",
-      _meta: { toolName: "mcp::t3-code::t3_thread_send", serverId: "t3-code", provenance: "mcp" },
+      _meta: { toolName: "mcp::t3-code::thread_send", serverId: "t3-code", provenance: "mcp" },
     });
 
     expect(extractMcpToolCallIdentity(toolCall)).toEqual({
-      server: "t3-code",
-      tool: "t3_thread_send",
+      server: "agentd-desktop",
+      tool: "thread_send",
     });
   });
 

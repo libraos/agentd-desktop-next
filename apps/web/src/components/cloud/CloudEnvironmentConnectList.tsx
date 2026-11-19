@@ -170,13 +170,16 @@ export function CloudEnvironmentConnectRows({
       toastManager.add({
         type: "success",
         title: savedWithoutRelay.has(environment.environmentId)
-          ? gt("T3 Connect route added")
+          ? gt("Hosted relay route added")
           : gt("Environment added"),
         description: savedWithoutRelay.has(environment.environmentId)
-          ? gt("{environment} falls back to T3 Connect when its other routes are unreachable.", {
-              environment: environment.label,
-            })
-          : gt("Connecting to {environment} through T3 Connect.", {
+          ? gt(
+              "{environment} falls back to the hosted relay when its other routes are unreachable.",
+              {
+                environment: environment.label,
+              },
+            )
+          : gt("Connecting to {environment} through the hosted relay.", {
               environment: environment.label,
             }),
       });
@@ -187,7 +190,7 @@ export function CloudEnvironmentConnectRows({
     }
     const cause = squashAtomCommandFailure(result);
     const message =
-      thrownErrorMessage(cause, m) ?? gt("Could not connect the T3 Connect environment.");
+      thrownErrorMessage(cause, m) ?? gt("Could not connect the hosted relay environment.");
     const traceId = findErrorTraceId(cause);
     console.error("[t3-connect] Could not connect environment", { message, traceId, cause });
     toastManager.add({
@@ -206,7 +209,7 @@ export function CloudEnvironmentConnectRows({
     return false;
   };
 
-  // Omit machines saved over other routes; onboarding selection must not add a T3 Connect route.
+  // Omit machines saved over other routes; onboarding selection must not add a hosted relay route.
   const isVisibleEnvironment = (environmentId: EnvironmentId) =>
     environmentId !== primaryEnvironmentId &&
     !desktopLocalIds.has(environmentId) &&
@@ -310,7 +313,7 @@ export function CloudEnvironmentConnectRows({
       return (
         <div className={ITEM_ROW_CLASSNAME}>
           <p className="text-sm font-medium text-destructive">
-            <T>Could not load T3 Connect environments</T>
+            <T>Could not load the hosted relay environments</T>
           </p>
           <p className="mt-1 text-xs text-muted-foreground">{discoveryProblem}</p>
           <Button
@@ -373,23 +376,23 @@ export function CloudEnvironmentConnectRows({
             ? "bg-warning"
             : "bg-muted-foreground/35";
     const notAdded = savedWithoutRelay.has(environment.environmentId)
-      ? gt("Saved without T3 Connect")
+      ? gt("Saved without the hosted relay")
       : gt("Not added");
     const statusText =
       unsupported && !savedEnvironment
-        ? `T3 Connect · ${notAdded} · ${gt("Client not supported")}`
+        ? `Hosted relay · ${notAdded} · ${gt("Client not supported")}`
         : offlineReason !== null
           ? offlineReason
           : savedConnection
             ? savedConnection.statusText
             : availability === "online"
-              ? `T3 Connect · ${notAdded} · ${gt("Relay online")}`
+              ? `Hosted relay · ${notAdded} · ${gt("Relay online")}`
               : availability === "offline"
-                ? `T3 Connect · ${notAdded} · ${gt("Relay offline")}`
+                ? `Hosted relay · ${notAdded} · ${gt("Relay offline")}`
                 : availability === "checking"
-                  ? `T3 Connect · ${notAdded} · ${gt("Checking relay status…")}`
+                  ? `Hosted relay · ${notAdded} · ${gt("Checking relay status…")}`
                   : (errorDisplayMessage(Option.getOrNull(error), m) ??
-                    `T3 Connect · ${notAdded} · ${gt("Relay status unavailable")}`);
+                    `Hosted relay · ${notAdded} · ${gt("Relay status unavailable")}`);
     if (selection) {
       return (
         <label

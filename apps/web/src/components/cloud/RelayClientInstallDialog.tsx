@@ -74,10 +74,10 @@ export function RelayClientInstallDialog() {
           <DialogDescription>
             {isInstalling
               ? gt(
-                  "AgentD Desktop is preparing this environment for secure access through T3 Connect.",
+                  "AgentD Desktop is preparing this environment for secure access through the hosted relay.",
                 )
               : gt(
-                  "AgentD Desktop needs the relay client to make this environment available through T3 Connect.",
+                  "AgentD Desktop needs the relay client to make this environment available through the hosted relay.",
                 )}
           </DialogDescription>
         </DialogHeader>

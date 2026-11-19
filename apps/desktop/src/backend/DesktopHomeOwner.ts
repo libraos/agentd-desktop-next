@@ -96,7 +96,7 @@ export const homeOwnedMessage = (owner: Option.Option<HomeOwner>): string =>
     onNone: () =>
       m(
         msg(
-          "Another AgentD Desktop server, such as the background service, is using this data directory, or an older background service is set up for it. Stop that server or try `agentd-desktop update`. If the older launcher cannot update, run `agentd-desktop service uninstall` and optionally reinstall with `agentd-desktop service install` from a current CLI. Use `npx t3@latest` if `t3` is missing or outdated, and pass `--base-dir` with the service's T3 home to each command. Then reopen AgentD Desktop. You can also set a separate T3CODE_HOME and pair with the running server.",
+          "Another AgentD Desktop server, such as the background service, is using this data directory, or an older background service is set up for it. Stop that server or try `agentd-desktop update`. If the older launcher cannot update, run `agentd-desktop service uninstall` and optionally reinstall with `agentd-desktop service install` from a current CLI. Use `npx t3@latest` if `t3` is missing or outdated, and pass `--base-dir` with the service's data directory to each command. Then reopen AgentD Desktop. You can also set a separate T3CODE_HOME and pair with the running server.",
         ),
       ),
     onSome: (owner) => {

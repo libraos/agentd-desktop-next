@@ -8,6 +8,9 @@ import type * as AcpSchema from "effect-acp/compat";
 
 import { responsePayloads } from "@t3tools/shared/mcpResponsePayloads";
 
+// Sessions started before the rename still connect with this id.
+const LEGACY_APP_MCP_SERVER_ID = "t3-code";
+
 const MAX_CONNECTIONS = 16;
 const MAX_MESSAGE_BYTES = 8 * 1024 * 1024;
 // Runtime teardown waits on disconnect, so an endpoint that never answers must not hold it.
@@ -227,7 +230,7 @@ export const makeAcpMcpOverAcpBridge = Effect.fn("AcpMcpOverAcpBridge.make")(fun
 
   return {
     connect: Effect.fn("mcpOverAcpBridge.connect")(function* (request) {
-      if (request.serverId !== "t3-code") {
+      if (request.serverId !== "agentd-desktop" && request.serverId !== LEGACY_APP_MCP_SERVER_ID) {
         return yield* new AcpMcpOverAcpError({
           message: `Unknown ACP MCP server "${request.serverId}".`,
         });

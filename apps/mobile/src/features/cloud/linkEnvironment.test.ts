@@ -12,6 +12,8 @@ import * as MobileStorage from "../../persistence/mobile-storage";
 
 import { linkEnvironmentToCloudWithPreference } from "./linkEnvironment";
 
+vi.mock("@t3tools/shared/hostedRelay", () => ({ HOSTED_RELAY_ENABLED: true }));
+
 vi.mock("expo-constants", () => ({
   default: {
     expoConfig: {

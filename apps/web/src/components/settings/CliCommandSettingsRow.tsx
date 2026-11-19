@@ -15,9 +15,9 @@ import { SettingsRow } from "./settingsLayout";
 import { useSearchableSetting } from "./settingsSearch";
 
 const FAILURE_TITLES = {
-  install: msg("Could not install t3"),
-  uninstall: msg("Could not remove t3"),
-  addToPath: msg("Could not add t3 to PATH"),
+  install: msg("Could not install agentd-desktop"),
+  uninstall: msg("Could not remove agentd-desktop"),
+  addToPath: msg("Could not add agentd-desktop to PATH"),
 } as const;
 
 /** The desktop `agentd-desktop` command's state, and its actions with a toast on failure. */
@@ -63,14 +63,18 @@ export function CliCommandSettingsRow() {
   const description = state.shadowedBy
     ? resolve(
         msg(
-          "Another t3 at {path} runs first in a new terminal. Remove it to use AgentD Desktop's.",
+          "Another agentd-desktop at {path} runs first in a new terminal. Remove it to use AgentD Desktop's.",
           {
             path: state.shadowedBy,
           },
         ),
       )
     : !installed
-      ? resolve(msg("Run AgentD Desktop's CLI as `agentd-desktop` from any terminal."))
+      ? resolve(
+          msg(
+            "Run AgentD Desktop's CLI as `agentd-desktop` from any terminal. Also installs `t3` as an alias.",
+          ),
+        )
       : state.onPath
         ? resolve(
             msg("Installed at {path}. Open a new terminal to use it.", {

@@ -128,7 +128,7 @@ export const layer = Layer.effect(
                 Ref.set(
                   preflightErrorRef,
                   Option.some(
-                    "Another AgentD Desktop server is using this distro's AgentD Desktop home, or an older background service is set up for it. Stop that server or pair with it, or try `agentd-desktop update` in the distro. If the older launcher cannot update, run `agentd-desktop service uninstall` and optionally reinstall with `agentd-desktop service install` from a current CLI in the distro. Use `npx t3@latest` if `t3` is missing or outdated, and pass `--base-dir` with the service's T3 home to each command.",
+                    "Another AgentD Desktop server is using this distro's AgentD Desktop home, or an older background service is set up for it. Stop that server or pair with it, or try `agentd-desktop update` in the distro. If the older launcher cannot update, run `agentd-desktop service uninstall` and optionally reinstall with `agentd-desktop service install` from a current CLI in the distro. Use `npx t3@latest` if `t3` is missing or outdated, and pass `--base-dir` with the service's data directory to each command.",
                   ),
                 ),
               ),

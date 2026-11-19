@@ -212,7 +212,7 @@ export class EnvironmentScopeRequiredError extends Schema.TaggedError<Environmen
   }
 }
 
-/** The host requires approval for this T3 Connect device and nobody has given it yet. */
+/** The host requires approval for this hosted relay device and nobody has given it yet. */
 export class EnvironmentConnectApprovalPendingError extends Schema.TaggedError<EnvironmentConnectApprovalPendingError>()(
   "EnvironmentConnectApprovalPendingError",
   {
@@ -472,7 +472,7 @@ export const EnvironmentConnectReachabilityCause = Schema.Literals([
 ]);
 export type EnvironmentConnectReachabilityCause = typeof EnvironmentConnectReachabilityCause.Type;
 
-/** Whether other devices can reach this environment through its T3 Connect tunnel. */
+/** Whether other devices can reach this environment through its hosted relay tunnel. */
 export const EnvironmentConnectReachability = Schema.Union([
   Schema.Struct({
     status: Schema.Literal("reachable"),
@@ -699,7 +699,7 @@ class EnvironmentMcpOAuthHttpApi extends HttpApiGroup.make("mcpOAuth")
   .add(HttpApiEndpoint.get("authorize", "/oauth/mcp/authorize"))
   .add(
     HttpApiEndpoint.post("approval", "/oauth/mcp/approval", {
-      // The hosted app sends the owner's T3 Connect credential; the environment's own page uses its cookie.
+      // The hosted app sends the owner's hosted relay credential; the environment's own page uses its cookie.
       headers: OptionalBearerHeaders,
       payload: AuthMcpAuthorizationRequest,
       success: [AuthMcpApprovalDetails, AuthMcpApprovalRedirect],
@@ -708,7 +708,7 @@ class EnvironmentMcpOAuthHttpApi extends HttpApiGroup.make("mcpOAuth")
   )
   .add(
     HttpApiEndpoint.post("decision", "/oauth/mcp/decision", {
-      // The hosted app sends the owner's T3 Connect credential; the environment's own page uses its cookie.
+      // The hosted app sends the owner's hosted relay credential; the environment's own page uses its cookie.
       headers: OptionalBearerHeaders,
       payload: AuthMcpApprovalDecisionRequest,
       success: AuthMcpApprovalRedirect,

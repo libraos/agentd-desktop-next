@@ -1,4 +1,4 @@
-/** AgentD Desktop's own data folder, link scheme and command, apart from a T3 Code on the same machine. */
+/** AgentD Desktop's own data folder, link scheme and command, apart from the upstream app on the same machine. */
 
 import * as Config from "effect/Config";
 import * as Option from "effect/Option";
@@ -8,7 +8,9 @@ export const APP_LINK_SCHEME = "agentd-desktop";
 export const APP_LINK_PROTOCOL = /^agentd-desktop(?:-[a-z]+)?:$/;
 /** The command the app puts on PATH (`.cmd` on Windows). */
 export const CLI_COMMAND_NAME = "agentd-desktop";
-/** Background service, Windows task, systemd slices and per-user folders; T3 Code's are `t3code`. */
+/** Installed beside the command so scripts written for upstream's `t3` keep working. */
+export const CLI_COMMAND_ALIAS = "t3";
+/** Background service, Windows task, systemd slices and per-user folders; the upstream app's are `t3code`. */
 export const OS_NAME = "agentd-desktop";
 /** `.service` keeps it apart from the app's bundle id, `ai.libraos.agentd-desktop`. */
 export const LAUNCHD_SERVICE_LABEL = "ai.libraos.agentd-desktop.service";

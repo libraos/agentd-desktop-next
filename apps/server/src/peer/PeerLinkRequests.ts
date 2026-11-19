@@ -186,10 +186,7 @@ const make = Effect.gen(function* () {
   const request: PeerLinkRequests["Service"]["request"] = Effect.fn("PeerLinkRequests.request")(
     function* (scope, input) {
       // The card is shown in, and answered from, the caller's own thread.
-      const threadScope = yield* McpInvocationContext.requireThreadScope(
-        scope,
-        "t3_environment_link",
-      );
+      const threadScope = yield* McpInvocationContext.requireThreadScope(scope, "environment_link");
       const threadId = threadScope.thread.threadId;
       if (!(yield* peerLinks.enabled)) {
         return yield* new OrchestratorMcpFailure({
@@ -472,7 +469,7 @@ const outcomeNotice = (
     }
     case "failed":
       return {
-        text: `Linking ${target} failed: ${outcome.failure ?? "the other environment refused"}. Call t3_environment_link again if the user still wants it.`,
+        text: `Linking ${target} failed: ${outcome.failure ?? "the other environment refused"}. Call environment_link again if the user still wants it.`,
         notification: {
           source: { kind: "background_task" },
           outcome: "failed",

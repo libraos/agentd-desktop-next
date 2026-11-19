@@ -80,7 +80,7 @@ export interface McpToolSession {
 }
 
 /**
- * One initialized MCP session over T3 Code's HTTP endpoint, terminated when
+ * One initialized MCP session over AgentD Desktop's HTTP endpoint, terminated when
  * the scope closes. Used by the ACP terminal fallback and `t3 thread`.
  */
 export const mcpToolSession = (
@@ -186,7 +186,7 @@ function callAcpMcpTool(options: {
   readonly tool: string;
   readonly arguments: Readonly<Record<string, unknown>>;
 }): Effect.Effect<unknown, AcpMcpBridgeError> {
-  return mcpToolSession({ ...options, clientName: "t3-code-acp-cli" }).pipe(
+  return mcpToolSession({ ...options, clientName: "agentd-desktop-acp-cli" }).pipe(
     Effect.flatMap((session) => session.call(options.tool, options.arguments)),
     Effect.scoped,
   );

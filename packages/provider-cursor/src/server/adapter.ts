@@ -215,7 +215,7 @@ export function cursorMcpServers(
     return undefined;
   }
   return {
-    "t3-code": {
+    "agentd-desktop": {
       type: "http",
       url: session.endpoint,
       headers: {
