@@ -3353,14 +3353,14 @@
   "168a996246dfcd04": "Model access",
   "715f60441697c965": "Your subscription (needs AgentD v0.1.14 or later)",
   "75a0a0ea5970711f": "Your subscription",
+  "2ae0b42ad8251297": "Worker time and inference are both billed to LibraOS credits.",
   "0d575788064a43d5": "Enter at least one absolute key file path on this environment’s machine. Do not paste the API key itself.",
   "83af98b27cd62acf": "Speichern Sie den Schlüssel in einer eigenen Zeile in einer Textdatei und wählen Sie dann die Datei aus.",
-  "e17f9689603be8f4": "Durchsuchen…",
-  "256f4ab9a895674d": "Das sieht aus wie der Schlüssel selbst. Speichern Sie ihn in einer Datei und wählen Sie diese Datei aus.",
   "07420cedda5d2275": "Anthropic key file path",
   "553eb762abefeda2": "OpenAI key file path",
   "7d7bb753c7e99807": "Worker time is billed to LibraOS credits. Your provider bills inference separately; it isn’t covered by this dollar cap.",
-  "2ae0b42ad8251297": "Worker time and inference are both billed to LibraOS credits.",
+  "e17f9689603be8f4": "Durchsuchen…",
+  "256f4ab9a895674d": "Das sieht aus wie der Schlüssel selbst. Speichern Sie ihn in einer Datei und wählen Sie diese Datei aus.",
   "0faf657712a9d10a": "Plan",
   "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
   "53150504b20565ec": "Needs a newer AgentD. Run agentd upgrade to use your Claude plan.",
@@ -6539,13 +6539,13 @@
   "efc48b9736a534bc": "jetzt",
   "54a1c70d830702e3": "Connect an agent you already use",
   "63df00e96bb046c8": "Skip for now",
-  "d8fbb6056b06db93": [
-    "AgentD Next collects anonymous usage data to improve the app. To opt out, see the",
+  "06c15567162aa08c": [
+    "AgentD Next sends no usage data unless an analytics endpoint is configured. See",
     " ",
     {
       "t": "a",
       "i": 1,
-      "c": "privacy policy"
+      "c": "what it would send"
     },
     "."
   ],
@@ -10368,7 +10368,7 @@
   "c424bee294b9f778": "Diese Umgebung wird von {organization} verwaltet. Einige Einstellungen und Funktionen folgen deren Richtlinie.",
   "82d9538af590f58c": "Sieh deine Agenten, importiere Projekte und richte dein Smartphone ein.",
   "6a48fd0a37e725a1": "Rechtliches",
-  "efcd036339718fe0": "How we handle your data, including the anonymous usage data AgentD Next collects.",
+  "1c0b6d4acd7e3c99": "How we handle your data. Usage data is off unless an analytics endpoint is configured.",
   "e741b1ab9396053a": "Wie wir mit deinen Daten umgehen. {telemetryOff}",
   "53453fb5be5ebd8e": "Notices for dependencies, assets, and optional tools used by AgentD Next.",
   "e39a57514be028e9": "Review",

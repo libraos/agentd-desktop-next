@@ -2519,7 +2519,7 @@ export function AboutSettingsPanel() {
           description={
             telemetryOff === undefined
               ? gt(
-                  "How we handle your data, including the anonymous usage data AgentD Next collects.",
+                  "How we handle your data. Usage data is off unless an analytics endpoint is configured.",
                 )
               : gt("How we handle your data. {telemetryOff}", { telemetryOff })
           }

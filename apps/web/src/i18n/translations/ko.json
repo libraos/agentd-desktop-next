@@ -3351,14 +3351,14 @@
   "168a996246dfcd04": "Model access",
   "715f60441697c965": "Your subscription (needs AgentD v0.1.14 or later)",
   "75a0a0ea5970711f": "Your subscription",
+  "2ae0b42ad8251297": "Worker time and inference are both billed to LibraOS credits.",
   "0d575788064a43d5": "Enter at least one absolute key file path on this environment’s machine. Do not paste the API key itself.",
   "83af98b27cd62acf": "텍스트 파일의 한 줄에 키만 저장한 다음 해당 파일을 선택하세요.",
-  "e17f9689603be8f4": "찾아보기…",
-  "256f4ab9a895674d": "키 자체를 입력한 것 같습니다. 파일에 저장한 다음 해당 파일을 선택하세요.",
   "07420cedda5d2275": "Anthropic key file path",
   "553eb762abefeda2": "OpenAI key file path",
   "7d7bb753c7e99807": "Worker time is billed to LibraOS credits. Your provider bills inference separately; it isn’t covered by this dollar cap.",
-  "2ae0b42ad8251297": "Worker time and inference are both billed to LibraOS credits.",
+  "e17f9689603be8f4": "찾아보기…",
+  "256f4ab9a895674d": "키 자체를 입력한 것 같습니다. 파일에 저장한 다음 해당 파일을 선택하세요.",
   "0faf657712a9d10a": "Plan",
   "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
   "53150504b20565ec": "Needs a newer AgentD. Run agentd upgrade to use your Claude plan.",
@@ -6523,13 +6523,13 @@
   "efc48b9736a534bc": "지금",
   "54a1c70d830702e3": "Connect an agent you already use",
   "63df00e96bb046c8": "Skip for now",
-  "d8fbb6056b06db93": [
-    "AgentD Next collects anonymous usage data to improve the app. To opt out, see the",
+  "06c15567162aa08c": [
+    "AgentD Next sends no usage data unless an analytics endpoint is configured. See",
     " ",
     {
       "t": "a",
       "i": 1,
-      "c": "privacy policy"
+      "c": "what it would send"
     },
     "."
   ],
@@ -10330,7 +10330,7 @@
   "c424bee294b9f778": "이 환경은 {organization}에서 관리합니다. 일부 설정과 기능은 해당 정책을 따릅니다.",
   "82d9538af590f58c": "에이전트를 확인하고, 프로젝트를 가져오고, 휴대폰을 설정하세요.",
   "6a48fd0a37e725a1": "법적 고지",
-  "efcd036339718fe0": "How we handle your data, including the anonymous usage data AgentD Next collects.",
+  "1c0b6d4acd7e3c99": "How we handle your data. Usage data is off unless an analytics endpoint is configured.",
   "e741b1ab9396053a": "데이터를 처리하는 방법입니다. {telemetryOff}",
   "53453fb5be5ebd8e": "Notices for dependencies, assets, and optional tools used by AgentD Next.",
   "e39a57514be028e9": "검토",
