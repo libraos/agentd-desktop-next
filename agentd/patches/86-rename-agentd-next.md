@@ -18,6 +18,7 @@ The product is now called AgentD Next. This patch changes every name a person or
 - Repository URL `libraos/agentd-desktop-next` and references to `libraos/agentd-desktop` issues.
 - Codex originator and clientInfo "T3 Code", `t3code:` storage keys, `T3CODE_*` env vars and `@t3tools/*` package names.
 - README.md, LICENSE, `agentd/design/shots` and the earlier notes in `agentd/patches` (which describe what they changed under the name of their time).
+- The 2026-11-18 internal test build record in `agentd/design/build.md`: it names the files that build produced.
 
 ## Files
 
@@ -27,6 +28,7 @@ The i18n catalogs (`apps/{web,mobile,desktop}/src/i18n/translations/*.json`) wer
 - `.github/workflows/release.yml` — installer names `AgentD-Next-*` in the upload, the file check, SHA256SUMS and the release; release title and notes, with a line for people coming from the earlier name.
 - `AGENTS.md` — product name.
 - `agentd/UPSTREAM.md` — product name.
+- `agentd/design/build.md` — guide title.
 - `agentd/scripts/build-desktop.sh` — installer file names.
 - `agents/implementer.md` — product name.
 - `agents/ui.md` — product name.
