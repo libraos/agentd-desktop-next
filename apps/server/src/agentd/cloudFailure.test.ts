@@ -39,6 +39,10 @@ describe("cloudJobNote", () => {
 describe("cloudReason", () => {
   it.each([
     [
+      "a cloud handoff needs [cloud] url for the Job API. Run agentd cloud setup",
+      CLOUD_REASONS.setup,
+    ],
+    [
       "--model-access subscription needs your Claude token: run claude setup-token on your own machine",
       CLOUD_REASONS.subscriptionToken,
     ],

@@ -902,7 +902,12 @@ describe("AgentdBridge", () => {
           case "cloud setup":
             return Effect.succeed(setup);
           case "cloud balance":
-            return Effect.succeed(output("set [cloud] url and the account key in key_file", 1));
+            return Effect.succeed(
+              output(
+                "a cloud handoff needs [cloud] url for the Job API. Run agentd cloud setup",
+                1,
+              ),
+            );
           default:
             return Effect.die(`unexpected agentd ${input.args.join(" ")}`);
         }
@@ -932,7 +937,17 @@ describe("AgentdBridge", () => {
           return Effect.succeed(output("usage: agentd handoff offer [--cloud]"));
         if (input.args.join(" ") === "cloud setup --dry-run --json") return Effect.succeed(target);
         if (input.args[1] === "setup") return Effect.succeed(setup);
+        if (input.args.join(" ") === "cloud balance --json")
+          return Effect.succeed(
+            output("a cloud handoff needs [cloud] url for the Job API. Run agentd cloud setup", 1),
+          );
         return Effect.die(`unexpected agentd ${input.args.join(" ")}`);
+      });
+      // A fresh install, [cloud] unset: v0.1.15's balance refusal is a setup problem, with the form.
+      expect(yield* upgraded.cloudSetup({ cwd: null, includeBalance: true })).toMatchObject({
+        canConfigure: true,
+        setupUrl: libraos,
+        problem: "setup",
       });
       expect(yield* upgraded.cloudSetup({ cwd: null, includeBalance: false })).toMatchObject({
         canConfigure: true,
