@@ -13,7 +13,7 @@ import {
   type AgentdStartTaskResult,
 } from "@t3tools/contracts";
 import * as Cache from "effect/Cache";
-import * as Clock from "effect/Clock";
+import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Schema from "effect/Schema";
@@ -287,7 +287,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
     features: CloudFeatures,
   ) {
     const setupUnavailable = platform === "win32";
-    const today = new Date(yield* Clock.currentTimeMillis).toISOString().slice(0, 10);
+    const today = DateTime.formatIso(yield* DateTime.now).slice(0, 10);
     if (features.codex) {
       const report = yield* run(agentdArgs.cloudSubscription(), { command }).pipe(
         Effect.map(subscriptionJson),
