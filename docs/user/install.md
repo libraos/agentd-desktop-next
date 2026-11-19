@@ -15,12 +15,12 @@ Download an installer from the
 release lists its files and a `SHA256SUMS` file; installers are named
 `AgentD-Next-<version>-<arch>.<ext>`.
 
-| System                | File                                                            |
-| --------------------- | --------------------------------------------------------------- |
-| macOS (Apple silicon) | `AgentD-Next-<version>-arm64.dmg` or `…-arm64.zip`              |
-| macOS (Intel)         | `AgentD-Next-<version>-x64.dmg` or `…-x64.zip`                  |
-| Windows (x64)         | `AgentD-Next-<version>-x64.exe`                                 |
-| Linux (x64)           | `AgentD-Next-x64.AppImage` or `AgentD-Next-<version>-amd64.deb` |
+| System                | File                                                  |
+| --------------------- | ----------------------------------------------------- |
+| macOS (Apple silicon) | `AgentD-Next-<version>-arm64.dmg` or `…-arm64.zip`    |
+| macOS (Intel)         | `AgentD-Next-<version>-x64.dmg` or `…-x64.zip`        |
+| Windows (x64)         | `AgentD-Next-<version>-x64.exe`                       |
+| Linux (x64)           | `AgentD-Next-<version>-x64.AppImage` or `…-amd64.deb` |
 
 Releases up to 0.1.10-agentd.6 carry the earlier name, AgentD Desktop, in their
 file names (`AgentD-Desktop-…`).
@@ -43,8 +43,8 @@ there are upstream's and not part of AgentD Next.
 To launch the AppImage, open a terminal in its download folder:
 
 ```bash
-chmod +x ./AgentD-Next-x64.AppImage
-./AgentD-Next-x64.AppImage
+chmod +x ./AgentD-Next-*-x64.AppImage
+./AgentD-Next-*-x64.AppImage
 ```
 
 To install the `.deb`:
