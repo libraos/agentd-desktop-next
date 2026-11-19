@@ -55,11 +55,19 @@ export function parseGatewayModels(body: unknown): ReadonlyArray<LibraosGatewayM
     .map((model) => (model.name ? { id: model.id, name: model.name } : { id: model.id }));
 }
 
+const REFUSAL_LIMIT = 200;
+// Clients that may only read status see this text, so a credential the Gateway echoes goes.
+const CREDENTIAL = /\b(?:lk|sk)[_-][A-Za-z0-9_-]{6,}|\bBearer\s+\S+/gi;
+
 /** The Gateway's one-line reason for a refused request, else its status. */
 export function gatewayRefusal(status: number, body: unknown): string {
   const parsed = decodeErrorBody(body);
-  const message = Option.isSome(parsed) ? parsed.value.error.message.trim() : "";
-  return message === "" ? `LibraOS Gateway answered HTTP ${status}.` : message;
+  const line = Option.isSome(parsed)
+    ? (parsed.value.error.message.trim().split(/\r?\n/)[0] ?? "")
+    : "";
+  const message = line.replace(CREDENTIAL, "[redacted]").trim();
+  if (message === "") return `LibraOS Gateway answered HTTP ${status}.`;
+  return message.length > REFUSAL_LIMIT ? `${message.slice(0, REFUSAL_LIMIT - 1)}…` : message;
 }
 
 /** A key the Gateway will not serve at all, as opposed to a Gateway that is down or busy. */
@@ -202,16 +210,25 @@ export function withGatewayModels(
     });
   }
   const opencode = current[GATEWAY_INSTANCE_IDS.opencode];
-  if (opencode !== undefined && models !== null) {
-    const value = opencodeGatewayConfig(models);
+  if (opencode !== undefined) {
+    const config = isRecord(opencode.config) ? opencode.config : {};
     const environment = opencode.environment ?? [];
+    const value = models === null ? null : opencodeGatewayConfig(models);
     set(GATEWAY_INSTANCE_IDS.opencode, {
       ...opencode,
-      environment: environment.some((variable) => variable.name === OPENCODE_CONFIG_ENV)
-        ? environment.map((variable) =>
-            variable.name === OPENCODE_CONFIG_ENV ? { ...variable, value } : variable,
-          )
-        : [...environment, plain(OPENCODE_CONFIG_ENV, value)],
+      // Its models live in OPENCODE_CONFIG_CONTENT; an older build let users add custom ones.
+      ...(Array.isArray(config.customModels) && config.customModels.length > 0
+        ? { config: { ...config, customModels: [] } }
+        : {}),
+      ...(value === null
+        ? {}
+        : {
+            environment: environment.some((variable) => variable.name === OPENCODE_CONFIG_ENV)
+              ? environment.map((variable) =>
+                  variable.name === OPENCODE_CONFIG_ENV ? { ...variable, value } : variable,
+                )
+              : [...environment, plain(OPENCODE_CONFIG_ENV, value)],
+          }),
     });
   }
   return changed ? next : current;

@@ -6464,6 +6464,7 @@
       "v": "v"
     }
   ],
+  "dfe11f51692569f9": "Autorisez de nouveau la clé dans Console et actualisez les fournisseurs, ou déconnectez-la et connectez une autre clé.",
   "e792e3764fdb4f0e": "In a chat, choose the agent marked LibraOS Gateway in the model picker. agentd workers use the Gateway too, so tasks accept dollar budgets.",
   "0ab50b1db2e5e363": "agentd is set up to use the Gateway.",
   "aa6af95ccd8de74d": "agentd did not take the key. What it said:",
@@ -9525,6 +9526,7 @@
     ", qui n’est pas disponible dans cette version. Sa configuration est conservée."
   ],
   "b534d4cd528ede39": "Les préférences de modèle et les modèles personnalisés sont enregistrés dans l’environnement sélectionné et partagés entre les appareils connectés.",
+  "9c1f2116b3b99fb0": "Voici les modèles que votre clé LibraOS Gateway autorisait lors de la dernière actualisation par un appareil qui gère les fournisseurs ou du dernier démarrage du serveur. Une actualisation depuis ici n’interroge pas à nouveau le Gateway.",
   "a48023474bd3fb52": "Voici les modèles autorisés par votre clé LibraOS Gateway. Modifiez-les dans Console, puis actualisez.",
   "caaef21e8722857d": "Mode rapide",
   "a860db2b1bb3aa31": "Sans raisonnement",

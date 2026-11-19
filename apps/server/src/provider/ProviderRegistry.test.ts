@@ -1355,6 +1355,52 @@ it.layer(
       );
     });
 
+    it("does not bring back a model the LibraOS Gateway key no longer allows", () => {
+      for (const [instanceId, driver, status] of [
+        ["libraosCodex", "codex", "warning"],
+        ["libraosOpencode", "opencode", "warning"],
+        ["libraosClaude", "claudeAgent", "ready"],
+      ] as const) {
+        const previousProvider = {
+          instanceId: ProviderInstanceId.make(instanceId),
+          driver: ProviderDriverKind.make(driver),
+          status: "ready",
+          enabled: true,
+          installed: true,
+          auth: { status: "authenticated" },
+          checkedAt: "2026-04-14T00:00:00.000Z",
+          version: "1.0.0",
+          models: [
+            { slug: "allowed", name: "Allowed", isCustom: false, capabilities: null },
+            { slug: "removed", name: "Removed", isCustom: false, capabilities: null },
+          ],
+          slashCommands: [],
+          skills: [],
+        } as const satisfies ServerProvider;
+        const kept = previousProvider.models[0];
+
+        // The key's last model removed: an empty list with the notice is the answer, not a gap.
+        assert.deepStrictEqual(
+          ProviderRegistry.mergeProviderSnapshot(previousProvider, {
+            ...previousProvider,
+            status: "warning",
+            models: [],
+          }).models,
+          [],
+          instanceId,
+        );
+        assert.deepStrictEqual(
+          ProviderRegistry.mergeProviderSnapshot(previousProvider, {
+            ...previousProvider,
+            status,
+            models: [kept],
+          }).models,
+          [kept],
+          instanceId,
+        );
+      }
+    });
+
     it("retains ACP Registry models while discovery has not completed", () => {
       const previousProvider = {
         instanceId: ProviderInstanceId.make("acpRegistry_codex"),

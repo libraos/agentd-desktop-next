@@ -505,7 +505,8 @@ describe("instance-scoped model selection", () => {
       providerInstances: {
         [instanceId]: {
           driver: ProviderDriverKind.make("codex"),
-          config: { customModels: ["gpt-6-astra"], onlyCustomModels: true },
+          // As an older build saved it, before the server marks it limited.
+          config: { customModels: ["gpt-6-astra"] },
         },
       },
     };

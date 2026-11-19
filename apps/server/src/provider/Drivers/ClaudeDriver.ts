@@ -1,4 +1,4 @@
-import { ClaudeSettings, ProviderDriverKind } from "@t3tools/contracts";
+import { ClaudeSettings, isLibraosGatewayInstanceId, ProviderDriverKind } from "@t3tools/contracts";
 import * as Cache from "effect/Cache";
 import type * as Cause from "effect/Cause";
 import * as Duration from "effect/Duration";
@@ -126,6 +126,8 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
     const effectiveConfig = {
       ...config,
       enabled,
+      // A Gateway agent saved by an older build lacks the flag; limit it from its first snapshot.
+      onlyCustomModels: config.onlyCustomModels ?? isLibraosGatewayInstanceId(instanceId),
       binaryPath: expandHomePath(config.binaryPath, yield* HostProcess.HomeDirectory),
     } satisfies ClaudeSettings;
     const resolveMaintenance = yield* makeClaudeMaintenanceResolution({

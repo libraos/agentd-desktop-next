@@ -6450,6 +6450,7 @@
       "v": "v"
     }
   ],
+  "dfe11f51692569f9": "Console でキーを再び許可してプロバイダーを更新するか、接続を解除して別のキーを接続してください。",
   "e792e3764fdb4f0e": "In a chat, choose the agent marked LibraOS Gateway in the model picker. agentd workers use the Gateway too, so tasks accept dollar budgets.",
   "0ab50b1db2e5e363": "agentd is set up to use the Gateway.",
   "aa6af95ccd8de74d": "agentd did not take the key. What it said:",
@@ -9493,6 +9494,7 @@
     " を使用していますが、このビルドでは利用できません。設定は保持されます。"
   ],
   "b534d4cd528ede39": "モデルの設定とカスタムモデルは選択した環境に保存され、接続されているデバイス間で共有されます。",
+  "9c1f2116b3b99fb0": "プロバイダーを管理できるデバイスが最後に更新したとき、またはサーバーが最後に起動したときに、LibraOS Gateway キーで許可されていたモデルです。ここから更新しても Gateway には再確認しません。",
   "a48023474bd3fb52": "これは LibraOS Gateway キーで使えるモデルです。Console で変更してから更新してください。",
   "caaef21e8722857d": "高速モード",
   "a860db2b1bb3aa31": "推論なし",

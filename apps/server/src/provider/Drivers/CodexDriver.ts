@@ -1,5 +1,5 @@
 import { resolveProviderProbeTimeoutMs } from "@t3tools/provider-core/server/snapshotProbe";
-import { CodexSettings, ProviderDriverKind } from "@t3tools/contracts";
+import { CodexSettings, isLibraosGatewayInstanceId, ProviderDriverKind } from "@t3tools/contracts";
 import * as Digest from "effect/crypto/Digest";
 import * as SecureRandom from "effect/crypto/SecureRandom";
 import type * as Signature from "effect/crypto/Signature";
@@ -217,6 +217,8 @@ export const CodexDriver: ProviderDriver<
     const effectiveConfig = {
       ...config,
       enabled,
+      // A Gateway agent saved by an older build lacks the flag; limit it from its first snapshot.
+      onlyCustomModels: config.onlyCustomModels ?? isLibraosGatewayInstanceId(instanceId),
       binaryPath: expandHomePath(config.binaryPath, yield* HostProcess.HomeDirectory),
       homePath: homeLayout.effectiveHomePath ?? "",
     } satisfies CodexSettings;

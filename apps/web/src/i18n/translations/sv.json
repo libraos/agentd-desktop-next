@@ -6464,6 +6464,7 @@
       "v": "v"
     }
   ],
+  "dfe11f51692569f9": "Tillåt nyckeln igen i Console och uppdatera leverantörerna, eller koppla från och anslut en annan nyckel.",
   "e792e3764fdb4f0e": "In a chat, choose the agent marked LibraOS Gateway in the model picker. agentd workers use the Gateway too, so tasks accept dollar budgets.",
   "0ab50b1db2e5e363": "agentd is set up to use the Gateway.",
   "aa6af95ccd8de74d": "agentd did not take the key. What it said:",
@@ -9531,6 +9532,7 @@
     ", som inte finns i den här versionen. Dess konfiguration bevaras."
   ],
   "b534d4cd528ede39": "Modellinställningar och anpassade modeller sparas i den valda miljön och delas mellan anslutna enheter.",
+  "9c1f2116b3b99fb0": "Det här är modellerna som din LibraOS Gateway-nyckel tillät när en enhet som hanterar leverantörer senast uppdaterade eller servern senast startade. En uppdatering härifrån frågar inte Gateway igen.",
   "a48023474bd3fb52": "Det här är modellerna som din LibraOS Gateway-nyckel tillåter. Ändra dem i Console och uppdatera sedan.",
   "caaef21e8722857d": "Snabbläge",
   "a860db2b1bb3aa31": "Inget resonerande",

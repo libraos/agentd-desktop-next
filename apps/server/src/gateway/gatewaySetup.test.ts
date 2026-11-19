@@ -111,10 +111,16 @@ describe("gatewaySetup", () => {
         [GATEWAY_INSTANCE_IDS.opencode]: {
           ...opencode,
           environment: [...opencode.environment!, proxy],
+          // Added while an older build still offered the control; the key does not serve it.
+          config: { enabled: true, customModels: [{ slug: "libraos/openai/gpt-unserved" }] },
         },
       },
       [{ id: "openai/gpt-6-luna" }],
     );
+    expect(next[GATEWAY_INSTANCE_IDS.opencode]?.config).toEqual({
+      enabled: true,
+      customModels: [],
+    });
     const environment = next[GATEWAY_INSTANCE_IDS.opencode]?.environment ?? [];
     expect(environment.map((variable) => variable.name)).toEqual([
       "LIBRAOS_API_KEY",
@@ -147,5 +153,11 @@ describe("gatewaySetup", () => {
       }),
     ).toBe("This API key is not valid.");
     expect(gatewayRefusal(502, "<html>")).toBe("LibraOS Gateway answered HTTP 502.");
+    const echoed = (message: string) => gatewayRefusal(401, { error: { message } });
+    expect(echoed("Key lk_live_0123456789abcdef was revoked.\nat auth.ts:12")).toBe(
+      "Key [redacted] was revoked.",
+    );
+    expect(echoed("Bad header: Bearer lk_x.y")).toBe("Bad header: [redacted]");
+    expect(echoed("x".repeat(500))).toHaveLength(200);
   });
 });

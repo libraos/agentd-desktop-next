@@ -1498,10 +1498,20 @@ export function ProviderInstanceCard({
             </p>
             {gatewayModels ? (
               <p className="mb-3 text-xs text-muted-foreground">
-                <T>
-                  These are the models your LibraOS Gateway key allows. Change them in Console, then
-                  refresh.
-                </T>
+                {readOnly ? (
+                  // The refresh this session may run re-checks the saved list; only a provider
+                  // manager's refresh asks the Gateway again.
+                  <T>
+                    These are the models your LibraOS Gateway key allowed when a device that manages
+                    providers last refreshed or the server last started. A refresh from here does
+                    not ask the Gateway again.
+                  </T>
+                ) : (
+                  <T>
+                    These are the models your LibraOS Gateway key allows. Change them in Console,
+                    then refresh.
+                  </T>
+                )}
               </p>
             ) : null}
             <ProviderModelsSection

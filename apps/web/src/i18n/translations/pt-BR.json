@@ -6463,6 +6463,7 @@
       "v": "v"
     }
   ],
+  "dfe11f51692569f9": "Permita a chave novamente no Console e atualize os provedores, ou desconecte e conecte outra chave.",
   "e792e3764fdb4f0e": "In a chat, choose the agent marked LibraOS Gateway in the model picker. agentd workers use the Gateway too, so tasks accept dollar budgets.",
   "0ab50b1db2e5e363": "agentd is set up to use the Gateway.",
   "aa6af95ccd8de74d": "agentd did not take the key. What it said:",
@@ -9524,6 +9525,7 @@
     ", que não está disponível nesta build. A configuração dela é preservada."
   ],
   "b534d4cd528ede39": "As preferências de modelo e os modelos personalizados são salvos no ambiente selecionado e compartilhados entre os dispositivos conectados.",
+  "9c1f2116b3b99fb0": "Estes são os modelos que sua chave do LibraOS Gateway permitia quando um dispositivo que gerencia provedores atualizou pela última vez ou o servidor foi iniciado pela última vez. Atualizar daqui não consulta o Gateway novamente.",
   "a48023474bd3fb52": "Estes são os modelos que sua chave do LibraOS Gateway permite. Altere-os no Console e depois atualize.",
   "caaef21e8722857d": "Modo rápido",
   "a860db2b1bb3aa31": "Sem raciocínio",

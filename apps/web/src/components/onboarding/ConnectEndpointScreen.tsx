@@ -228,10 +228,17 @@ function GatewayConnectPanel({
           </p>
         ) : null}
         <p className="text-muted-foreground">
-          <T>
-            In a chat, choose the agent marked LibraOS Gateway in the model picker. agentd workers
-            use the Gateway too, so tasks accept dollar budgets.
-          </T>
+          {status.refusal ? (
+            <T>
+              Allow the key again in Console and refresh providers, or disconnect and connect
+              another key.
+            </T>
+          ) : (
+            <T>
+              In a chat, choose the agent marked LibraOS Gateway in the model picker. agentd workers
+              use the Gateway too, so tasks accept dollar budgets.
+            </T>
+          )}
         </p>
         {status.agentd === null ? null : (
           <div className="space-y-1">

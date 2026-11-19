@@ -2,6 +2,7 @@ import {
   DEFAULT_TEXT_GENERATION_MODEL,
   DEFAULT_TEXT_GENERATION_MODEL_BY_PROVIDER,
   defaultInstanceIdForDriver,
+  isLibraosGatewayInstanceId,
   type ModelSelection,
   type ProjectId,
   ProviderDriverKind,
@@ -74,24 +75,9 @@ export interface AppModelOption {
   isUnavailable?: boolean;
 }
 
-// An instance limited to its key's models (LibraOS Gateway) loses a model when the key does.
-function instanceListsOnlyCustomModels(
-  settings: UnifiedSettings,
-  instanceId: ProviderInstanceId,
-): boolean {
-  const config = settings.providerInstances?.[instanceId]?.config;
-  return (
-    config !== null &&
-    typeof config === "object" &&
-    (config as Record<string, unknown>).onlyCustomModels === true
-  );
-}
-
-function listsModelsAtRuntime(settings: UnifiedSettings, entry: ProviderInstanceEntry): boolean {
-  return (
-    hasRuntimeModelCatalog(entry.driverKind) ||
-    instanceListsOnlyCustomModels(settings, entry.instanceId)
-  );
+// A LibraOS Gateway agent lists its key's models, so it loses a model when the key does.
+function listsModelsAtRuntime(entry: ProviderInstanceEntry): boolean {
+  return hasRuntimeModelCatalog(entry.driverKind) || isLibraosGatewayInstanceId(entry.instanceId);
 }
 
 function appendUnavailableDynamicModelSelection(
@@ -264,7 +250,7 @@ export function getAppModelOptionsForInstance(
     applyInstanceModelPreferences(options, preferences),
     entry.models,
     entry.driverKind,
-    listsModelsAtRuntime(settings, entry),
+    listsModelsAtRuntime(entry),
     selectedModel,
     preferences.hiddenModels,
   );
@@ -304,7 +290,7 @@ export function resolveAppModelSelectionForInstance(
   if (resolvedSelection) {
     return resolvedSelection;
   }
-  if (resolutionOptions?.preserveUnavailableSelection && listsModelsAtRuntime(settings, entry)) {
+  if (resolutionOptions?.preserveUnavailableSelection && listsModelsAtRuntime(entry)) {
     const unavailableSelection = normalizeCustomModelSlug(selectedModel);
     const hiddenModels = readInstanceModelPreferences(settings, entry.instanceId).hiddenModels;
     if (
