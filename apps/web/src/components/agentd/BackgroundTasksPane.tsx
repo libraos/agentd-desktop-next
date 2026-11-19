@@ -102,7 +102,7 @@ export function BackgroundTasksPane({ threadRef }: { readonly threadRef: ScopedT
               Agentd was not found in this environment. Follow the{" "}
               <a
                 className="text-foreground underline"
-                href="https://github.com/libraos/agentd-core/blob/main/docs/install.md"
+                href="https://github.com/libraos/agentd#installation"
                 target="_blank"
                 rel="noreferrer"
               >
