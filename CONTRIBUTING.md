@@ -11,7 +11,7 @@ Search first, in case someone already reported it.
 - For a bug, say what you did, what you expected, and what happened instead. Add the app version,
   your operating system, and the agent you used (Claude Code, Codex, opencode or another).
 - For a change, say what you want to do and why the app does not let you do it today.
-- Leave out keys, tokens and passwords, in logs and screenshots too.
+- Do not include credentials, personal data or confidential information in issues, pull requests, logs, screenshots or videos.
 
 ## Open a pull request
 
@@ -58,9 +58,7 @@ and run the app.
 
 ## Upstream
 
-AgentD Next is a fork of the open source `t3code` project and follows it: we merge upstream's changes
-regularly, and the [README](README.md) credits it. [agentd/UPSTREAM.md](agentd/UPSTREAM.md) says how we merge upstream and resolve conflicts.
+AgentD Next is a fork of [T3 Code](https://github.com/pingdotgg/t3code). [agentd/UPSTREAM.md](agentd/UPSTREAM.md) says how we merge upstream's changes and resolve conflicts.
 A fix that belongs upstream is best sent there too.
 
-The project is released under the MIT licence; see [LICENSE](LICENSE). By contributing, you agree
-that your contribution is released under the same licence.
+The project is released under the MIT licence; see [LICENSE](LICENSE). By submitting a contribution for inclusion in AgentD Next, you license it under the MIT licence in LICENSE and confirm that you have the right to do so, including any required permission from your employer or other rights holders.

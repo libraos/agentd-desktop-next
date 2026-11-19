@@ -1,4 +1,4 @@
-# 116: Contributing guide and user docs name AgentD Next
+# 87: Contributing guide and user docs name AgentD Next
 
 `CONTRIBUTING.md` was upstream's: it described another project, turned contributions away, told AI
 models to decline pull requests and linked upstream's discussions. `docs/user` named the product

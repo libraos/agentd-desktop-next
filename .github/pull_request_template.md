@@ -17,9 +17,8 @@ explain why those changes are needed for the same fix. Split independent fixes. 
 
 ## Scope
 
-<!-- We accept bug fixes, not features. Link the issue that shows the bug. For a
-small fix of an obvious bug, say why it needs no issue. If a maintainer asked for
-this PR, link the request. -->
+<!-- Say what this change covers and what it leaves out. Link the related issue, or
+the maintainer's request. For a small fix of an obvious bug, say why it needs no issue. -->
 
 ## Verification
 
