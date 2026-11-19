@@ -67,7 +67,7 @@ export const makeCursorTextGeneration = Effect.fn("makeCursorTextGeneration")(fu
     if (!cursorSettings.enabled) {
       return yield* new TextGenerationError({
         operation,
-        detail: "Cursor is disabled in AgentD Desktop settings.",
+        detail: "Cursor is disabled in AgentD Next settings.",
       });
     }
 

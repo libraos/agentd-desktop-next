@@ -2,7 +2,7 @@
 
 Screenshots of other products, kept as a reference for layout only. Names, addresses, session titles, conversation text and command lines are masked. Do not copy another product's wording, icons or artwork into AgentD Desktop, and do not publish these files.
 
-The design they illustrate is in `libraos/agentd-core#898`.
+The design they illustrate is in the notes in [agentd/design](..).
 
 ## Main window (Claude Code's desktop app)
 

@@ -1,5 +1,5 @@
 ---
-description: Builds web UI for AgentD Desktop on its own branch; commits, never pushes or merges
+description: Builds web UI for AgentD Next on its own branch; commits, never pushes or merges
 tool: codex
 model: gpt-6.2-sol
 budget: 2h

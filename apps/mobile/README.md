@@ -1,4 +1,4 @@
-# AgentD Desktop Mobile
+# AgentD Next Mobile
 
 > [!NOTE]
 > To install the released app from the App Store or Google Play, see [Mobile app](../../docs/user/install.md#mobile-app). This guide covers building it from source.
@@ -10,9 +10,9 @@
 
 This app has three variants:
 
-- `development`: Expo dev client, installable side-by-side as `AgentD Desktop Dev`
-- `preview`: persistent internal preview build, installable side-by-side as `AgentD Desktop Preview`
-- `production`: store/release build as `AgentD Desktop`
+- `development`: Expo dev client, installable side-by-side as `AgentD Next Dev`
+- `preview`: persistent internal preview build, installable side-by-side as `AgentD Next Preview`
+- `production`: store/release build as `AgentD Next`
 
 Run commands from `apps/mobile`.
 

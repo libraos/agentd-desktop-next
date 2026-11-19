@@ -88,7 +88,7 @@ const connectInspector = Effect.fn("measure.connectInspector")(function* (metro:
   const target = targets.find((entry) => entry.appId.startsWith("com.t3tools.t3code"));
   if (!target)
     return yield* new MeasureError({
-      message: `No AgentD Desktop app is attached to Metro at ${metro}.`,
+      message: `No AgentD Next app is attached to Metro at ${metro}.`,
     });
   // Expo closes inspector sockets unless Origin matches Metro's advertised URL; pass that URL as --metro.
   const socket = yield* Socket.makeWebSocket(target.webSocketDebuggerUrl, {

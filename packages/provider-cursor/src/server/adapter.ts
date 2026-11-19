@@ -215,7 +215,7 @@ export function cursorMcpServers(
     return undefined;
   }
   return {
-    "agentd-desktop": {
+    "agentd-next": {
       type: "http",
       url: session.endpoint,
       headers: {
@@ -317,7 +317,7 @@ export function makeCursorAgentOptions(input: {
   const mcpServers = cursorMcpServers(input.mcpSession);
   return {
     model: cursorSdkModelSelection(input.modelSelection, input.models),
-    name: `AgentD Desktop ${input.threadId}`,
+    name: `AgentD Next ${input.threadId}`,
     mode: input.runtimePolicy.interactionMode === "plan" ? "plan" : "agent",
     ...(input.apiKey === undefined ? {} : { apiKey: input.apiKey }),
     local: {

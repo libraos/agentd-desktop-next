@@ -92,7 +92,7 @@ export const buildInitialGrokProviderSnapshot = Effect.fn(
         version: null,
         status: "warning",
         auth: { status: "unknown" },
-        message: "Grok is disabled in AgentD Desktop settings.",
+        message: "Grok is disabled in AgentD Next settings.",
       },
     });
   }
@@ -418,7 +418,7 @@ export const checkGrokProviderStatus = Effect.fn("checkGrokProviderStatus")(func
         version: null,
         status: "warning",
         auth: { status: "unknown" },
-        message: "Grok is disabled in AgentD Desktop settings.",
+        message: "Grok is disabled in AgentD Next settings.",
       },
     });
   }

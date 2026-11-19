@@ -91,7 +91,7 @@ Claude receives an HTTP MCP server in its query options:
   },
   allowedTools: [
     // existing allowed tools
-    "mcp__agentd-desktop__*",
+    "mcp__agentd-next__*",
   ],
 }
 ```
@@ -166,7 +166,7 @@ T3_MCP_URL=http://127.0.0.1:<port>/mcp
 T3_MCP_BEARER_TOKEN=<provider-session-token>
 ```
 
-The extension preserves public names under `mcp__agentd-desktop__` for saved loadouts
+The extension preserves public names under `mcp__agentd-next__` for saved loadouts
 and tool selectors. Modern Pi also receives hidden `mcp__t3_code__` aliases,
 which reserve the normalized namespace against configured MCP servers without
 adding declarations or search results. On Pi 0.99+,

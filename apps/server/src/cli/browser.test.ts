@@ -128,12 +128,12 @@ it.effect.each([
     written: CUSTOMIZED_PROFILE,
     said: "Reloaded the AppArmor profile",
   },
-])("agentd-desktop browser setup as root $label", (input) =>
+])("agentd-next browser setup as root $label", (input) =>
   Effect.gen(function* () {
     const result = yield* runSetupAsRoot({ profile: input.profile });
     expect(result.loads).toEqual([LOAD]);
     expect(result.profile).toBe(input.written);
     expect(result.output).toContain(input.said);
-    expect(result.output).toContain("This host is ready for AgentD Desktop's browser.");
+    expect(result.output).toContain("This host is ready for AgentD Next's browser.");
   }),
 );

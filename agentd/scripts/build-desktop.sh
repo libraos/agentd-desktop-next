@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# AgentD Desktop with agentd inside. Usage: agentd/scripts/build-desktop.sh linux|win|mac [arm64|x64]
+# AgentD Next with agentd inside. Usage: agentd/scripts/build-desktop.sh linux|win|mac [arm64|x64]
 #
-# Writes release/AgentD-Desktop-<upstream>-agentd.<N>-<arch>.{AppImage,deb,exe,dmg,zip}. Nothing is
+# Writes release/AgentD-Next-<upstream>-agentd.<N>-<arch>.{AppImage,deb,exe,dmg,zip}. Nothing is
 # published (.github/workflows/release.yml does that). For linux and win it runs the upstream packager
 # (scripts/build-desktop-artifact.ts) by default inside a container made from electron-builder's Wine
 # image, pinned by digest, plus Rust, MinGW and ImageMagick, so the host needs only Docker, git, gh and
@@ -129,6 +129,6 @@ echo "[agentd] building $platform/$target $arch $version with agentd from $AGENT
 node scripts/build-desktop-artifact.ts --platform "$platform" --target "$target" --arch "$arch"
 if [ "$platform" = linux ]; then
   # electron-builder names an AppImage after its own arch (x86_64); ours carry x64 as on Windows.
-  mv -f "release/AgentD-Desktop-$version-x86_64.AppImage" "release/AgentD-Desktop-$version-x64.AppImage"
+  mv -f "release/AgentD-Next-$version-x86_64.AppImage" "release/AgentD-Next-$version-x64.AppImage"
 fi
-ls -l release/AgentD-Desktop-"$version"-*
+ls -l release/AgentD-Next-"$version"-*

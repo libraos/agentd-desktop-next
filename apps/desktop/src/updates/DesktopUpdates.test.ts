@@ -42,8 +42,8 @@ const semver = requireFromUpdater("semver") as { parse: (version: string) => Run
 
 const releaseTitle = (version: string) =>
   version.includes("-nightly.")
-    ? `AgentD Desktop Nightly ${version} (0123456789ab)`
-    : `AgentD Desktop v${version}`;
+    ? `AgentD Next Nightly ${version} (0123456789ab)`
+    : `AgentD Next v${version}`;
 
 const releaseFeed = (...versions: ReadonlyArray<string>) =>
   parseXml(
@@ -1327,7 +1327,7 @@ describe("describeUpdateErrorCause", () => {
 });
 
 describe("DesktopUpdates under a managed policy", () => {
-  const message = "Example Corp manages AgentD Desktop updates.";
+  const message = "Example Corp manages AgentD Next updates.";
   const managed = (
     policy: Partial<DesktopUpdatePolicy.UpdatePolicy>,
   ): DesktopUpdatePolicy.UpdatePolicy => ({

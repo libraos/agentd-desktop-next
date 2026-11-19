@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "AgentD Desktop",
-  "short_name": "AgentD Desktop",
+  "name": "AgentD Next",
+  "short_name": "AgentD Next",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

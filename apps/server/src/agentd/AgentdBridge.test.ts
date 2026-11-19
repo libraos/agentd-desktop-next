@@ -356,7 +356,7 @@ describe("AgentdBridge", () => {
               "body":{"goal":"On my plan","model_access":"subscription","codex_auth_file":"/private/auth.json"}
             }`),
             );
-          case "handoff done hof-abc456 --cancel --reason Stopped from AgentD Desktop":
+          case "handoff done hof-abc456 --cancel --reason Stopped from AgentD Next":
             return Effect.succeed(output("{}"));
           default:
             return Effect.die(`unexpected agentd ${input.args.join(" ")}`);
@@ -399,7 +399,7 @@ describe("AgentdBridge", () => {
       expect(subscribed.cloud).toMatchObject({ modelAccess: "subscription", plan: "codex" });
       expect(JSON.stringify(subscribed)).not.toContain("/private/auth.json");
       expect(
-        yield* bridge.stopTask({ id: "hof-abc456", reason: "Stopped from AgentD Desktop" }),
+        yield* bridge.stopTask({ id: "hof-abc456", reason: "Stopped from AgentD Next" }),
       ).toEqual({});
     }),
   );

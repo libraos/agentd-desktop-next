@@ -142,11 +142,11 @@ jobs:
         with:
           name: desktop-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
-            release/AgentD-Desktop-${{ needs.prepare.outputs.version }}-*.AppImage
-            release/AgentD-Desktop-${{ needs.prepare.outputs.version }}-*.deb
-            release/AgentD-Desktop-${{ needs.prepare.outputs.version }}-*.exe
-            release/AgentD-Desktop-${{ needs.prepare.outputs.version }}-*.dmg
-            release/AgentD-Desktop-${{ needs.prepare.outputs.version }}-*.zip
+            release/AgentD-Next-${{ needs.prepare.outputs.version }}-*.AppImage
+            release/AgentD-Next-${{ needs.prepare.outputs.version }}-*.deb
+            release/AgentD-Next-${{ needs.prepare.outputs.version }}-*.exe
+            release/AgentD-Next-${{ needs.prepare.outputs.version }}-*.dmg
+            release/AgentD-Next-${{ needs.prepare.outputs.version }}-*.zip
           if-no-files-found: error
           compression-level: 0
 
@@ -166,12 +166,12 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           cd dist
-          for f in "AgentD-Desktop-$VERSION-x64.AppImage" "AgentD-Desktop-$VERSION-amd64.deb" \
-            "AgentD-Desktop-$VERSION-x64.exe" "AgentD-Desktop-$VERSION-arm64.dmg" \
-            "AgentD-Desktop-$VERSION-x64.dmg"; do
+          for f in "AgentD-Next-$VERSION-x64.AppImage" "AgentD-Next-$VERSION-amd64.deb" \
+            "AgentD-Next-$VERSION-x64.exe" "AgentD-Next-$VERSION-arm64.dmg" \
+            "AgentD-Next-$VERSION-x64.dmg"; do
             test -s "$f" || { echo "::error::missing $f"; ls -l; exit 1; }
           done
-          sha256sum AgentD-Desktop-* > SHA256SUMS
+          sha256sum AgentD-Next-* > SHA256SUMS
           cat SHA256SUMS
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -204,15 +204,17 @@ jobs:
           cd dist
           sha256sum -c SHA256SUMS
           cat > notes.md <<EOF
-          AgentD Desktop $VERSION, with agentd $AGENTD_RELEASE and its Skills inside.
+          AgentD Next $VERSION, with agentd $AGENTD_RELEASE and its Skills inside.
 
           These builds are not signed yet:
 
-          - **macOS:** the app is not notarized. The first time, right-click AgentD Desktop in Applications and choose Open, or open System Settings → Privacy & Security and click Open Anyway.
+          - **macOS:** the app is not notarized. The first time, right-click AgentD Next in Applications and choose Open, or open System Settings → Privacy & Security and click Open Anyway.
           - **Windows:** SmartScreen may warn. Click More info, then Run anyway.
+
+          Coming from AgentD Desktop (the earlier name)? Settings, threads and the background service carry over. On macOS, delete the old AgentD Desktop app from Applications after installing AgentD Next.
 
           Check a download against \`SHA256SUMS\`.
           EOF
           gh release create "$TAG" -R "$REPO" --draft --verify-tag \
-            --title "AgentD Desktop $VERSION" --notes-file notes.md \
-            AgentD-Desktop-* SHA256SUMS
+            --title "AgentD Next $VERSION" --notes-file notes.md \
+            AgentD-Next-* SHA256SUMS

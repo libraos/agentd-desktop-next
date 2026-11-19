@@ -936,7 +936,7 @@ export class Launcher {
       if (lock !== undefined) return lock;
       if (attempt >= LOCK_ATTEMPTS) {
         throw new Error(
-          "Another AgentD Desktop service launcher still runs for this AgentD Desktop home.",
+          "Another AgentD Next service launcher still runs for this AgentD Next home.",
         );
       }
       await new Promise((resolve) => setTimeout(resolve, LOCK_RETRY_MS));
@@ -1042,7 +1042,7 @@ export class Launcher {
     ]);
     const free = Math.min(...available);
     return free < MIN_SERVICE_START_FREE_BYTES
-      ? `AgentD Desktop needs at least ${MIN_SERVICE_START_FREE_BYTES} bytes free before starting the server; ${free} bytes available.`
+      ? `AgentD Next needs at least ${MIN_SERVICE_START_FREE_BYTES} bytes free before starting the server; ${free} bytes available.`
       : undefined;
   }
 
@@ -1462,7 +1462,7 @@ export class Launcher {
     }
     this.#releaseServing();
     this.#log(
-      "[service-launcher] Another AgentD Desktop server owns this AgentD Desktop home. This service starts again once it stops.\n",
+      "[service-launcher] Another AgentD Next server owns this AgentD Next home. This service starts again once it stops.\n",
     );
     this.#stateDirFreeProbes = 0;
     // The interval also keeps Node alive: signal listeners alone do not.
@@ -1486,7 +1486,7 @@ export class Launcher {
     if (this.#stateDirFreeProbes < 2) return;
     this.#clearTimer();
     await this.#claimServing();
-    this.#log("[service-launcher] The AgentD Desktop home is free again. Starting the server.\n");
+    this.#log("[service-launcher] The AgentD Next home is free again. Starting the server.\n");
     const update = this.#state.update;
     if (update?.status === "pending") await this.#startTrial(update);
     else await this.#startChild(this.#state.activeVersion, "active", update);
@@ -1531,7 +1531,7 @@ export interface LauncherOptions {
 export async function main(options: LauncherOptions = {}): Promise<void> {
   const baseDir = options.baseDir ?? process.env.T3CODE_HOME;
   if (baseDir === undefined || baseDir.trim() === "") {
-    throw new Error("T3CODE_HOME is required by the AgentD Desktop service launcher.");
+    throw new Error("T3CODE_HOME is required by the AgentD Next service launcher.");
   }
   const output =
     options.logFile === undefined ? undefined : NodeFS.openSync(options.logFile, "a", 0o600);

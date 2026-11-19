@@ -1518,7 +1518,7 @@ effectIt.effect(
           failure: {
             class: "unknown",
             message:
-              "AgentD Desktop could not start this turn. Send the message again; if it keeps failing, check the server logs.",
+              "AgentD Next could not start this turn. Send the message again; if it keeps failing, check the server logs.",
           },
         },
       ]);

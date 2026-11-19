@@ -81,11 +81,11 @@ export function resolveProviderCompatibility(
       : "unknown";
   const message =
     status === "broken"
-      ? "This provider version is known to be incompatible with this AgentD Desktop release."
+      ? "This provider version is known to be incompatible with this AgentD Next release."
       : status === "unsupported"
-        ? "This provider version is outside the supported range for this AgentD Desktop release."
+        ? "This provider version is outside the supported range for this AgentD Next release."
         : status === "graceful"
-          ? "This provider version has limited compatibility with this AgentD Desktop release."
+          ? "This provider version has limited compatibility with this AgentD Next release."
           : null;
   const recommendedVersion = policy.recommendedVersion ?? null;
   const recommendedRange = policy.recommendedRange ?? null;

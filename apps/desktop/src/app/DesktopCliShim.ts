@@ -1,4 +1,4 @@
-import { CLI_COMMAND_NAME } from "@t3tools/shared/desktopIdentity";
+import { CLI_COMMAND_NAME, LEGACY_CLI_COMMAND_NAME } from "@t3tools/shared/desktopIdentity";
 import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -11,8 +11,12 @@ import { makeComponentLogger } from "./DesktopObservability.ts";
 // AppImage mounts change each run; the launcher must mount the image itself.
 const { logInfo, logWarning } = makeComponentLogger("desktop-cli-shim");
 
-export const MARKER =
-  "Written by AgentD Desktop: runs the desktop app's bundled agentd-desktop CLI.";
+export const MARKER = "Written by AgentD Next: runs the desktop app's bundled agentd-next CLI.";
+/** Launchers and aliases from agentd.4 to agentd.6 carry the legacy marker. */
+export const LEGACY_MARKER = "Written by AgentD Desktop: runs";
+
+export const isOwnShim = (content: string) =>
+  content.includes(MARKER) || content.includes(LEGACY_MARKER);
 
 const SERVER_ENTRY = "apps/server/dist/bin.mjs";
 
@@ -21,7 +25,7 @@ const shellWord = (value: string) => `'${value.replaceAll("'", `'"'"'`)}'`;
 const cmdText = (value: string) => value.replaceAll("%", "%%");
 const cmdWord = (value: string) => `"${cmdText(value)}"`;
 
-const MOVED = "AgentD Desktop has moved or been removed. Open the app once to update this command.";
+const MOVED = "AgentD Next has moved or been removed. Open the app once to update this command.";
 
 export type CliShimTarget =
   | { readonly kind: "appimage"; readonly appImage: string; readonly executableName: string }
@@ -118,12 +122,22 @@ export const renderCliShim = (input: {
   ].join("\n");
 };
 
-export const launcherPath = (environment: DesktopEnvironment.DesktopEnvironment["Service"]) =>
+const launcherNamed = (
+  environment: DesktopEnvironment.DesktopEnvironment["Service"],
+  name: string,
+) =>
   environment.path.join(
     environment.baseDir,
     "bin",
-    environment.platform === "win32" ? `${CLI_COMMAND_NAME}.cmd` : CLI_COMMAND_NAME,
+    environment.platform === "win32" ? `${name}.cmd` : name,
   );
+
+export const launcherPath = (environment: DesktopEnvironment.DesktopEnvironment["Service"]) =>
+  launcherNamed(environment, CLI_COMMAND_NAME);
+
+/** The legacy launcher, which links in ~/.local/bin or a Windows PATH entry may still run. */
+const legacyLauncherPath = (environment: DesktopEnvironment.DesktopEnvironment["Service"]) =>
+  launcherNamed(environment, LEGACY_CLI_COMMAND_NAME);
 
 export const install = Effect.gen(function* () {
   const environment = yield* DesktopEnvironment.DesktopEnvironment;
@@ -143,26 +157,36 @@ export const install = Effect.gen(function* () {
         }),
         onNone: () => ({ kind: "direct" as const, executable: process.execPath, entry }),
       });
-  const content = renderCliShim({ target, shimPath, t3Home: environment.baseDir });
+  const contentFor = (at: string) =>
+    renderCliShim({ target, shimPath: at, t3Home: environment.baseDir });
+  const write = Effect.fn("DesktopCliShim.write")(function* (at: string, content: string) {
+    yield* fs.makeDirectory(path.dirname(at), { recursive: true });
+    // Unique per call: backend startup and the first-launch command install can race here.
+    const staging = `${at}.${process.pid}.${yield* Random.nextIntBetween(0, 0xffffff)}.tmp`;
+    yield* fs.writeFileString(staging, content, { mode: 0o755 });
+    yield* fs.rename(staging, at);
+    yield* logInfo("installed agentd-next launcher", { shimPath: at });
+  });
 
   return yield* Effect.gen(function* () {
     const existing = yield* fs.readFileString(shimPath).pipe(Effect.option);
-    if (Option.isSome(existing) && !existing.value.includes(MARKER)) {
-      yield* logWarning("leaving an agentd-desktop launcher the app did not write", { shimPath });
+    if (Option.isSome(existing) && !isOwnShim(existing.value)) {
+      yield* logWarning("leaving an agentd-next launcher the app did not write", { shimPath });
       return Option.none<string>();
     }
-    if (Option.getOrUndefined(existing) !== content) {
-      yield* fs.makeDirectory(path.dirname(shimPath), { recursive: true });
-      // Unique per call: backend startup and the first-launch command install can race here.
-      const staging = `${shimPath}.${process.pid}.${yield* Random.nextIntBetween(0, 0xffffff)}.tmp`;
-      yield* fs.writeFileString(staging, content, { mode: 0o755 });
-      yield* fs.rename(staging, shimPath);
-      yield* logInfo("installed agentd-desktop launcher", { shimPath });
+    const content = contentFor(shimPath);
+    if (Option.getOrUndefined(existing) !== content) yield* write(shimPath, content);
+    // Only refreshed, never created: the legacy command keeps working where it was installed.
+    const legacy = legacyLauncherPath(environment);
+    const legacyExisting = yield* fs.readFileString(legacy).pipe(Effect.option);
+    if (Option.isSome(legacyExisting) && isOwnShim(legacyExisting.value)) {
+      const legacyContent = contentFor(legacy);
+      if (legacyExisting.value !== legacyContent) yield* write(legacy, legacyContent);
     }
     return Option.some(shimPath);
   }).pipe(
     Effect.catchCause((cause) =>
-      logWarning("could not install agentd-desktop launcher", {
+      logWarning("could not install agentd-next launcher", {
         shimPath,
         cause: Cause.pretty(cause),
       }).pipe(Effect.as(Option.none<string>())),

@@ -67,7 +67,7 @@ export const makeCodexManagedRuntime = Effect.fn("makeCodexManagedRuntime")(func
             instanceId: options.instanceId,
             operation: "runtime",
             detail:
-              "Could not prepare the private managed Codex token listener. Restart AgentD Desktop and retry.",
+              "Could not prepare the private managed Codex token listener. Restart AgentD Next and retry.",
             cause,
           }),
       ),
@@ -113,7 +113,7 @@ export const makeCodexManagedRuntime = Effect.fn("makeCodexManagedRuntime")(func
           }),
       ),
     );
-    // Ambient CLI overrides cannot redirect an AgentD Desktop-owned token to a different provider.
+    // Ambient CLI overrides cannot redirect an AgentD Next-owned token to a different provider.
     const environment: NodeJS.ProcessEnv = {
       ...options.environment,
       CODEX_HOME: homePath,

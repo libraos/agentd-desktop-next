@@ -2,14 +2,14 @@ import type { Messages } from "./en";
 
 export const ja: Messages = {
   layout: {
-    defaultTitle: "AgentD Desktop",
+    defaultTitle: "AgentD Next",
     defaultDescription:
-      "AgentD Desktop。コーディングエージェントのためのオープンソースのコントロールプレーン。",
+      "AgentD Next。コーディングエージェントのためのオープンソースのコントロールプレーン。",
     socialImageAlt:
-      "AgentD Desktop：コーディングエージェントのためのオープンソースのコントロールプレーン。Claude Code、Codex、Cursor、OpenCode、Grok、Antigravity に対応。",
-    homeLabel: "AgentD Desktop ホーム",
+      "AgentD Next：コーディングエージェントのためのオープンソースのコントロールプレーン。Claude Code、Codex、Cursor、OpenCode、Grok、Antigravity に対応。",
+    homeLabel: "AgentD Next ホーム",
     download: "ダウンロード",
-    starsLabel: "GitHub で AgentD Desktop にスターを付ける（{stars} スター）",
+    starsLabel: "GitHub で AgentD Next にスターを付ける（{stars} スター）",
     githubStars: "GitHub スター {stars}",
     language: "言語",
     mitLicensed: "MIT ライセンス",
@@ -20,9 +20,9 @@ export const ja: Messages = {
     security: "セキュリティ",
   },
   home: {
-    title: "AgentD Desktop | コーディングエージェントのためのオープンソースのコントロールプレーン",
+    title: "AgentD Next | コーディングエージェントのためのオープンソースのコントロールプレーン",
     description:
-      "AgentD Desktop。コーディングエージェントのためのオープンソースのコントロールプレーン。",
+      "AgentD Next。コーディングエージェントのためのオープンソースのコントロールプレーン。",
     heroTitle: ["コーディングエージェントの", "オープンソース", "コントロールプレーン。"],
     heroSub:
       "Claude Code、Codex、Antigravity、OpenCode、Cursor、Grok をひとつの画面からオーケストレーション。サブスクリプションは手持ちのものをそのまま。まるごとフォークも自由です。",
@@ -34,14 +34,14 @@ export const ja: Messages = {
     sourceLink: "コードを盗もう（合法的に）",
     alsoOnPhone: "スマホでも使えます：",
     screenshotAlt:
-      "ひとつのスレッドで Claude、Codex、Muse、Gemini のサブエージェントを動かす AgentD Desktop",
+      "ひとつのスレッドで Claude、Codex、Muse、Gemini のサブエージェントを動かす AgentD Next",
     endorsementsTitle: "{users} 人以上の開発者が我慢して使っています",
     endorsementsSub: "ツイートまでしてくれた人もいます。",
     endorsementsLabel: "開発者の声",
     readPost: "X で {handle} の投稿を読む",
     harnessTitle: "サブスクは持ち込みで",
     harnessBody:
-      "AgentD Desktop はトークンを転売しません。Claude Code、Codex、Antigravity、OpenCode、Cursor、Grok を、すでに持っている認証情報でつなぐだけ。オーケストレーションは私たちに任せて、プランは今のままで。",
+      "AgentD Next はトークンを転売しません。Claude Code、Codex、Antigravity、OpenCode、Cursor、Grok を、すでに持っている認証情報でつなぐだけ。オーケストレーションは私たちに任せて、プランは今のままで。",
     googleSignIn: "Google でサインイン",
     harnessPoints: [
       "キーの転売なし。使用量の上限なし。",
@@ -49,7 +49,7 @@ export const ja: Messages = {
       "対応エージェントは毎週追加。",
     ],
     gitVisualLabel:
-      "AgentD Desktop の Git ワークフローの図：diff を確認し、変更をコミットしてプッシュし、プルリクエストを作成する。",
+      "AgentD Next の Git ワークフローの図：diff を確認し、変更をコミットしてプッシュし、プルリクエストを作成する。",
     prReady: "準備完了",
     prCommits: "3 コミット",
     viewDiff: "diff を表示",
@@ -78,15 +78,15 @@ export const ja: Messages = {
     browseSource: "ソースを見る",
     ctaTitle: "あなたのエージェントに、ターミナルだけではもったいない。",
     ctaSub:
-      "AgentD Desktop は無料、オープンソース、そして高速。インストールして、契約中のツールをつなぐだけ。あとはエージェントにおまかせ。",
+      "AgentD Next は無料、オープンソース、そして高速。インストールして、契約中のツールをつなぐだけ。あとはエージェントにおまかせ。",
     otherPlatforms: "ほかのプラットフォーム",
   },
   download: {
-    title: "AgentD Desktop をダウンロード（macOS、Windows、Linux）| AgentD Desktop",
+    title: "AgentD Next をダウンロード（macOS、Windows、Linux）| AgentD Next",
     description:
-      "公式の AgentD Desktop デスクトップアプリ（macOS、Windows、Linux）や、iOS・Android アプリをダウンロードできます。公式のダウンロードサイトは t3.codes だけです。",
+      "公式の AgentD Next デスクトップアプリ（macOS、Windows、Linux）や、iOS・Android アプリをダウンロードできます。公式のダウンロードサイトは t3.codes だけです。",
     breadcrumb: "ダウンロード",
-    heading: "AgentD Desktop をダウンロード",
+    heading: "AgentD Next をダウンロード",
     channelLabel: "リリースチャンネル",
     stable: "安定版",
     nightly: "Nightly",

@@ -124,7 +124,7 @@ export function antigravitySessionMeta(
 export function antigravityClientInfo(version: string | null | undefined) {
   const parsed = parseAntigravityVersion(version);
   return parsed !== undefined && compareVersions(parsed, OPEN_MODEL_ACCESS_RELEASE) >= 0
-    ? { name: "agentd-desktop", title: "AgentD Desktop", version: packageJson.version }
+    ? { name: "agentd-next", title: "AgentD Next", version: packageJson.version }
     : { name: "zed", version: "0.0.0" };
 }
 

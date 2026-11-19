@@ -2,13 +2,13 @@ import type { Messages } from "./en";
 
 export const de: Messages = {
   layout: {
-    defaultTitle: "AgentD Desktop",
-    defaultDescription: "AgentD Desktop. Die Open-Source-Steuerzentrale für Coding-Agents.",
+    defaultTitle: "AgentD Next",
+    defaultDescription: "AgentD Next. Die Open-Source-Steuerzentrale für Coding-Agents.",
     socialImageAlt:
-      "AgentD Desktop: die Open-Source-Steuerzentrale für Coding-Agents, mit Claude Code, Codex, Cursor, OpenCode, Grok und Antigravity.",
-    homeLabel: "Startseite von AgentD Desktop",
+      "AgentD Next: die Open-Source-Steuerzentrale für Coding-Agents, mit Claude Code, Codex, Cursor, OpenCode, Grok und Antigravity.",
+    homeLabel: "Startseite von AgentD Next",
     download: "Download",
-    starsLabel: "AgentD Desktop auf GitHub einen Stern geben, {stars} Sterne",
+    starsLabel: "AgentD Next auf GitHub einen Stern geben, {stars} Sterne",
     githubStars: "{stars} GitHub-Sterne",
     language: "Sprache",
     mitLicensed: "MIT-lizenziert",
@@ -19,8 +19,8 @@ export const de: Messages = {
     security: "Sicherheit",
   },
   home: {
-    title: "AgentD Desktop | Die Open-Source-Steuerzentrale für Coding-Agents",
-    description: "AgentD Desktop. Die Open-Source-Steuerzentrale für Coding-Agents.",
+    title: "AgentD Next | Die Open-Source-Steuerzentrale für Coding-Agents",
+    description: "AgentD Next. Die Open-Source-Steuerzentrale für Coding-Agents.",
     heroTitle: ["Die Open-Source-", "Steuerzentrale", "für Coding-Agents."],
     heroSub:
       "Steuere Claude Code, Codex, Antigravity, OpenCode, Cursor und Grok von einer Oberfläche aus. Nutze dein eigenes Abo. Forke das ganze Ding.",
@@ -32,14 +32,14 @@ export const de: Messages = {
     sourceLink: "Klau unseren Code (legal)",
     alsoOnPhone: "Auch auf deinem Handy:",
     screenshotAlt:
-      "AgentD Desktop führt Subagents von Claude, Codex, Muse und Gemini in einem Thread aus",
+      "AgentD Next führt Subagents von Claude, Codex, Muse und Gemini in einem Thread aus",
     endorsementsTitle: "Toleriert von über {users} Devs",
     endorsementsSub: "Manche haben sogar darüber getwittert.",
     endorsementsLabel: "Stimmen von Entwicklern",
     readPost: "Beitrag von {handle} auf X lesen",
     harnessTitle: "Bring dein eigenes Abo mit",
     harnessBody:
-      "AgentD Desktop verkauft keine Tokens weiter. Verbinde Claude Code, Codex, Antigravity, OpenCode, Cursor oder Grok mit den Zugangsdaten, die du schon hast. Wir orchestrieren sie, du behältst dein Abo.",
+      "AgentD Next verkauft keine Tokens weiter. Verbinde Claude Code, Codex, Antigravity, OpenCode, Cursor oder Grok mit den Zugangsdaten, die du schon hast. Wir orchestrieren sie, du behältst dein Abo.",
     googleSignIn: "Google-Anmeldung",
     harnessPoints: [
       "Keine weiterverkauften Keys. Keine Kontingentgrenzen.",
@@ -47,7 +47,7 @@ export const de: Messages = {
       "Jede Woche neue Agents.",
     ],
     gitVisualLabel:
-      "Illustration des Git-Workflows in AgentD Desktop: Diff prüfen, Änderungen committen und pushen, Pull Request öffnen.",
+      "Illustration des Git-Workflows in AgentD Next: Diff prüfen, Änderungen committen und pushen, Pull Request öffnen.",
     prReady: "Bereit",
     prCommits: "3 Commits",
     viewDiff: "Diff ansehen",
@@ -76,15 +76,15 @@ export const de: Messages = {
     browseSource: "Quellcode ansehen",
     ctaTitle: "Deine Agents verdienen Besseres als ein Terminal.",
     ctaSub:
-      "AgentD Desktop ist kostenlos, Open Source und schnell. Installier es, verbinde das Abo, für das du schon zahlst, und lass deine Agents loslegen.",
+      "AgentD Next ist kostenlos, Open Source und schnell. Installier es, verbinde das Abo, für das du schon zahlst, und lass deine Agents loslegen.",
     otherPlatforms: "Andere Plattformen",
   },
   download: {
-    title: "AgentD Desktop für macOS, Windows und Linux herunterladen | AgentD Desktop",
+    title: "AgentD Next für macOS, Windows und Linux herunterladen | AgentD Next",
     description:
-      "Lade die offizielle Desktop-App von AgentD Desktop für macOS, Windows oder Linux herunter, oder hol dir die Apps für iOS und Android. t3.codes ist die einzige offizielle Download-Seite.",
+      "Lade die offizielle Desktop-App von AgentD Next für macOS, Windows oder Linux herunter, oder hol dir die Apps für iOS und Android. t3.codes ist die einzige offizielle Download-Seite.",
     breadcrumb: "Download",
-    heading: "AgentD Desktop herunterladen",
+    heading: "AgentD Next herunterladen",
     channelLabel: "Release-Kanal",
     stable: "Stable",
     nightly: "Nightly",

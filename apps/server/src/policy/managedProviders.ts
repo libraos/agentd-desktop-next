@@ -91,7 +91,7 @@ type PinnedConfigField = (typeof PINNED_CONFIG_FIELDS)[number];
 /**
  * Fields that decide what a provider starts and reads on startup; a driver has those its schema
  * has. Under a ceiling they are the administrator's: a wrapper binary, a skip-permissions flag, or
- * a config directory with allow rules each outrank AgentD Desktop's mode, and no flag filter stops a wrapper.
+ * a config directory with allow rules each outrank AgentD Next's mode, and no flag filter stops a wrapper.
  */
 const LAUNCH_CONFIG_FIELDS = [
   "binaryPath",

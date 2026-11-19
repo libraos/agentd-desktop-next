@@ -118,9 +118,9 @@ type PricedModel = keyof typeof PRICES;
 const PROXY_SHELL_MODELS = ["gpt-6-luna", "gpt-6.1-terra"] as const;
 type ShellModel = PricedModel | (typeof PROXY_SHELL_MODELS)[number];
 const isPricedModel = (model: ShellModel): model is PricedModel => model in PRICES;
-const T3_PREFIX = "mcp__agentd-desktop__";
+const T3_PREFIX = "mcp__agentd-next__";
 /** Codex code mode spells the server with underscores; captures from before the rename use the old name. */
-const CODEX_T3_PREFIX = "mcp__agentd_desktop__";
+const CODEX_T3_PREFIX = "mcp__agentd_next__";
 const T3_NAME_PREFIXES = [T3_PREFIX, CODEX_T3_PREFIX, "mcp__t3_code__"];
 const RUNTIME_MARKER = "<runtime_info>";
 const TOOL_LOADED = "Tool loaded.";

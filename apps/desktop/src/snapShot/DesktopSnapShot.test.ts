@@ -1786,7 +1786,7 @@ it.effect("flags revoked macOS permissions on read and re-registers once they re
       const revoked = yield* service.state;
       assert.equal(
         revoked.message,
-        "Allow Screen Recording in System Settings, then restart AgentD Desktop.",
+        "Allow Screen Recording in System Settings, then restart AgentD Next.",
       );
       assert.deepEqual(revoked.macPermissions, { screenRecording: false, accessibility: true });
 
@@ -1799,7 +1799,7 @@ it.effect("flags revoked macOS permissions on read and re-registers once they re
       const blocked = yield* service.state;
       assert.equal(
         blocked.message,
-        "Allow Screen Recording in System Settings, then restart AgentD Desktop.",
+        "Allow Screen Recording in System Settings, then restart AgentD Next.",
       );
       assert.isFalse(blocked.shortcutRegistered);
 
@@ -2159,7 +2159,7 @@ it.effect.each([false, true])(
       platform: "macos",
       id: 42,
       title: "Setup",
-      owner: { name: "AgentD Desktop", processId: 123, path: "/Applications/AgentD Desktop.app" },
+      owner: { name: "AgentD Next", processId: 123, path: "/Applications/AgentD Next.app" },
       bounds: { x: 0, y: 0, width: 800, height: 600 },
     };
     activeWindowMock.mockReset().mockResolvedValue(active);

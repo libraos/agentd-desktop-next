@@ -55,7 +55,7 @@ function inhibitorCommand(
         command: "systemd-inhibit",
         args: [
           "--what=idle:sleep",
-          "--who=AgentD Desktop",
+          "--who=AgentD Next",
           "--why=Agents are working",
           "--mode=block",
           "tail",

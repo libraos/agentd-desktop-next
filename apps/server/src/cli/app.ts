@@ -38,7 +38,7 @@ export class DesktopAppSshUnsupportedError extends Schema.TaggedError<DesktopApp
   {},
 ) {
   override get message(): string {
-    return "`agentd-desktop app` only controls a desktop app on the same machine. It cannot run over SSH.";
+    return "`agentd-next app` only controls a desktop app on the same machine. It cannot run over SSH.";
   }
 }
 
@@ -47,7 +47,7 @@ export class DesktopAppPlatformUnsupportedError extends Schema.TaggedError<Deskt
   { platform: Schema.String },
 ) {
   override get message(): string {
-    return `\`agentd-desktop app\` is not supported on ${this.platform}.`;
+    return `\`agentd-next app\` is not supported on ${this.platform}.`;
   }
 }
 
@@ -61,7 +61,7 @@ export class DesktopAppUnreachableError extends Schema.TaggedError<DesktopAppUnr
   },
 ) {
   override get message(): string {
-    return "Could not reach the AgentD Desktop app. Start or update the desktop app on this machine, then run `agentd-desktop app` again. A running AgentD Desktop server is not enough.";
+    return "Could not reach the AgentD Next app. Start or update the desktop app on this machine, then run `agentd-next app` again. A running AgentD Next server is not enough.";
   }
 }
 
@@ -75,7 +75,7 @@ export class DesktopAppRequestFailedError extends Schema.TaggedError<DesktopAppR
   },
 ) {
   override get message(): string {
-    return `AgentD Desktop could not open ${this.workspaceRoot} (${this.code}).`;
+    return `AgentD Next could not open ${this.workspaceRoot} (${this.code}).`;
   }
 }
 
@@ -267,7 +267,7 @@ const runAppCommand = Effect.fn("cli.app")(function* (flags: {
     });
   }
 
-  yield* Console.log(`Opened ${workspaceRoot} in AgentD Desktop.`);
+  yield* Console.log(`Opened ${workspaceRoot} in AgentD Next.`);
 });
 
 export const appCommand = Command.make("app", {
@@ -277,6 +277,6 @@ export const appCommand = Command.make("app", {
     Argument.optional,
   ),
 }).pipe(
-  Command.withDescription("Open a project in the running AgentD Desktop app."),
+  Command.withDescription("Open a project in the running AgentD Next app."),
   Command.withHandler(runAppCommand),
 );

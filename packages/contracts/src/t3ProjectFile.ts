@@ -24,10 +24,10 @@ const trimmedNonEmpty = (annotations: { readonly description: string }, maxLengt
 
 export const T3ProjectFileScript = Schema.Struct({
   name: trimmedNonEmpty({
-    description: "Display name for the script, shown in the AgentD Desktop scripts menu.",
+    description: "Display name for the script, shown in the AgentD Next scripts menu.",
   }),
   command: trimmedNonEmpty({
-    description: "Shell command executed in an AgentD Desktop terminal at the project root.",
+    description: "Shell command executed in an AgentD Next terminal at the project root.",
   }),
   icon: Schema.optionalKey(
     ProjectScriptIcon.annotate({
@@ -71,7 +71,7 @@ export const T3ProjectFileScript = Schema.Struct({
     }),
   ),
 }).annotate({
-  description: "A project script that team members can import into AgentD Desktop.",
+  description: "A project script that team members can import into AgentD Next.",
 });
 export type T3ProjectFileScript = typeof T3ProjectFileScript.Type;
 
@@ -85,7 +85,7 @@ export const T3ProjectFile = Schema.Struct({
     trimmedNonEmpty(
       {
         description:
-          'Workspace-relative path to the project icon (e.g. "assets/logo.svg"). Checked before AgentD Desktop\'s built-in icon locations.',
+          'Workspace-relative path to the project icon (e.g. "assets/logo.svg"). Checked before AgentD Next\'s built-in icon locations.',
       },
       T3_PROJECT_FILE_PATH_MAX_LENGTH,
     ),
@@ -93,13 +93,13 @@ export const T3ProjectFile = Schema.Struct({
   defaultThreadEnvMode: Schema.optionalKey(
     ThreadEnvMode.annotate({
       description:
-        'Where new threads start for this repository: "worktree" for a fresh git worktree, "local" for the current checkout. A per-project setting in AgentD Desktop overrides this; when neither is set, the global default applies.',
+        'Where new threads start for this repository: "worktree" for a fresh git worktree, "local" for the current checkout. A per-project setting in AgentD Next overrides this; when neither is set, the global default applies.',
     }),
   ),
   worktreeSubmodules: Schema.optionalKey(
     WorktreeSubmodules.annotate({
       description:
-        'How new worktrees populate git submodules: "recursive" (the default) initializes nested submodules too, "top-level" initializes only those declared by this repository, and "none" leaves every submodule empty for a setup script to handle. A project or environment setting in AgentD Desktop overrides this.',
+        'How new worktrees populate git submodules: "recursive" (the default) initializes nested submodules too, "top-level" initializes only those declared by this repository, and "none" leaves every submodule empty for a setup script to handle. A project or environment setting in AgentD Next overrides this.',
     }),
   ),
   worktreeSparsePatternsPath: Schema.optionalKey(
@@ -115,14 +115,14 @@ export const T3ProjectFile = Schema.Struct({
     Schema.Array(T3ProjectFileScript)
       .annotate({
         description:
-          "Project scripts shared with everyone who opens this repository in AgentD Desktop.",
+          "Project scripts shared with everyone who opens this repository in AgentD Next.",
       })
       .check(Schema.isMaxLength(T3_PROJECT_FILE_MAX_SCRIPTS)),
   ),
 }).annotate({
   title: "T3 project file",
   description:
-    "Checked-in project configuration for AgentD Desktop (t3.json at the repository root). See https://github.com/libraos/agentd-desktop-next for documentation.",
+    "Checked-in project configuration for AgentD Next (t3.json at the repository root). See https://github.com/libraos/agentd-desktop-next for documentation.",
 });
 export type T3ProjectFile = typeof T3ProjectFile.Type;
 

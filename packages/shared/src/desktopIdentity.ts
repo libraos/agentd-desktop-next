@@ -1,4 +1,7 @@
-/** AgentD Desktop's own data folder, link scheme and command, apart from the upstream app on the same machine. */
+/**
+ * AgentD Next's own data folder, link scheme and command, apart from the upstream app on the same machine.
+ * Folder, scheme and service names keep the legacy `agentd-desktop` so installs update in place.
+ */
 
 import * as Config from "effect/Config";
 import * as Option from "effect/Option";
@@ -7,7 +10,9 @@ import * as Option from "effect/Option";
 export const APP_LINK_SCHEME = "agentd-desktop";
 export const APP_LINK_PROTOCOL = /^agentd-desktop(?:-[a-z]+)?:$/;
 /** The command the app puts on PATH (`.cmd` on Windows). */
-export const CLI_COMMAND_NAME = "agentd-desktop";
+export const CLI_COMMAND_NAME = "agentd-next";
+/** The legacy command name, from agentd.4 to agentd.6; an installed one is kept working and removed with the new one. */
+export const LEGACY_CLI_COMMAND_NAME = "agentd-desktop";
 /** Installed beside the command so scripts written for upstream's `t3` keep working. */
 export const CLI_COMMAND_ALIAS = "t3";
 /** Background service, Windows task, systemd slices and per-user folders; the upstream app's are `t3code`. */

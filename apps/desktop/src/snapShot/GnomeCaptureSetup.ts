@@ -56,7 +56,7 @@ export async function installGnomeCaptureBundle({ bundle, dataHome }: SetupPaths
     );
     if (installed.version > metadata.version)
       throw new Error(
-        "A newer extension is installed. Update AgentD Desktop instead of replacing it.",
+        "A newer extension is installed. Update AgentD Next instead of replacing it.",
       );
   }
   const staged = await NodeFSP.mkdtemp(NodePath.join(parent, ".t3-capture-install-"));
@@ -184,7 +184,7 @@ export class GnomeCaptureSetup {
         return {
           status: "restart-required",
           message:
-            "Installed. Save your work, sign out of GNOME and sign back in, then return here to enable the extension. Restarting AgentD Desktop alone is not enough.",
+            "Installed. Save your work, sign out of GNOME and sign back in, then return here to enable the extension. Restarting AgentD Next alone is not enough.",
         };
       if ((installed?.version ?? info.version?.value ?? 0) < bundled.version)
         return {
@@ -196,13 +196,12 @@ export class GnomeCaptureSetup {
         return {
           status: "extensions-disabled",
           message:
-            "GNOME has disabled user extensions. Turn on Extensions in the GNOME Extensions app, then check again. AgentD Desktop will not enable your other extensions for you.",
+            "GNOME has disabled user extensions. Turn on Extensions in the GNOME Extensions app, then check again. AgentD Next will not enable your other extensions for you.",
         };
       if (info.state?.value === 1)
         return {
           status: "enabled",
-          message:
-            "The AgentD Desktop extension is running. Active-window snapshots are available.",
+          message: "The AgentD Next extension is running. Active-window snapshots are available.",
         };
       if (info.state?.value === 3 || info.state?.value === 4)
         return {
@@ -214,7 +213,7 @@ export class GnomeCaptureSetup {
       return {
         status: "disabled",
         message:
-          "Enable the AgentD Desktop extension to allow active-window snapshots. You can disable it here at any time.",
+          "Enable the AgentD Next extension to allow active-window snapshots. You can disable it here at any time.",
       };
     } catch (error) {
       return {

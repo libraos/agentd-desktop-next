@@ -154,7 +154,7 @@ export const makeAcpMcpOverAcpBridge = Effect.fn("AcpMcpOverAcpBridge.make")(fun
             () => response.body?.cancel().catch(() => undefined) ?? Promise.resolve(),
           );
           return yield* new AcpMcpOverAcpError({
-            message: `AgentD Desktop MCP endpoint responded with HTTP ${response.status}.`,
+            message: `AgentD Next MCP endpoint responded with HTTP ${response.status}.`,
           });
         }
         const payloads = [...(yield* Stream.runCollect(responsePayloads(response, bridgeError)))];
@@ -205,7 +205,7 @@ export const makeAcpMcpOverAcpBridge = Effect.fn("AcpMcpOverAcpBridge.make")(fun
         });
         if (!response.ok && response.status !== 404) {
           return yield* new AcpMcpOverAcpError({
-            message: `AgentD Desktop MCP endpoint rejected disconnect with HTTP ${response.status}.`,
+            message: `AgentD Next MCP endpoint rejected disconnect with HTTP ${response.status}.`,
           });
         }
         yield* Effect.promise(
@@ -217,7 +217,7 @@ export const makeAcpMcpOverAcpBridge = Effect.fn("AcpMcpOverAcpBridge.make")(fun
           orElse: () =>
             Effect.fail(
               new AcpMcpOverAcpError({
-                message: "AgentD Desktop MCP endpoint did not answer disconnect.",
+                message: "AgentD Next MCP endpoint did not answer disconnect.",
               }),
             ),
         }),
@@ -230,7 +230,7 @@ export const makeAcpMcpOverAcpBridge = Effect.fn("AcpMcpOverAcpBridge.make")(fun
 
   return {
     connect: Effect.fn("mcpOverAcpBridge.connect")(function* (request) {
-      if (request.serverId !== "agentd-desktop" && request.serverId !== LEGACY_APP_MCP_SERVER_ID) {
+      if (request.serverId !== "agentd-next" && request.serverId !== LEGACY_APP_MCP_SERVER_ID) {
         return yield* new AcpMcpOverAcpError({
           message: `Unknown ACP MCP server "${request.serverId}".`,
         });

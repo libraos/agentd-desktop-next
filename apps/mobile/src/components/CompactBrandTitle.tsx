@@ -42,7 +42,7 @@ export function CompactBrandTitle(
         props.fit && showStage ? (event) => setFullWidth(event.nativeEvent.layout.width) : undefined
       }
       aria-level={1}
-      accessibilityLabel={props.accessibilityLabel ?? gt("AgentD Desktop, Threads")}
+      accessibilityLabel={props.accessibilityLabel ?? gt("AgentD Next, Threads")}
       accessible
       role="heading"
       className="flex-row items-center gap-1.5"

@@ -60,7 +60,7 @@ it.layer(NodeServices.layer)("ClaudeHome", (it) => {
   });
 
   it.effect(
-    "drops the launching Claude session and Electron's run-as-Node flag, and labels processes agentd-desktop unless overridden",
+    "drops the launching Claude session and Electron's run-as-Node flag, and labels processes agentd-next unless overridden",
     () =>
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
@@ -81,7 +81,7 @@ it.layer(NodeServices.layer)("ClaudeHome", (it) => {
         ];
 
         expect(yield* mergeClaudeProcessEnvironment({ homePath }, undefined, host)).toEqual({
-          CLAUDE_CODE_ENTRYPOINT: "agentd-desktop",
+          CLAUDE_CODE_ENTRYPOINT: "agentd-next",
           KEEP: "1",
         });
         expect(yield* mergeClaudeProcessEnvironment({ homePath }, instance, host)).toEqual({

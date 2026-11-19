@@ -114,7 +114,7 @@ function createWindow(
     resizable: false,
     show: false,
     skipTaskbar: true,
-    title: "AgentD Desktop Snapshot Animation",
+    title: "AgentD Next Snapshot Animation",
     transparent: true,
     webPreferences: {
       backgroundThrottling: false,

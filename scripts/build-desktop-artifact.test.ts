@@ -570,7 +570,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     ),
   );
 
-  it.effect("uses the AgentD Desktop identity in the Linux package and launcher", () =>
+  it.effect("uses the AgentD Next identity in the Linux package and launcher", () =>
     Effect.gen(function* () {
       const linux = yield* createBuildConfig(
         "linux",
@@ -583,8 +583,8 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       );
 
       assert.propertyVal(linux, "appId", "ai.libraos.agentd-desktop");
-      assert.propertyVal(linux, "productName", "AgentD Desktop");
-      assert.propertyVal(linux, "artifactName", "AgentD-Desktop-${version}-${arch}.${ext}");
+      assert.propertyVal(linux, "productName", "AgentD Next");
+      assert.propertyVal(linux, "artifactName", "AgentD-Next-${version}-${arch}.${ext}");
       assert.nestedPropertyVal(linux, "linux.executableName", "agentd-desktop");
       assert.nestedPropertyVal(linux, "linux.syncDesktopName", true);
       assert.nestedPropertyVal(
@@ -611,8 +611,8 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       const stable = yield* appImageName("0.0.37");
       const nightly = yield* appImageName("0.0.38-nightly.20261026.3740");
 
-      assert.equal(stable, "AgentD-Desktop-${arch}.${ext}");
-      assert.equal(nightly, "AgentD-Desktop-Nightly-${arch}.${ext}");
+      assert.equal(stable, "AgentD-Next-${arch}.${ext}");
+      assert.equal(nightly, "AgentD-Next-Nightly-${arch}.${ext}");
     }).pipe(
       Effect.provide(
         ConfigProvider.layer(

@@ -9,7 +9,7 @@ export function T3Wordmark(props: Omit<ComponentProps<"img">, "alt" | "src">) {
 }
 
 const WORDMARK_NAME = "AgentD";
-const WORDMARK_QUALIFIER = "Desktop";
+const WORDMARK_QUALIFIER = "Next";
 
 export function AgentDWordmark({ onBackdrop = false }: { readonly onBackdrop?: boolean }) {
   return (

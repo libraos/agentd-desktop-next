@@ -1,4 +1,4 @@
-# Building AgentD Desktop
+# Building AgentD Next
 
 ## Cutting a release
 
