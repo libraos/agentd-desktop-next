@@ -25,7 +25,9 @@ A server you run with `agentd-next` from the desktop app updates with the app. T
 need a release mirror: set `T3CODE_RELEASE_BASE_URL` on the server's machine to a
 mirror laid out like a GitHub release's downloads, or use the managed policy's
 `updates.feedUrl`. Without one they report "Updates are not configured for this
-build" and make no network request. For a server built from source, update it with
+build" and make no network request. With `T3CODE_RELEASE_BASE_URL` set, the server also
+looks up release information for the npm package `t3`, through `npm` or, when npm is not
+installed, the public npm registry. For a server built from source, update it with
 `git pull` and a rebuild.
 
 ## Before you update

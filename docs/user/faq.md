@@ -40,7 +40,7 @@ A separate work account is fine. Setup for two: [Codex](./providers-codex.md#use
 
 ## Does my code go to your servers?
 
-No. Your code and prompts go from your machine to your provider (Anthropic, OpenAI, and so on), or to LibraOS Gateway if you chose it. AgentD Next sends no product usage events unless you configure your own analytics endpoint, and never prompts or file contents. Set `T3CODE_TELEMETRY_ENABLED=false` to keep it off even then. [Product usage data](./telemetry.md)
+No. Your code and prompts go from your machine to your provider (Anthropic, OpenAI, and so on), or to LibraOS Gateway if you chose it. AgentD Next sends no product usage events unless an analytics endpoint is configured, and those events do not include prompts or file contents. Set `T3CODE_TELEMETRY_ENABLED=false` to keep them off even then; diagnostics you export to your own OpenTelemetry receiver are a separate setting. [Product usage data](./telemetry.md)
 
 ## Worktrees are eating my disk. How do I clean them up?
 

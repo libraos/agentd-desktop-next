@@ -1,16 +1,20 @@
 # Product usage data
 
-AgentD Next sends no product usage events, crash reports or connection traces to its
-makers or to upstream. With no configuration, the server sends nothing to PostHog and
-fetches nothing from upstream's servers. The network requests the app does make are
-the ones you start: your providers' CLIs talking to their vendors, source control,
-provider installs and updates, speech model downloads, and similar actions.
+By default, AgentD Next sends no product usage events, crash reports or connection
+traces to its makers or to upstream. With no configuration, the server sends nothing to
+PostHog and fetches nothing from upstream's servers.
+
+The app still uses the network. Some requests start on their own: it checks which
+providers are installed and signed in, and checks for provider updates unless you turn
+that setting off. The rest follow from what you do: your providers' CLIs talking to
+their vendors, source control, provider installs, speech model downloads, and similar
+actions.
 
 ## Analytics you configure
 
 The server sends product usage events only when both `T3CODE_POSTHOG_KEY` and
-`T3CODE_POSTHOG_HOST` are set in its environment. It then sends them to that host,
-which you or your organization run. Events include the provider, model, reasoning
+`T3CODE_POSTHOG_HOST` are set in its environment. It then sends them to that host;
+whoever runs the host receives them. Events include the provider, model, reasoning
 effort, permission mode, turn and request results, duration, release channel, and
 token counts when available, associated with hashed account or installation
 identifiers. They do not include prompts, responses, file contents, authentication
@@ -20,6 +24,10 @@ To keep events off even when those variables are set, set
 `T3CODE_TELEMETRY_ENABLED=false` in the server's environment before starting it. An
 administrator can turn them off for the server and desktop app with a
 [managed policy](./managed-policy.md#other-capabilities).
+
+This setting covers product usage events only. Diagnostics you export to an
+OpenTelemetry receiver (below) are separate: remove the endpoints, or set
+`T3CODE_OTEL_SDK_DISABLED=true` and restart, to stop those.
 
 The desktop app reads `T3CODE_TELEMETRY_ENABLED` from your shell profile (for
 example `~/.zshrc`) on macOS and Linux, so export it there and restart the app. On
