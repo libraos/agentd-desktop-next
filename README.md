@@ -8,37 +8,7 @@ It runs on macOS, Linux and Windows.
 
 ![A project thread with its branch, changes, background tasks and AgentD workers beside the conversation](agentd/design/shots/session-panel.png)
 
-## BYOK: bring your own key
-
-AgentD Next has no models of its own. Every model call is made by an agent you connect, under an account or key that is yours:
-
-| You bring                     | How                                                                                                                                          | Who bills the model usage              |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| An agent you are signed in to | Claude Code, Codex, opencode and the others under **More agents**, installed and signed in on your machine with a subscription or an API key | That agent's provider, on your account |
-| A LibraOS API key (optional)  | **Use an API key or gateway** → **LibraOS Gateway**: one key gives every agent its models                                                    | Your LibraOS account                   |
-
-- **Nothing to buy from us to start.** Chat and Code work with one signed-in agent and no LibraOS account.
-- **Your agent talks to its provider itself.** The app starts the agent's own program and shows its work; it does not route your prompts through a service of ours. With LibraOS Gateway, the requests go to the Gateway because you chose it.
-- **Workers use the same accounts.** A worker on this machine runs on your agent account, or on the Gateway if you connected it. Cloud Workers run on LibraOS and spend your LibraOS credit.
-- **Other endpoints are not available yet.** A custom base URL or another gateway cannot be entered in the app today.
-
-## What you can do
-
-- **Connect the agents you already use.** The first run lists Claude Code, Codex and opencode, with more under **More agents**. If no agent is detected, choose **Skip for now**, then open **Settings → Providers** after installing one.
-- **Use LibraOS Gateway.** In **Use an API key or gateway**, enter your key in **LibraOS API key**, then choose the agent marked **LibraOS Gateway** in the model picker. Other endpoint options are not available yet.
-- **Join a team.** Paste the **Team invitation link** from your team.
-- **Chat or Code.** Chat is a conversation with an agent. Code is a project: its files, branch and changes sit beside the conversation.
-- **Hand a task to a worker.** From a session, or from a task card the chat drafts, start an agentd worker with a goal, acceptance criteria, a check command and a budget. The budget comes from agentd's estimate for similar tasks. **Run in the cloud** sends it to Cloud Workers instead of this machine.
-- **Follow the work.** The session panel lists the project's background tasks, running and finished, with live output and Stop, and every AgentD worker running now, on this machine, a team node or in the cloud.
-- **Review the result.** A finished Cloud Workers task opens its changes in a review dialog with the diff viewer.
-- **See agentd's state.** The AgentD page shows agentd's status and checks, what needs you (approvals and messages), and the workers and team nodes.
-- **Set agentd up from the app.** When agentd is not set up yet, the app shows its End User Agreement and runs the setup when you accept. Chat and Code work without it.
-
-| First run                                                            | Hand to a worker                                                                            |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| ![Connect an agent you already use](agentd/design/shots/welcome.png) | ![A task with its goal, criteria, check and budget](agentd/design/shots/hand-to-worker.png) |
-
-## Install
+## Install the desktop app
 
 Installers are on the [releases page](https://github.com/libraos/agentd-desktop-next/releases), with agentd and its Skills inside. The files and the app still carry the earlier name, AgentD Desktop.
 
@@ -57,6 +27,65 @@ Download from the official releases page and check the installer against `SHA256
 Do not override a malware warning or a block enforced by your organization.
 
 The app finds agents on your login shell's `PATH` and in the folders their installers use, such as `~/.local/bin`, `~/.claude/local` and `/opt/homebrew/bin`. Its command line tool is `agentd-desktop`; the first run offers to put it on `PATH`.
+
+## Bring your own key (BYOK)
+
+AgentD Next has no models of its own. Every model call is made by an agent you connect, under an account or key that is yours. There are three ways, and you can mix them.
+
+| You bring                           | Who bills the model usage              |
+| ----------------------------------- | -------------------------------------- |
+| A subscription you already have     | That agent's provider, on your account |
+| An API key or another provider      | Whoever issued the key                 |
+| A LibraOS API key (LibraOS Gateway) | Your LibraOS account, pay as you go    |
+
+Chat and Code work with one connected agent and no LibraOS account. The app starts the agent's own program and shows its work; it does not route your prompts through a service of ours.
+
+### A subscription you already have
+
+The first run lists Claude Code, Codex and opencode, with more under **More agents**. Each row says what it needs: **Install**, **Sign in** or **Turn on**. An agent that is already installed and signed in on this machine is used as it is.
+
+| Agent       | Plan                  | Sign in                                        |
+| ----------- | --------------------- | ---------------------------------------------- |
+| Claude Code | Claude Pro or Max     | **Sign in** in the app, or `claude auth login` |
+| Codex       | ChatGPT plan          | **Sign in** in the app, or `codex login`       |
+| opencode    | The plans it supports | `opencode auth login`                          |
+
+If no agent is detected, choose **Skip for now** and connect one later in **Settings → Providers**.
+
+### An API key or another provider
+
+Each agent keeps its own way of using a key, and the app uses whatever the agent is configured with:
+
+- **Claude Code:** an Anthropic API key, Amazon Bedrock or Google Vertex AI, set up the way Claude Code documents.
+- **Codex:** an OpenAI API key, set up the way Codex documents.
+- **opencode:** any provider it supports, added with `opencode auth login`.
+
+To keep a key or an endpoint apart from your main login, add a second instance of the agent in **Settings → Providers** and put the values in its **Environment variables**, for example `ANTHROPIC_API_KEY` and `ANTHROPIC_BASE_URL`. A second account works the same way, with `CLAUDE_CONFIG_DIR` or `CODEX_HOME` pointing at its own folder. The guides for [Claude](./docs/user/providers-claude.md), [Codex](./docs/user/providers-codex.md) and [opencode](./docs/user/providers-opencode.md) have the details.
+
+### LibraOS Gateway
+
+One LibraOS key gives every agent its models, with no separate subscription for each.
+
+1. Create a key on the [Console's API keys page](https://console.libraos.com/api-keys). Use is billed pay as you go.
+2. In the app, open **Use an API key or gateway** (on the first run, or in **Settings → Providers**), choose **LibraOS Gateway** and the agent to use it with, paste the key into **LibraOS API key** and press **Connect**.
+3. In a chat, choose the agent marked **LibraOS Gateway** in the model picker.
+
+The key stays on that environment, and **Disconnect** removes it. agentd workers use the Gateway too, so tasks accept dollar budgets. Other gateways cannot be chosen on that screen yet; use an instance's environment variables for those.
+
+**Join a team** is separate from keys: paste the **Team invitation link** from your team to enroll this device with its agentd server.
+
+## What you can do
+
+- **Chat or Code.** Chat is a conversation with an agent. Code is a project: its files, branch and changes sit beside the conversation.
+- **Hand a task to a worker.** From a session, or from a task card the chat drafts, start an agentd worker with a goal, acceptance criteria, a check command and a budget. The budget comes from agentd's estimate for similar tasks. **Run in the cloud** sends it to Cloud Workers instead of this machine.
+- **Follow the work.** The session panel lists the project's background tasks, running and finished, with live output and Stop, and every AgentD worker running now, on this machine, a team node or in the cloud.
+- **Review the result.** A finished Cloud Workers task opens its changes in a review dialog with the diff viewer.
+- **See agentd's state.** The AgentD page shows agentd's status and checks, what needs you (approvals and messages), and the workers and team nodes.
+- **Set agentd up from the app.** When agentd is not set up yet, the app shows its End User Agreement and runs the setup when you accept. Chat and Code work without it.
+
+| First run                                                            | Hand to a worker                                                                            |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| ![Connect an agent you already use](agentd/design/shots/welcome.png) | ![A task with its goal, criteria, check and budget](agentd/design/shots/hand-to-worker.png) |
 
 ## Run it from source
 
