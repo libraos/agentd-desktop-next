@@ -799,6 +799,8 @@ it("shows only compatible endpoints and keeps the Gateway shortcut selected", as
   await expect
     .element(options.getByRole("button", { name: "LibraOS Gateway" }))
     .toHaveAttribute("aria-pressed", "true");
+  await expect.element(screen.getByRole("button", { name: "Sign in with LibraOS" })).toBeVisible();
+  await screen.getByRole("button", { name: "Use an API key instead" }).click();
   await expect
     .element(screen.getByLabelText("LibraOS API key"))
     .toHaveAttribute("type", "password");
