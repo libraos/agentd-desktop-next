@@ -258,11 +258,11 @@ host restored from an image or snapshot, where the profile can be on disk
 without being loaded. Without `sudo`, it only reports what it would change.
 
 The browser runs in Chrome's sandbox by default. Chrome cannot start that sandbox
-as root. If your T3 server runs as root, run it as a nonroot user to keep
+as root. If your AgentD Next server runs as root, run it as a nonroot user to keep
 sandboxing enabled. `t3 browser setup` does not fix this root restriction.
 
 If you need to run as root, or cannot enable the sandbox on your host, set
-`T3CODE_SERVER_BROWSER_SANDBOX=0` in the **T3 server's environment** and restart
+`T3CODE_SERVER_BROWSER_SANDBOX=0` in the **AgentD Next server's environment** and restart
 the server. This disables Chrome's sandbox. For a manual launch:
 
 ```sh
@@ -271,8 +271,8 @@ T3CODE_SERVER_BROWSER_SANDBOX=0 t3 serve
 
 For a systemd service, add `Environment=T3CODE_SERVER_BROWSER_SANDBOX=0` under
 `[Service]` in its configuration, run `sudo systemctl daemon-reload`, then restart
-your T3 service. Setting the variable in an agent's terminal does not change the
-environment of an already running T3 server.
+your AgentD Next service. Setting the variable in an agent's terminal does not change the
+environment of an already running AgentD Next server.
 
 ## Connect an outside agent
 

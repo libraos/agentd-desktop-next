@@ -108,9 +108,8 @@ Leaving an edited form asks before discarding unsaved changes.
 
 In **Settings → Scheduled tasks**, choose **On webhook**
 as a task's schedule to run it whenever another service calls its URL, such as
-GitHub on a new pull request or a CI job that failed. A public URL needs a
-[T3 Connect](remote-access.md) managed tunnel; after you save the task, copy
-its URL from the editor. Without one, the editor shows only the URL's path.
+GitHub on a new pull request or a CI job that failed. The editor shows only the URL's
+path. A public URL needs upstream's hosted relay, which is not part of AgentD Next.
 **Rotate** replaces the URL and the old one stops working.
 
 The prompt decides what the agent sees. Placeholders pull values out of the
@@ -165,11 +164,8 @@ requests and the prompt each one produced.
 
 If the environment is offline, the sender gets an error and nothing runs;
 redeliver from the sender, such as GitHub's **Recent Deliveries**, once it is
-back. To have T3 Connect keep requests instead, turn on **Hold webhooks while
-offline** in **Settings → Sharing & access**. T3 Connect then stores requests to a
-T3 Connect URL for up to 24 hours and delivers them when the environment
-returns. Leave it off if you don't want request bodies stored outside your
-machine. To skip requests that waited too long, set **Skip requests older
+back. **Hold webhooks while offline** relies on upstream's hosted relay, which
+is not part of AgentD Next. To skip requests that waited too long, set **Skip requests older
 than** on the task.
 
 ## Defaults and inheritance
@@ -208,7 +204,7 @@ This needs Git 2.35 or newer.
 
 ## Worktree location
 
-New worktrees go in the `worktrees` folder of the T3 home directory. To put them somewhere else,
+New worktrees go in the `worktrees` folder of the AgentD Next home directory. To put them somewhere else,
 such as another drive, set **Settings → Worktrees → Worktree location** to an absolute path like
 `D:\worktrees` or `~/worktrees`. The setting is per machine. Existing worktrees stay where they
 are, and cleanup covers both the default folder and the custom one.
@@ -217,12 +213,12 @@ are, and cleanup covers both the default folder and the custom one.
 
 Fast worktree checkout is a beta. Turn it on for each Mac in **Settings → Labs → Fast worktree
 checkout**. AgentD Next then keeps a few recent checkouts of each repository in the `caches` folder of
-the T3 home directory. A new worktree is cloned from one of them with APFS copy-on-write, which is
+the AgentD Next home directory. A new worktree is cloned from one of them with APFS copy-on-write, which is
 about twice as fast as writing every file and makes the first `git status` in it fast as well.
 Turning it off deletes the cache.
 
 The first worktree of a repository uses Git's normal checkout and fills the cache. It needs Git 2.42
-or newer. Git's normal checkout is also used for worktrees on a different drive from the T3 home
+or newer. Git's normal checkout is also used for worktrees on a different drive from the AgentD Next home
 directory, sparse checkouts, repositories whose attributes use filters such as Git LFS, and
 repositories whose checkout settings changed.
 
@@ -242,7 +238,7 @@ merging, or when they have no commits beyond the default branch and their thread
 archived. Set settled retention to 0 days to remove a worktree at the next cleanup after
 settlement. In repositories without remotes,
 unchanged-worktree cleanup compares against the branch checked out in the project workspace;
-if that checkout has a detached HEAD, the worktree is kept. Only T3-managed worktrees are eligible.
+if that checkout has a detached HEAD, the worktree is kept. Only AgentD Next-managed worktrees are eligible.
 Active sessions and shared worktrees prevent removal. **Keep worktrees with local changes** defaults
 to **Uncommitted changes**, which protects tracked edits and untracked files but deletes ignored
 files such as `.env` and build output. **Any local files** also protects ignored files other than
