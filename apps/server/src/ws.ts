@@ -3617,6 +3617,10 @@ export const layerWsRpc = (
         [WS_METHODS.libraosGatewayStatus]: (_input) => libraosGateway.status,
         [WS_METHODS.libraosGatewayConnect]: (input) => libraosGateway.connect(input.key),
         [WS_METHODS.libraosGatewayDisconnect]: (_input) => libraosGateway.disconnect,
+        [WS_METHODS.libraosGatewaySignInStart]: (input) =>
+          libraosGateway.signInStart(input.purpose),
+        [WS_METHODS.libraosGatewaySignInWait]: (_input) => libraosGateway.signInWait,
+        [WS_METHODS.libraosGatewaySignInCancel]: (_input) => libraosGateway.signInCancel,
       });
       const splitHandlers: Pick<typeof handlers, SplitWsRpc["_tag"]> = handlers;
       const otherHandlers: Pick<typeof handlers, Exclude<ServerWsRpc, SplitWsRpc>["_tag"]> =
