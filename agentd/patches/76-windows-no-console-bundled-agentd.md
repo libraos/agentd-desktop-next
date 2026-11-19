@@ -10,7 +10,7 @@ Ours:
 - `apps/server/src/agentd/AgentdTeamNode.ts` — `windowsHide: true` on the team-node worker it starts.
 - `apps/server/src/agentd/AgentdBridge.ts` — `AgentdNotFoundError` says `bundled: true` when the desktop app carries agentd.
 - `apps/server/src/agentd/AgentdBridge.test.ts` — the not-found case also checks the bundled flag.
-- `apps/web/src/components/agentd/AgentdPage.tsx`, `apps/web/src/components/agentd/BackgroundTasksPane.tsx` — with a bundled agentd, say to reinstall AgentD Desktop instead of linking agentd-core's install guide.
+- `apps/web/src/components/agentd/AgentdPage.tsx`, `apps/web/src/components/agentd/BackgroundTasksPane.tsx` — with a bundled agentd, say to reinstall AgentD Desktop instead of linking agentd's install guide.
 
 Upstream, one or two lines each:
 
