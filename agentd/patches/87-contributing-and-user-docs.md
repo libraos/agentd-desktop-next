@@ -27,7 +27,8 @@ The pages the first pass skipped, for upstream-only services, are now done, and
   `T3CODE_POSTHOG_*` is set. Updates mean installing the new release, since there is no feed; a
   mirror (`T3CODE_RELEASE_BASE_URL`, policy `updates.feedUrl`) enables in-app updates. Gone:
   upstream's install script, npx, package managers, Nix, store apps and release channels.
-- Deleted, only about upstream services: `t3-connect-troubleshooting.md`, `guest-links.md` (needs
+- Kept with a note that the service is not part of AgentD Next: `t3-connect-troubleshooting.md` (the relay diagnostics inherited from upstream link to its sections, and a test checks them).
+- Deleted, only about upstream services: `guest-links.md` (needs
   the hosted relay's address), `mobile-notifications.md` (push through the hosted relay). Links to
   them in `docs/README.md`, `docs/internals/environment-auth.md`, `remote-access.md` and
   `background-service.md` are removed.
