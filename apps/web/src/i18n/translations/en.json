@@ -3046,6 +3046,8 @@
   "2c73362a57a1dff5": "AgentD page",
   "19ccb9ca234d58ce": "Worker settings",
   "8b9fa521cecb4f8d": "Uses",
+  "d1934c355b387dbd": "AgentD’s background services ran an AgentD that is missing or belongs to the old AgentD Desktop. They now run this app’s AgentD, so cloud results sync again.",
+  "e94ad00e323f4971": "AgentD’s background services run an AgentD that is missing or belongs to the old AgentD Desktop, and moving them to this app’s AgentD failed. Run agentd install in a terminal.",
   "803dbf99343f4441": "Installed for the terminal",
   "b21f66984690c19a": [
     {
@@ -3368,6 +3370,8 @@
   "bb58748e4b230007": "ChatGPT (Codex)",
   "4283cbba1d675ef8": "ChatGPT (Codex): needs a newer AgentD",
   "0606bddb2fb895bd": "Run in the cloud",
+  "f7eb4a8dece08115": "Couldn’t reach AgentD.",
+  "9bbecec926c3b695": "Retry",
   "e2f5cc2eeccfc92b": "Cloud Workers require a GitHub repository as the checkout’s origin.",
   "16c7fc3b7eaea196": [
     "Cloud repository: ",
@@ -3395,6 +3399,23 @@
   "7d7bb753c7e99807": "Worker time is billed to LibraOS credits. Your provider bills inference separately; it isn’t covered by this dollar cap.",
   "e17f9689603be8f4": "Browse…",
   "256f4ab9a895674d": "This looks like the key itself. Save it in a file and choose that file.",
+  "564377ac68a9dbc8": "This is an Anthropic key; choose it under Anthropic key file.",
+  "3190c4c819611d04": "This is an OpenAI key; choose it under OpenAI key file.",
+  "26f34b3ba7aa528d": [
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " can be read by other users. Run chmod 600 ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    },
+    ", then try again."
+  ],
+  "5e8c89ed36b770b3": "Fix permissions",
   "0faf657712a9d10a": "Plan",
   "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
   "53150504b20565ec": "Needs a newer AgentD. Run agentd upgrade to use your Claude plan.",
@@ -3416,6 +3437,8 @@
     },
     "."
   ],
+  "dfb9a5114c1f0681": "Use a different auth.json",
+  "2643d467d5aae326": "Use a different token file",
   "2df8ba1ffd667a89": "ChatGPT auth.json path (optional)",
   "2ad77b2747bd90e4": "Claude token file path (optional)",
   "a059069d84b5141d": "Billed to your ChatGPT plan. Worker time is billed to LibraOS credits.",
@@ -3443,13 +3466,14 @@
   "72985eae43f9def3": "Issue (optional)",
   "096a8482c9b1451a": "AgentD saved task {taskId}, but it didn’t start in Cloud Workers. Check Background tasks for updates before trying again.",
   "4d4ec2226fc46ee3": "Task {taskId} was offered but did not start.",
+  "6a06a09e3a1f8f65": "Couldn’t change the file’s permissions.",
   "b2d4a97a97c93f80": "Review the task and its budget before starting a worker on your account.",
   "00ee0820465e85c7": "Waiting for the session’s agent…",
   "99ea3181ff9ebe91": "Draft from this conversation",
   "b98c20b1d8015a9d": "Hide details",
   "f5b66c481aa3e4df": "Edit",
   "e91857c891498df2": "This connection cannot start AgentD tasks.",
-  "1e13c026073ae979": "Submit this task in its place",
+  "b7088cd1c566d9c9": "Replace",
   "cddd25f1fe0c5855": "Checking the earlier submission…",
   "81c18cf032b057e9": "Check and retry",
   "bba1e3a22505b87f": "Starting…",
@@ -3480,6 +3504,9 @@
   "95b341922c1fa227": "Offer to hand a Code thread's task to a worker when a turn runs long or you send a message while it runs.",
   "7af00a32ca27332c": "Where Hand to a worker starts a task. You can change it for each task.",
   "066142017d5f22b9": "Cloud Workers need AgentD set up and your LibraOS account linked on the AgentD page.",
+  "97567e841a7d32aa": "Your LibraOS account is linked. Its credit and key are on the AgentD page.",
+  "3fe0466eb86553f8": "Run tasks on LibraOS machines instead of this one. Set them up on the AgentD page.",
+  "1001952bd82ee967": "Manage Cloud Workers",
   "7661d98010296c92": "Used when AgentD has no estimate for the task.",
   "232e5a93f6fd9568": "Enter whole minutes and a dollar amount above zero.",
   "45364730b756553d": "min",
@@ -4168,7 +4195,6 @@
       "v": "v"
     }
   ],
-  "9bbecec926c3b695": "Retry",
   "4fd8927b7afc2a92": "Copy message",
   "6f8651e48261911a": "Thought",
   "ac511f991a3c1fab": "Web search",

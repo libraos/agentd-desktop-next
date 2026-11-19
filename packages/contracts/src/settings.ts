@@ -411,6 +411,11 @@ export const AgentdDefaultBudget = Schema.String.check(
 );
 export const DEFAULT_AGENTD_BUDGET = "60m,$5";
 
+const AgentdCloudKeyFiles = Schema.Struct({
+  anthropic: Schema.optionalKey(Schema.String),
+  openai: Schema.optionalKey(Schema.String),
+});
+
 export const ClientSettingsSchema = Schema.Struct({
   notificationMode: NotificationMode.pipe(
     Schema.withDecodingDefault(Effect.succeed("off" as const)),
@@ -616,6 +621,10 @@ export const ClientSettingsSchema = Schema.Struct({
   ),
   // Environment ids whose "Try a worker" card was shown or dismissed.
   agentdFirstTaskShown: Schema.Record(Schema.String, Schema.Boolean).pipe(
+    Schema.withDecodingDefault(Effect.succeed({})),
+  ),
+  // Per environment id: the last BYOK key file paths a cloud task was submitted with.
+  agentdCloudKeyFiles: Schema.Record(Schema.String, AgentdCloudKeyFiles).pipe(
     Schema.withDecodingDefault(Effect.succeed({})),
   ),
 });
@@ -2164,5 +2173,6 @@ export const ClientSettingsPatch = Schema.Struct({
   agentdRunTasksOn: Schema.optionalKey(AgentdRunTasksOn),
   agentdDefaultBudget: Schema.optionalKey(AgentdDefaultBudget),
   agentdFirstTaskShown: Schema.optionalKey(Schema.Record(Schema.String, Schema.Boolean)),
+  agentdCloudKeyFiles: Schema.optionalKey(Schema.Record(Schema.String, AgentdCloudKeyFiles)),
 });
 export type ClientSettingsPatch = typeof ClientSettingsPatch.Type;

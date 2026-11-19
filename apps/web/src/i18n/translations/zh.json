@@ -3050,6 +3050,8 @@
   "2c73362a57a1dff5": "AgentD 页面",
   "19ccb9ca234d58ce": "Worker 设置",
   "8b9fa521cecb4f8d": "使用",
+  "d1934c355b387dbd": "AgentD 的后台服务之前运行的是已缺失或属于旧版 AgentD Desktop 的 AgentD。现在它们改用此应用的 AgentD，云端结果会重新同步。",
+  "e94ad00e323f4971": "AgentD 的后台服务运行的是已缺失或属于旧版 AgentD Desktop 的 AgentD，且未能改用此应用的 AgentD。请在终端中运行 agentd install。",
   "803dbf99343f4441": "已为终端安装",
   "b21f66984690c19a": [
     {
@@ -3371,6 +3373,8 @@
   "bb58748e4b230007": "ChatGPT（Codex）",
   "4283cbba1d675ef8": "ChatGPT（Codex）：需要更新版本的 AgentD",
   "0606bddb2fb895bd": "在云端运行",
+  "f7eb4a8dece08115": "无法连接 AgentD。",
+  "9bbecec926c3b695": "重试",
   "e2f5cc2eeccfc92b": "Cloud Workers 要求 checkout 的 origin 是 GitHub 仓库。",
   "16c7fc3b7eaea196": [
     "云端仓库：",
@@ -3398,6 +3402,23 @@
   "7d7bb753c7e99807": "Worker 时间计入 LibraOS 额度。推理费用由你的服务商单独计费，不受这个金额上限约束。",
   "e17f9689603be8f4": "浏览…",
   "256f4ab9a895674d": "这看起来是密钥本身。请将它保存到文件中，然后选择该文件。",
+  "564377ac68a9dbc8": "这是 Anthropic 密钥，请在 Anthropic 密钥文件中选择它。",
+  "3190c4c819611d04": "这是 OpenAI 密钥，请在 OpenAI 密钥文件中选择它。",
+  "26f34b3ba7aa528d": [
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " 可被其他用户读取。请运行 chmod 600 ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    },
+    "，然后重试。"
+  ],
+  "5e8c89ed36b770b3": "修复权限",
   "0faf657712a9d10a": "套餐",
   "35f3400f1d3dee9f": "需要更新版本的 AgentD。运行 agentd upgrade 后即可使用你的 ChatGPT 套餐。",
   "53150504b20565ec": "需要更新版本的 AgentD。运行 agentd upgrade 后即可使用你的 Claude 套餐。",
@@ -3419,6 +3440,8 @@
     },
     " 到期。"
   ],
+  "dfb9a5114c1f0681": "使用其他 auth.json",
+  "2643d467d5aae326": "使用其他令牌文件",
   "2df8ba1ffd667a89": "ChatGPT auth.json 路径（可选）",
   "2ad77b2747bd90e4": "Claude token 文件路径（可选）",
   "a059069d84b5141d": "计入你的 ChatGPT 套餐。Worker 时间计入 LibraOS 额度。",
@@ -3446,13 +3469,14 @@
   "72985eae43f9def3": "Issue（可选）",
   "096a8482c9b1451a": "AgentD 已保存任务 {taskId}，但它没有在 Cloud Workers 中启动。请先在 Background tasks 中查看进展，再重试。",
   "4d4ec2226fc46ee3": "任务 {taskId} 已提交，但未能启动。",
+  "6a06a09e3a1f8f65": "无法更改该文件的权限。",
   "b2d4a97a97c93f80": "请在使用你的账户启动 Worker 之前，先审阅任务及其预算。",
   "00ee0820465e85c7": "正在等待此会话的 Agent…",
   "99ea3181ff9ebe91": "根据此对话起草",
   "b98c20b1d8015a9d": "隐藏详情",
   "f5b66c481aa3e4df": "编辑",
   "e91857c891498df2": "此连接无法启动 AgentD 任务。",
-  "1e13c026073ae979": "改为提交这个任务",
+  "b7088cd1c566d9c9": "替换",
   "cddd25f1fe0c5855": "正在检查之前的提交…",
   "81c18cf032b057e9": "检查并重试",
   "bba1e3a22505b87f": "正在启动…",
@@ -3483,6 +3507,9 @@
   "95b341922c1fa227": "当一轮运行很久，或在运行时你又发送消息，建议把 Code 会话的任务交给 worker。",
   "7af00a32ca27332c": "“交给 worker”启动任务的位置。每个任务都可以单独更改。",
   "066142017d5f22b9": "Cloud Workers 需要先设置 AgentD，并在 AgentD 页面关联你的 LibraOS 账户。",
+  "97567e841a7d32aa": "你的 LibraOS 账户已关联。其额度和密钥在 AgentD 页面上。",
+  "3fe0466eb86553f8": "在 LibraOS 的机器而非本机上运行任务。请在 AgentD 页面上设置。",
+  "1001952bd82ee967": "管理 Cloud Workers",
   "7661d98010296c92": "在 AgentD 无法估算任务时使用。",
   "232e5a93f6fd9568": "请输入整数分钟数和大于零的美元金额。",
   "45364730b756553d": "分钟",
@@ -4170,7 +4197,6 @@
       "v": "v"
     }
   ],
-  "9bbecec926c3b695": "重试",
   "4fd8927b7afc2a92": "复制消息",
   "6f8651e48261911a": "已思考",
   "ac511f991a3c1fab": "网络搜索",

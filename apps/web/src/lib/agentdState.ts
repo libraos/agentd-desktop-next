@@ -122,6 +122,7 @@ export function useAgentdCommands() {
     joinTeam: useAtomCommand(agentdEnvironment.joinTeam),
     setTeamNode: useAtomCommand(agentdEnvironment.setTeamNode),
     cloudConfigure: useAtomCommand(agentdEnvironment.cloudConfigure),
+    cloudKeyFileFix: useAtomCommand(agentdEnvironment.cloudKeyFileFix),
   };
 }
 
@@ -146,6 +147,17 @@ export function useAgentdCloudSetup(
     environmentId === null || cwd === null
       ? null
       : agentdEnvironment.cloudSetup({ environmentId, input: { cwd, includeBalance } }),
+    useMessages(),
+  );
+}
+
+/** Whose key a chosen Cloud Workers key file holds, and whether others can read it. */
+export function useAgentdCloudKeyFile(path: string | null, target: EnvironmentId) {
+  const environmentId = useAgentdEnvironment(target);
+  return useEnvironmentQuery(
+    environmentId === null || path === null
+      ? null
+      : agentdEnvironment.cloudKeyFile({ environmentId, input: { path } }),
     useMessages(),
   );
 }

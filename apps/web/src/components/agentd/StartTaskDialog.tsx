@@ -7,7 +7,7 @@ import { Atom } from "effect/reactivity";
 import { T, useGT } from "gt-react";
 import { useId, useState } from "react";
 
-import { agentdEnvironment } from "~/lib/agentdState";
+import { agentdEnvironment, useAgentdCommands } from "~/lib/agentdState";
 import { useLibraosGatewayConnected } from "~/lib/libraosGatewayState";
 import { newMessageId } from "~/lib/utils";
 import { rightPanelHostRef, useRightPanelStore } from "~/rightPanelStore";
@@ -127,6 +127,9 @@ function StartTaskDialog({
   // An earlier cloud offer whose outcome is unknown: Start checks agentd before offering again.
   const [outcomeUnknown, setOutcomeUnknown] = useState(false);
   const [replaceSubmission, setReplaceSubmission] = useState<string | null>(null);
+  const [privateFile, setPrivateFile] = useState<string | null>(null);
+  const [fixingFile, setFixingFile] = useState(false);
+  const { cloudKeyFileFix } = useAgentdCommands();
   const projection = useThreadProjection(draft === null ? null : threadRef)?.projection;
   const reply = draft === null ? null : conversationTaskDraft(projection, draft.messageId);
   const drafting = reply?.kind === "waiting";
@@ -230,6 +233,7 @@ function StartTaskDialog({
       case "failed":
         setOutcomeUnknown(outcome.outcomeUnknown);
         setReplaceSubmission(outcome.replaceSubmission);
+        setPrivateFile(outcome.privateFile ?? null);
         setStartError(showFailure(outcome.error, gt("AgentD could not start the task.")));
         return;
       case "offered":
@@ -251,6 +255,7 @@ function StartTaskDialog({
   function submit(replacing: string | null = null) {
     if (disabled) return;
     setStartError(null);
+    setPrivateFile(null);
     void plan.start(replacing).then((outcome) => {
       if (outcome !== null) settle(outcome);
     });
@@ -438,16 +443,60 @@ function StartTaskDialog({
                     : gt("Task {taskId} was offered but did not start.", { taskId: offeredId })}
                 </p>
               )}
-              <pre className="wrap-anywhere whitespace-pre-wrap">{startError}</pre>
+              <p className="wrap-anywhere whitespace-pre-wrap">{startError}</p>
               {cloud.enabled && replaceSubmission !== null ? (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={disabled}
+                    onClick={() => submit(replaceSubmission)}
+                  >
+                    <T>Replace</T>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={disabled}
+                    onClick={() => {
+                      setStartError(null);
+                      setReplaceSubmission(null);
+                    }}
+                  >
+                    <T>Cancel</T>
+                  </Button>
+                </div>
+              ) : null}
+              {cloud.enabled && privateFile !== null ? (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={disabled}
-                  onClick={() => submit(replaceSubmission)}
+                  disabled={disabled || fixingFile}
+                  onClick={async () => {
+                    setFixingFile(true);
+                    const result = await cloudKeyFileFix({
+                      environmentId,
+                      input: { path: privateFile },
+                    });
+                    setFixingFile(false);
+                    if (result._tag === "Failure") {
+                      setStartError(
+                        showFailure(
+                          squashAtomCommandFailure(result),
+                          gt("Couldn’t change the file’s permissions."),
+                        ),
+                      );
+                      return;
+                    }
+                    setPrivateFile(null);
+                    setStartError(null);
+                    cloud.refreshKeyFiles();
+                  }}
                 >
-                  <T>Submit this task in its place</T>
+                  <T>Fix permissions</T>
                 </Button>
               ) : null}
               {cloud.enabled &&

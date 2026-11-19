@@ -108,6 +108,17 @@ export function createAgentdEnvironmentAtoms<R, E>(
       tag: WS_METHODS.agentdCloudConfigure,
       scheduler,
     }),
+    cloudKeyFile: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:agentd:cloud-key-file",
+      tag: WS_METHODS.agentdCloudKeyFile,
+      idleTtlMs: 0,
+      staleTimeMs: 0,
+    }),
+    cloudKeyFileFix: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:agentd:cloud-key-file-fix",
+      tag: WS_METHODS.agentdCloudKeyFileFix,
+      scheduler,
+    }),
     cloudReview: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:agentd:cloud-review",
       tag: WS_METHODS.agentdCloudReview,

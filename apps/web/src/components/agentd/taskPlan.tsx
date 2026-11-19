@@ -57,6 +57,8 @@ export type TaskStartOutcome =
       readonly error: unknown;
       readonly outcomeUnknown: boolean;
       readonly replaceSubmission: string | null;
+      /** A key file of the user's that agentd refused because others can read it. */
+      readonly privateFile?: string;
     }
   | { readonly kind: "refused"; readonly reason: string };
 
@@ -253,8 +255,12 @@ export function useTaskPlan({
         error: failure,
         outcomeUnknown: isCommandError(failure) && failure.outcomeUnknown === true,
         replaceSubmission: isCommandError(failure) ? (failure.replaceSubmission ?? null) : null,
+        ...(isCommandError(failure) && failure.privateFile !== undefined
+          ? { privateFile: failure.privateFile }
+          : {}),
       };
     }
+    if (cloud.enabled && cloud.input !== null) cloud.remember(cloud.input);
     return result.value.started
       ? { kind: "started", task: result.value }
       : { kind: "offered", task: result.value };

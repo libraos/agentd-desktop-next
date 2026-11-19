@@ -267,7 +267,7 @@ export function useComposerMenuItems({
                 id: "slash:hand-to-worker",
                 type: "slash-command",
                 command: "hand-to-worker",
-                label: gt("Hand to a worker"),
+                label: "/hand-to-worker",
                 description: gt("Start a background task for this project"),
               },
             ] as const)

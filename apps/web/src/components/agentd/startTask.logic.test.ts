@@ -10,6 +10,7 @@ import {
   conversationTaskDraft,
   defaultCloudPlan,
   defaultModelAccess,
+  keyFileProblem,
   modelAccessChoices,
   EMPTY_TASK_FIELDS,
   prepareTaskFields,
@@ -229,4 +230,19 @@ it("offers each subscription plan only when agentd can run it and has its creden
   expect(defaultCloudPlan(unset)).toBe("codex");
   expect(defaultCloudPlan(claudeOnly)).toBe("claude");
   expect(defaultCloudPlan(null)).toBe("claude");
+});
+
+it("blocks a key file under the other provider's field, then one others can read", () => {
+  const check = (provider: "anthropic" | "openai" | null, openToOthers = false) => ({
+    provider,
+    readable: provider !== null,
+    openToOthers,
+  });
+  expect(keyFileProblem("openai", check("anthropic"))).toBe("anthropic-key");
+  expect(keyFileProblem("anthropic", check("openai", true))).toBe("openai-key");
+  expect(keyFileProblem("openai", check("openai", true))).toBe("open-to-others");
+  expect(keyFileProblem("anthropic", check("anthropic"))).toBe(null);
+  // An unrecognised or unreadable file is left to agentd, as is a host that can't check.
+  expect(keyFileProblem("openai", check(null))).toBe(null);
+  expect(keyFileProblem("openai", null)).toBe(null);
 });

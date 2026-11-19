@@ -14,7 +14,8 @@ export function AgentdInstallStatus({ status }: { status: AgentdStatus }) {
   const install = status.install ?? null;
   // The folder the notice was dismissed for; a different folder is reported again.
   const [dismissed, setDismissed] = useLocalStorage(PATH_NOTICE_KEY, null, DismissedFolder);
-  if (status.binary === undefined && install === null) return null;
+  const repair = status.servicesRepair ?? null;
+  if (status.binary === undefined && install === null && repair === null) return null;
   const pathLine = install?.pathLine ?? null;
   return (
     <div className="space-y-2 border-t border-border pt-3 text-sm">
@@ -25,6 +26,22 @@ export function AgentdInstallStatus({ status }: { status: AgentdStatus }) {
           </span>
           <span className="break-all text-muted-foreground">{status.binary}</span>
         </div>
+      ) : null}
+      {repair !== null ? (
+        <p role="status" className={repair.ok ? "text-muted-foreground" : "text-destructive"}>
+          {repair.ok ? (
+            <T>
+              AgentD’s background services ran an AgentD that is missing or belongs to the old
+              AgentD Desktop. They now run this app’s AgentD, so cloud results sync again.
+            </T>
+          ) : (
+            <T>
+              AgentD’s background services run an AgentD that is missing or belongs to the old
+              AgentD Desktop, and moving them to this app’s AgentD failed. Run agentd install in a
+              terminal.
+            </T>
+          )}
+        </p>
       ) : null}
       {install !== null ? (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">

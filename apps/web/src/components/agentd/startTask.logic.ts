@@ -2,6 +2,7 @@ import {
   AgentdStartTaskInput,
   AgentdTaskSize,
   AgentdWorkerTool,
+  type AgentdCloudKeyFileCheck,
   type AgentdCloudModelAccess,
   type AgentdCloudPlan,
   type AgentdCloudSubscription,
@@ -245,6 +246,24 @@ export function modelAccessChoices(subscription: AgentdCloudSubscription | null 
     { value: "byok", disabled: false },
     { value: "subscription", disabled: !subscription?.claude.supported },
   ] as const satisfies ReadonlyArray<{ value: AgentdCloudModelAccess; disabled: boolean }>;
+}
+
+/** A key typed or pasted where its file's path belongs. */
+export function looksLikeKey(value: string): boolean {
+  const text = value.trim();
+  return text.startsWith("sk-") || (text.length > 30 && !/[/\\]/.test(text));
+}
+
+export type KeyFileProblem = "anthropic-key" | "openai-key" | "open-to-others";
+
+/** Why a BYOK key file under `field` can't be submitted, from the host's check of it. */
+export function keyFileProblem(
+  field: "anthropic" | "openai",
+  check: AgentdCloudKeyFileCheck | null,
+): KeyFileProblem | null {
+  if (check === null) return null;
+  if (check.provider !== null && check.provider !== field) return `${check.provider}-key`;
+  return check.openToOthers ? "open-to-others" : null;
 }
 
 export type TaskStartProblem =

@@ -3,6 +3,7 @@ import "~/index.css";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
 import {
   AgentdCommandError,
+  type AgentdCloudKeyFileCheck,
   type AgentdCloudPlanState,
   type AgentdCloudSetup,
   type AgentdStartTaskResult,
@@ -43,6 +44,9 @@ const state = vi.hoisted(() => ({
   worker: "opencode" as string | null,
   primary: null as EnvironmentId | null,
   os: "unknown" as ExecutionEnvironmentPlatformOs,
+  cloudError: null as Error | null,
+  keyFiles: {} as Record<string, AgentdCloudKeyFileCheck>,
+  fixKeyFile: vi.fn(),
 }));
 
 vi.mock("~/lib/agentdState", async () => {
@@ -56,10 +60,16 @@ vi.mock("~/lib/agentdState", async () => {
     useAgentdStatus: () => ({ data: { defaultWorker: state.worker } }),
     useAgentdTaskDefaults: () => ({ data: state.defaults }),
     useAgentdCloudSetup: (cwd: string | null) => ({
-      data: cwd ? state.cloud : null,
-      error: null,
+      data: cwd && state.cloudError === null ? state.cloud : null,
+      error: state.cloudError,
       refresh: state.cloudRefresh,
     }),
+    useAgentdCloudKeyFile: (path: string | null) => ({
+      data: path === null ? null : (state.keyFiles[path] ?? null),
+      error: null,
+      refresh: () => {},
+    }),
+    useAgentdCommands: () => ({ cloudKeyFileFix: state.fixKeyFile }),
     useAgentdTaskOthers: () => ({ data: state.others, isPending: false, isSuccess: true }),
   };
 });
@@ -112,6 +122,9 @@ function setup(
   state.primary = null;
   state.os = "unknown";
   state.worker = "opencode";
+  state.cloudError = null;
+  state.keyFiles = {};
+  state.fixKeyFile.mockReset();
   state.start.mockReset();
   state.configure.mockReset();
   state.cloudRefresh.mockReset();
@@ -317,10 +330,10 @@ it("checks an unknown cloud outcome before retrying and can replace an earlier s
     outcomeUnknown?: true;
     replaceSubmission?: string;
   }) => AsyncResult.failure(Cause.fail(new AgentdCommandError({ notSetUp: false, ...fields })));
+  const unfinished = "Your last cloud submission didn’t finish. Replace it with this one?";
   state.start
-    .mockResolvedValueOnce(
-      refused({ message: "acme/app holds an AgentD reservation.", replaceSubmission: earlier }),
-    )
+    .mockResolvedValueOnce(refused({ message: unfinished, replaceSubmission: earlier }))
+    .mockResolvedValueOnce(refused({ message: unfinished, replaceSubmission: earlier }))
     .mockResolvedValueOnce(
       refused({ message: "AgentD may have created this cloud task.", outcomeUnknown: true }),
     )
@@ -329,8 +342,11 @@ it("checks an unknown cloud outcome before retrying and can replace an earlier s
   await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
   await userEvent.fill(page.getByLabelText("Goal"), "Fix export");
   await page.getByRole("button", { name: "Start", exact: true }).click();
-  await expect.element(page.getByText("acme/app holds an AgentD reservation.")).toBeVisible();
-  await page.getByRole("button", { name: "Submit this task in its place" }).click();
+  await expect.element(page.getByText(unfinished)).toBeVisible();
+  await page.getByRole("button", { name: "Cancel" }).first().click();
+  await expect.element(page.getByText(unfinished)).not.toBeInTheDocument();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await page.getByRole("button", { name: "Replace", exact: true }).click();
   const input = { cwd: "/repo/worktrees/export", goal: "Fix export", accept: [], check: null };
   expect(state.start).toHaveBeenLastCalledWith({
     environmentId: thread.environmentId,
@@ -354,7 +370,7 @@ it("checks an unknown cloud outcome before retrying and can replace an earlier s
   await expect
     .element(page.getByRole("button", { name: /Start|Check and retry/ }))
     .not.toBeInTheDocument();
-  expect(state.start).toHaveBeenCalledTimes(3);
+  expect(state.start).toHaveBeenCalledTimes(4);
 });
 
 it("turns off cloud start if the checkout’s origin is not a GitHub repository", async () => {
@@ -806,6 +822,13 @@ it("starts a cloud task on the Claude plan agentd has set up, never choosing it 
       page.getByText("Using the Claude token AgentD has set up. It runs out about Nov 1, 2027."),
     )
     .toBeVisible();
+  // The optional file stays folded while agentd has a token, and nothing optional takes focus.
+  await expect
+    .element(page.getByLabelText("Claude token file path (optional)"))
+    .not.toBeInTheDocument();
+  await page.getByRole("button", { name: "Use a different token file" }).click();
+  await expect.element(page.getByLabelText("Claude token file path (optional)")).toHaveValue("");
+  await expect.element(page.getByLabelText("Claude token file path (optional)")).not.toHaveFocus();
   await expect.element(page.getByText(/^Billed to your Claude plan\./)).toBeVisible();
   await expect.element(page.getByText(/budget up to \$5\.00 · your Claude plan/)).toBeVisible();
 
@@ -939,4 +962,74 @@ it("keeps each model access mode's key paths to itself and submits only the show
       },
     },
   });
+});
+
+it("offers Retry when agentd didn't answer the cloud probe, instead of hiding cloud", async () => {
+  setup("feature/export");
+  state.cloud = { ...cloudReady(), unreachable: true };
+  await using _screen = await renderDialog();
+  await expect.element(page.getByRole("checkbox", { name: "Run in the cloud" })).toBeDisabled();
+  await expect.element(page.getByText("Couldn’t reach AgentD.")).toBeVisible();
+  await page.getByRole("button", { name: "Retry" }).click();
+  expect(state.cloudRefresh).toHaveBeenCalled();
+});
+
+it("checks each BYOK key file's provider and privacy, and remembers the paths that were sent", async () => {
+  setup("feature/export");
+  state.cloud = cloudReady();
+  state.keyFiles = {
+    "/home/me/anthropic.key": { provider: "anthropic", readable: true, openToOthers: false },
+    "/home/me/shared.key": { provider: "openai", readable: true, openToOthers: true },
+    "/home/me/openai.key": { provider: "openai", readable: true, openToOthers: false },
+  };
+  state.fixKeyFile.mockResolvedValue(
+    AsyncResult.success({ provider: "openai", readable: true, openToOthers: false }),
+  );
+  state.start.mockResolvedValue(
+    AsyncResult.success({ id: "hof-123abc", started: true, note: null }),
+  );
+  {
+    await using _screen = await renderDialog();
+    await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+    await userEvent.fill(page.getByLabelText("Goal"), "Fix export");
+    await page.getByRole("combobox", { name: "Model access" }).click();
+    await page.getByRole("option", { name: "Your API key" }).click();
+    const start = page.getByRole("button", { name: "Start", exact: true });
+    const openai = page.getByLabelText("OpenAI key file path");
+    await userEvent.fill(openai, "/home/me/anthropic.key");
+    await expect
+      .element(page.getByText("This is an Anthropic key; choose it under Anthropic key file."))
+      .toBeVisible();
+    await expect.element(start).toBeDisabled();
+
+    await userEvent.fill(openai, "/home/me/shared.key");
+    await expect
+      .element(
+        page.getByText(
+          "/home/me/shared.key can be read by other users. Run chmod 600 /home/me/shared.key, then try again.",
+        ),
+      )
+      .toBeVisible();
+    await expect.element(start).toBeDisabled();
+    await page.getByRole("button", { name: "Fix permissions" }).click();
+    expect(state.fixKeyFile).toHaveBeenCalledWith({
+      environmentId: thread.environmentId,
+      input: { path: "/home/me/shared.key" },
+    });
+
+    await userEvent.fill(openai, "/home/me/openai.key");
+    await expect.element(start).toBeEnabled();
+    await start.click();
+    await expect.element(page.getByText("Started task hof-123abc.")).toBeVisible();
+  }
+  // The next task starts with the path that was sent, in its own field.
+  openStartTaskDialog(threadRef);
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await page.getByRole("combobox", { name: "Model access" }).click();
+  await page.getByRole("option", { name: "Your API key" }).click();
+  await expect
+    .element(page.getByLabelText("OpenAI key file path"))
+    .toHaveValue("/home/me/openai.key");
+  await expect.element(page.getByLabelText("Anthropic key file path")).toHaveValue("");
 });
