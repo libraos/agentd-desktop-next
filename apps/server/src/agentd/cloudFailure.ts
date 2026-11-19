@@ -69,7 +69,7 @@ export function cloudReason(message: string): string | null {
   const setup = cloudSetupProblem(message);
   if (setup !== null) return CLOUD_REASONS[setup];
   if (/can be read or written by others|belongs to another user/i.test(message))
-    return CLOUD_REASONS.privateFile;
+    return sharedFileReason(message);
   const chatgpt = chatgptReason(message);
   if (chatgpt !== null) return chatgpt;
   if (/must hold the token from claude setup-token/i.test(message))
@@ -108,6 +108,25 @@ export function cloudReason(message: string): string | null {
   if (/timed? ?out|time limit|ran past/i.test(message)) return CLOUD_REASONS.time;
   if (/push.*(?:failed|refused)|could not push/i.test(message)) return CLOUD_REASONS.push;
   return null;
+}
+
+// agentd names a shared key file as "SETTING PATH can be read or written by others (mode 644)".
+const SHARED_FILE =
+  /(?:^|\s)(?:[\w.]+_file|--[\w-]+-file)\s+(\S(?:.*?\S)?)\s+(can be read or written by others|belongs to another user)/i;
+
+/** The user's own key file agentd refused because others can read it; null for any other refusal. */
+export function openKeyFile(message: string): string | null {
+  const found = SHARED_FILE.exec(message);
+  return found?.[2]?.toLowerCase().startsWith("can") ? (found[1] ?? null) : null;
+}
+
+function sharedFileReason(message: string): string {
+  const found = SHARED_FILE.exec(message);
+  const path = found?.[1];
+  if (path === undefined) return CLOUD_REASONS.privateFile;
+  return found?.[2]?.toLowerCase().startsWith("can")
+    ? `${path} can be read by other users. Run chmod 600 ${path}, then try again.`
+    : `${path} belongs to another user. Copy it to a file of your own, run chmod 600 on that copy, then choose it.`;
 }
 
 // Codex on a ChatGPT plan: agentd names ChatGPT, codex_auth_file or codex login in each refusal.

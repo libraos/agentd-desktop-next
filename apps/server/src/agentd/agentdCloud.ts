@@ -35,6 +35,7 @@ import {
   cloudReason,
   cloudSetupProblem,
   cloudSetupReason,
+  openKeyFile,
 } from "./cloudFailure.ts";
 
 const isCloudTask = Schema.is(AgentdCloudBudget);
@@ -251,6 +252,12 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
   const capabilities = yield* Cache.makeWith(
     ([command]: readonly [string, string]) =>
       run(agentdArgs.cloudHelp(), { command, jsonOnFailure: true }).pipe(
+        // A crashed or cut-off probe prints no usage: that is no answer, never "no cloud", and the
+        // cache keeps only answers.
+        Effect.filterOrFail(
+          (help) => /usage/i.test(help),
+          () => commandError("agentd did not answer the Cloud Workers probe."),
+        ),
         Effect.map((help): CloudFeatures => ({
           cloud: /(?:^|[\s[|])--cloud(?=[\s\]|=,]|$)/u.test(help),
           subscription: /--claude-token-file\b/.test(help),
@@ -348,7 +355,10 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
     cwd,
     includeBalance,
   }: AgentdCloudSetupInput) {
-    const found = yield* cloudAgentd;
+    const probed = yield* cloudAgentd.pipe(Effect.timeout("20 seconds"), Effect.result);
+    // Only an agentd that answered without cloud lacks it; one that didn't answer may have it.
+    if (probed._tag === "Failure") return { ...emptySetup, supported: true, unreachable: true };
+    const found = probed.success;
     if (found === null) return { ...emptySetup, supported: false };
     const { command, version, features } = found;
     const project = cwd === null ? null : yield* originProject(cwd);
@@ -529,6 +539,10 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
         }),
         Effect.mapError(() => unknownOutcome()),
       );
+    // agentd refused the offer before making a task: the reservation holds nothing, and the next
+    // Start must not ask about it.
+    const release = (id: string) =>
+      agentd(() => agentdArgs.releaseSubmission(session, id)).pipe(Effect.ignore);
     const remember = (id: string, handoff: string) =>
       agentd(() => agentdArgs.rememberSubmission(session, id, handoff)).pipe(Effect.ignore);
     const alreadyRecorded = (handoff: string): AgentdStartTaskResult => ({
@@ -539,7 +553,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
 
     const current = yield* reservation;
     let submission: string;
-    if (current !== null && current.handoff === null) {
+    if (current !== null && current.handoff === null && !current.released) {
       const handoff = yield* recorded(current.id);
       if (handoff !== null) {
         yield* remember(current.id, handoff);
@@ -547,7 +561,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       }
       if (current.fingerprint !== fingerprint && input.cloud.replaceSubmission !== current.id) {
         return yield* new AgentdCommandError({
-          message: `${project} holds an AgentD reservation for an earlier Cloud Workers submission that has no task. Start that task again, or replace it with this one.`,
+          message: "Your last cloud submission didn’t finish. Replace it with this one?",
           notSetUp: false,
           replaceSubmission: current.id,
         });
@@ -588,6 +602,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
 
     const argv = yield* args(() => agentdArgs.cloudOffer(input, project, submission));
     yield* agentd(() => agentdArgs.cloudSession(input.cwd)).pipe(
+      Effect.tapError(() => release(submission)),
       Effect.catchTags({
         AgentdCommandError: (error) =>
           Effect.fail(
@@ -612,14 +627,29 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
               } satisfies AgentdStartTaskResult),
             );
           const reason = said ? cloudReason(said) : null;
-          return Effect.fail(reason === null ? unknownOutcome() : commandError(reason));
+          if (reason === null) return Effect.fail(unknownOutcome());
+          const privateFile = said ? openKeyFile(said) : null;
+          return release(submission).pipe(
+            Effect.andThen(
+              Effect.fail(
+                new AgentdCommandError({
+                  message: reason,
+                  notSetUp: false,
+                  ...(privateFile === null ? {} : { privateFile }),
+                }),
+              ),
+            ),
+          );
         }),
       );
     const offered = yield* run(argv, { command }).pipe(Effect.result);
     if (offered._tag === "Failure") {
       const error = offered.failure;
       if (error._tag !== "AgentdCommandError") return yield* error;
-      if (error.notSetUp) return yield* offerError(error.message, true);
+      if (error.notSetUp) {
+        yield* release(submission);
+        return yield* offerError(error.message, true);
+      }
       return yield* reconcile(error.message);
     }
     const receipt = offerReceipt(offered.success);

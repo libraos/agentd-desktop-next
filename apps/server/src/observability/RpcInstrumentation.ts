@@ -260,6 +260,8 @@ const RPC_AGGREGATES = {
   [WS_METHODS.agentdCloudSetup]: "agentd",
   [WS_METHODS.agentdCloudReview]: "agentd",
   [WS_METHODS.agentdCloudConfigure]: "agentd",
+  [WS_METHODS.agentdCloudKeyFile]: "agentd",
+  [WS_METHODS.agentdCloudKeyFileFix]: "agentd",
   [WS_METHODS.agentdTaskDefaults]: "agentd",
   [WS_METHODS.agentdTaskOthers]: "agentd",
   [WS_METHODS.agentdSubscribeTeamNode]: "agentd",

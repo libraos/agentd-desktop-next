@@ -25,6 +25,8 @@ export class AgentdCommandError extends Schema.TaggedError<AgentdCommandError>()
     outcomeUnknown: Schema.optionalKey(Schema.Boolean),
     /** An earlier cloud submission agentd has no task for, which Start may replace with this draft. */
     replaceSubmission: Schema.optionalKey(Schema.String),
+    /** A credential file of the user's that others can read; the app can make it private. */
+    privateFile: Schema.optionalKey(Schema.String),
   },
 ) {}
 
@@ -228,6 +230,13 @@ export const AgentdInstallRecord = Schema.Struct({
 });
 export type AgentdInstallRecord = typeof AgentdInstallRecord.Type;
 
+/** agentd services that ran a missing agentd or the old AgentD Desktop's, re-registered on start. */
+export const AgentdServicesRepair = Schema.Struct({
+  services: Schema.Array(Schema.Literals(["watchdog", "dash"])),
+  ok: Schema.Boolean,
+});
+export type AgentdServicesRepair = typeof AgentdServicesRepair.Type;
+
 export const AgentdStatus = Schema.Struct({
   /** `agentd version` as it printed it, such as "agentd v0.1.13 0d0b360a58c0". */
   version: Schema.String,
@@ -239,6 +248,8 @@ export const AgentdStatus = Schema.Struct({
   /** The agentd binary the app runs. */
   binary: Schema.optionalKey(Schema.String),
   install: Schema.optionalKey(Schema.NullOr(AgentdInstallRecord)),
+  /** agentd's services this app moved to its bundled agentd since it started; null when none. */
+  servicesRepair: Schema.optionalKey(Schema.NullOr(AgentdServicesRepair)),
 });
 export type AgentdStatus = typeof AgentdStatus.Type;
 
@@ -489,6 +500,8 @@ export const AgentdCloudSubscription = Schema.Struct({
 export type AgentdCloudSubscription = typeof AgentdCloudSubscription.Type;
 export const AgentdCloudSetup = Schema.Struct({
   supported: Schema.Boolean,
+  /** agentd did not answer the cloud probe; whether it has Cloud Workers is unknown. */
+  unreachable: Schema.optionalKey(Schema.Boolean),
   /** agentd has `cloud setup`, so the app can install the account key. */
   canConfigure: Schema.optionalKey(Schema.Boolean),
   /** The Job API `cloud setup` sends the account key to; null when agentd didn't say. */
@@ -514,6 +527,18 @@ export const AgentdCloudConfigured = Schema.Struct({
   balanceUsd: Schema.NullOr(Schema.Number),
 });
 export type AgentdCloudConfigured = typeof AgentdCloudConfigured.Type;
+
+/** A key file the user chose for Cloud Workers, checked on the environment's host. */
+export const AgentdCloudKeyFileInput = Schema.Struct({ path: AgentdCloudKeyFile });
+export type AgentdCloudKeyFileInput = typeof AgentdCloudKeyFileInput.Type;
+export const AgentdCloudKeyFileCheck = Schema.Struct({
+  /** Whose key the file holds, by its first bytes only; null when unreadable or unrecognised. */
+  provider: Schema.NullOr(Schema.Literals(["anthropic", "openai"])),
+  readable: Schema.Boolean,
+  /** Other users can read or write it (never on Windows, where agentd checks no mode). */
+  openToOthers: Schema.Boolean,
+});
+export type AgentdCloudKeyFileCheck = typeof AgentdCloudKeyFileCheck.Type;
 
 /** A finished cloud task's pushed branch, compared in a checkout whose origin is its repository. */
 export const AgentdCloudReviewInput = Schema.Struct({ id: AgentdHandoffId, cwd: AbsolutePath });

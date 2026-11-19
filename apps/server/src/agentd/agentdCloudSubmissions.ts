@@ -7,7 +7,7 @@ import * as Schema from "effect/Schema";
 // A cloud offer is paid, and its outcome can be lost (timeout, killed process). Each one is
 // reserved in agentd first, per GitHub project so every checkout and window sees it: a pin in a
 // session of its own holds `{id, after, fingerprint}`, then `{id, handoff}` once agentd names the
-// task. The offer carries the id as --idem and as a --state marker, so a retry can find the task.
+// task, or `{id, released: true}` once agentd refused the offer outright. The offer carries the id as --idem and as a --state marker, so a retry can find the task.
 
 const SUBMISSION_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-8[a-f0-9]{3}-8[a-f0-9]{3}-[a-f0-9]{12}$/;
 const HANDOFF_ID = /^hof-[0-9a-f]{6,32}$/;
@@ -55,6 +55,8 @@ export interface Reservation {
   readonly id: string;
   readonly fingerprint: string;
   readonly handoff: string | null;
+  /** agentd refused its offer before making a task; the next Start reserves after it. */
+  readonly released: boolean;
 }
 
 const Pin = Schema.Struct({ text: Schema.String, session: Schema.optionalKey(Schema.String) });
@@ -64,6 +66,7 @@ const decodeRecord = Schema.decodeUnknownOption(
   Schema.fromJsonString(
     Schema.Union([
       Schema.Struct({ id: Schema.String, handoff: Schema.String }),
+      Schema.Struct({ id: Schema.String, released: Schema.Literal(true) }),
       Schema.Struct({
         id: Schema.String,
         after: Schema.NullOr(Schema.String),
@@ -78,6 +81,11 @@ export function reserveRecord(id: string, after: string | null, fingerprint: str
     throw new Error("not a cloud submission id");
   if (!FINGERPRINT.test(fingerprint)) throw new Error("not a submission fingerprint");
   return JSON.stringify({ id, after, fingerprint });
+}
+
+export function releaseRecord(id: string): string {
+  if (!isSubmissionId(id)) throw new Error("not a cloud submission id");
+  return JSON.stringify({ id, released: true });
 }
 
 export function handoffRecord(id: string, handoff: string): string {
@@ -98,6 +106,7 @@ export function currentReservation(
   if (pins._tag === "None") return undefined;
   const successors = new Map<string | null, { id: string; fingerprint: string }>();
   const handoffs = new Map<string, string>();
+  const released = new Set<string>();
   for (const raw of pins.value) {
     const pin = decodePin(raw);
     if (pin._tag === "None" || (pin.value.session !== undefined && pin.value.session !== session))
@@ -105,7 +114,9 @@ export function currentReservation(
     const record = decodeRecord(pin.value.text);
     if (record._tag === "None" || !isSubmissionId(record.value.id)) continue;
     const value = record.value;
-    if ("handoff" in value) {
+    if ("released" in value) {
+      released.add(value.id);
+    } else if ("handoff" in value) {
       if (HANDOFF_ID.test(value.handoff) && !handoffs.has(value.id))
         handoffs.set(value.id, value.handoff);
     } else if (FINGERPRINT.test(value.fingerprint) && !successors.has(value.after)) {
@@ -119,7 +130,9 @@ export function currentReservation(
     seen.add(next.id);
     current = next;
   }
-  return current === null ? null : { ...current, handoff: handoffs.get(current.id) ?? null };
+  return current === null
+    ? null
+    : { ...current, handoff: handoffs.get(current.id) ?? null, released: released.has(current.id) };
 }
 
 const decodeHits = Schema.decodeUnknownOption(

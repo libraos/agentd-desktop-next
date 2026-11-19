@@ -400,6 +400,8 @@ import {
   AgentdCloudSetupInput,
   AgentdCloudConfigureInput,
   AgentdCloudConfigured,
+  AgentdCloudKeyFileCheck,
+  AgentdCloudKeyFileInput,
   AgentdCloudReview,
   AgentdCloudReviewInput,
   AgentdTaskDefaults,
@@ -721,6 +723,8 @@ export const WS_METHODS = {
   agentdCloudSetup: "agentd.cloudSetup",
   agentdCloudReview: "agentd.cloudReview",
   agentdCloudConfigure: "agentd.cloudConfigure",
+  agentdCloudKeyFile: "agentd.cloudKeyFile",
+  agentdCloudKeyFileFix: "agentd.cloudKeyFileFix",
   agentdTaskDefaults: "agentd.taskDefaults",
   agentdTaskOthers: "agentd.taskOthers",
   agentdSubscribeTeamNode: "agentd.subscribeTeamNode",
@@ -2387,6 +2391,18 @@ const WsAgentdCloudConfigureRpc = Rpc.make(WS_METHODS.agentdCloudConfigure, {
   error: AgentdRpcError,
 });
 
+const WsAgentdCloudKeyFileRpc = Rpc.make(WS_METHODS.agentdCloudKeyFile, {
+  payload: AgentdCloudKeyFileInput,
+  success: AgentdCloudKeyFileCheck,
+  error: AgentdRpcError,
+});
+
+const WsAgentdCloudKeyFileFixRpc = Rpc.make(WS_METHODS.agentdCloudKeyFileFix, {
+  payload: AgentdCloudKeyFileInput,
+  success: AgentdCloudKeyFileCheck,
+  error: AgentdRpcError,
+});
+
 const WsAgentdCloudReviewRpc = Rpc.make(WS_METHODS.agentdCloudReview, {
   payload: AgentdCloudReviewInput,
   success: AgentdCloudReview,
@@ -2694,6 +2710,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsAgentdCloudSetupRpc,
   WsAgentdCloudReviewRpc,
   WsAgentdCloudConfigureRpc,
+  WsAgentdCloudKeyFileRpc,
+  WsAgentdCloudKeyFileFixRpc,
   WsAgentdTaskDefaultsRpc,
   WsAgentdTaskOthersRpc,
   WsAgentdSubscribeTeamNodeRpc,

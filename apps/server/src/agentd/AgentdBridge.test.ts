@@ -486,6 +486,13 @@ describe("AgentdBridge", () => {
       const cwd = platform === "win32" ? "C:\\work\\fork" : "/work/fork";
       const keyFile = path.join(cwd, "private", "OpenAI key.txt");
       const input = { cwd, goal: "Fix the check", accept: ["Pass it"], check: "pnpm test" };
+      // A probe agentd answers with nothing is no answer: the option stays, with Retry.
+      help = "";
+      expect(yield* bridge.cloudSetup({ cwd, includeBalance: true })).toMatchObject({
+        supported: true,
+        unreachable: true,
+      });
+      help = "usage: agentd handoff offer [--cloud]";
       expect(yield* bridge.cloudSetup({ cwd, includeBalance: true })).toEqual({
         supported: true,
         canConfigure: false,
@@ -565,7 +572,8 @@ describe("AgentdBridge", () => {
           undefined,
         ],
       ]);
-      expect(runs.filter(({ args }) => args.includes("--help"))).toHaveLength(1);
+      // The unanswered probe is asked again; an answer is kept.
+      expect(runs.filter(({ args }) => args.includes("--help"))).toHaveLength(2);
       expect(
         runs.filter(({ args }) => args[0] === "remote").map((run) => [run.args, run.cwd]),
       ).toEqual(Array.from({ length: 3 }, () => [["remote", "get-url", "--", "origin"], cwd]));
@@ -610,7 +618,7 @@ describe("AgentdBridge", () => {
       expect(yield* bridge.cloudSetup({ cwd, includeBalance: false })).toMatchObject({
         supported: false,
       });
-      expect(runs.filter(({ args }) => args.includes("--help"))).toHaveLength(2);
+      expect(runs.filter(({ args }) => args.includes("--help"))).toHaveLength(3);
     }),
   );
 
@@ -670,7 +678,9 @@ describe("AgentdBridge", () => {
       const other = { ...input, goal: "Update the changelog" };
       const refused = yield* Effect.flip(bridge.startTask(other));
       expect(refused).toMatchObject({ replaceSubmission: keys()[0] });
-      expect(refused.message).toMatch(/^acme\/app holds an AgentD reservation/);
+      expect(refused.message).toBe(
+        "Your last cloud submission didn’t finish. Replace it with this one?",
+      );
       expect(offers()).toHaveLength(2);
 
       // agentd recorded the offer but the answer was lost, and so was the record of its task.
@@ -1069,8 +1079,8 @@ describe("AgentdBridge", () => {
           "The repository owner must install the Cloud Workers GitHub App on this repository.",
         ],
         [
-          `cloud.openai_key_file ${keyFile} can be read or written by others`,
-          "Choose a credential file that only your account can access.",
+          `cloud.openai_key_file ${keyFile} can be read or written by others (mode 644)`,
+          `${keyFile} can be read by other users. Run chmod 600 ${keyFile}, then try again.`,
         ],
         [
           "--model-access subscription is not offered through an agentd server",
@@ -1090,7 +1100,15 @@ describe("AgentdBridge", () => {
         expect((yield* Effect.flip(bridge.startTask(input))).message, said).toBe(reason);
       }
       expect(offers.every((args) => args.includes(keyFile))).toBe(true);
-      expect(new Set(offers.map((args) => args[args.indexOf("--idem") + 1])).size).toBe(1);
+      // Each refusal made no task and released its reservation: the next Start offers afresh.
+      expect(new Set(offers.map((args) => args[args.indexOf("--idem") + 1])).size).toBe(
+        offers.length,
+      );
+      refusal = `cloud.openai_key_file ${keyFile} can be read or written by others (mode 644)`;
+      const other = { ...input, goal: "Update the changelog" };
+      const shared = yield* Effect.flip(bridge.startTask(other));
+      expect(shared).toMatchObject({ privateFile: keyFile });
+      expect(shared).not.toHaveProperty("replaceSubmission");
     }),
   );
 

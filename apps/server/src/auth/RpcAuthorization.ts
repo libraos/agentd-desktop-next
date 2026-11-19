@@ -234,6 +234,7 @@ export const RPC_REQUIRED_SCOPES = {
   [WS_METHODS.agentdInbox]: AuthOrchestrationReadScope,
   [WS_METHODS.agentdPeople]: AuthOrchestrationReadScope,
   [WS_METHODS.agentdCloudSetup]: AuthOrchestrationReadScope,
+  [WS_METHODS.agentdCloudKeyFile]: AuthOrchestrationReadScope,
   // Fetches into temporary refs it deletes; the checkout's branch, index and files stay as they were.
   [WS_METHODS.agentdCloudReview]: AuthOrchestrationReadScope,
   [WS_METHODS.agentdTaskDefaults]: AuthOrchestrationReadScope,

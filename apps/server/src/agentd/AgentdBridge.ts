@@ -19,6 +19,9 @@ import {
   type AgentdCloudSetupInput,
   type AgentdCloudConfigureInput,
   type AgentdCloudConfigured,
+  type AgentdCloudKeyFileCheck,
+  type AgentdCloudKeyFileInput,
+  type AgentdServicesRepair,
   type AgentdTaskDefaults,
   type AgentdTaskDefaultsInput,
   type AgentdCloudTaskInput,
@@ -42,6 +45,7 @@ import {
 } from "@t3tools/contracts";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import { resolveCommandPath } from "@t3tools/shared/shell";
+import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -58,6 +62,8 @@ import { makeAgentdCloud } from "./agentdCloud.ts";
 import { makeCloudReview } from "./agentdCloudReview.ts";
 import { AgentdArgumentError, agentdArgs, agentdTicket } from "./agentdCommands.ts";
 import * as AgentdJson from "./agentdJson.ts";
+import { repairServices } from "./agentdServices.ts";
+import { makeCloudKeyFile } from "./cloudKeyFile.ts";
 import { estimateType, PROJECT_FILES, readEstimate, suggestCheck } from "./taskDefaults.ts";
 import { joinedPerson, mergeTaskHolders, repositoryTargets } from "./taskOthers.ts";
 
@@ -93,6 +99,11 @@ export class AgentdBridge extends Context.Service<
     readonly cloudConfigure: (
       input: AgentdCloudConfigureInput,
     ) => Effect.Effect<AgentdCloudConfigured, AgentdError>;
+    /** A chosen key file's provider and privacy; with makePrivate, chmod 600 first. */
+    readonly cloudKeyFile: (
+      input: AgentdCloudKeyFileInput,
+      makePrivate: boolean,
+    ) => Effect.Effect<AgentdCloudKeyFileCheck, AgentdError>;
     readonly taskDefaults: (
       input: AgentdTaskDefaultsInput,
     ) => Effect.Effect<AgentdTaskDefaults, AgentdError>;
@@ -117,6 +128,26 @@ const OUTPUT_TAIL_BYTES = 64 * 1024;
 // agentd reads are host reads a client asks for while it shows them, as diagnostics are.
 const POLL_SCOPE = { type: "diagnostics" } as const;
 const RUNNING_STATES = new Set(["offered", "claimed"]);
+// A cloud job past these has nothing more for `cloud sync` to mirror.
+const CLOUD_FINAL_STATES = new Set([
+  "completed",
+  "failed",
+  "failed_verification",
+  "budget_exceeded",
+  "cancelled",
+  "settlement_conflict",
+  "expired",
+]);
+// The watchdog syncs cloud jobs each pass; while one may not run, a shown list syncs this often.
+const CLOUD_SYNC_INTERVAL = Duration.seconds(30);
+
+/** A listed cloud job whose state agentd still has to mirror from the Job API. */
+function hasOpenCloudJob(rows: ReadonlyArray<AgentdTaskRow>): boolean {
+  return rows.some(
+    (row) =>
+      row.cloudState != null && row.cloudState !== "" && !CLOUD_FINAL_STATES.has(row.cloudState),
+  );
+}
 
 function sameRows(a: ReadonlyArray<AgentdTaskRow>, b: ReadonlyArray<AgentdTaskRow>): boolean {
   return (
@@ -246,6 +277,8 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     platform,
   });
 
+  const cloudKeyFile = makeCloudKeyFile({ fs, isAbsolute: pathService.isAbsolute, platform });
+
   const readShow = (id: string) =>
     args(() => agentdArgs.show(id)).pipe(
       Effect.flatMap((argv) => run(argv)),
@@ -256,6 +289,47 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     runProcess: runner.run,
     readShow,
     originProject: cloud.originProject,
+  });
+
+  // Set once on start when agentd's services were moved to the bundled agentd.
+  let servicesRepair: AgentdServicesRepair | null = null;
+  const bundledBinary = env.AGENTD_DESKTOP_BUNDLED === "1" ? env.AGENTD_BIN?.trim() : undefined;
+  if (bundledBinary) {
+    const home = yield* HostProcess.HomeDirectory;
+    yield* repairServices({
+      bundled: bundledBinary,
+      platform,
+      home,
+      root: env.AGENTD_ROOT,
+      run: runner.run,
+    }).pipe(
+      Effect.tap((repair) =>
+        Effect.sync(() => {
+          servicesRepair = repair;
+        }),
+      ),
+      Effect.tap((repair) =>
+        repair === null
+          ? Effect.void
+          : Effect.logInfo("agentd services moved to the bundled agentd", repair),
+      ),
+      Effect.provideService(FileSystem.FileSystem, fs),
+      Effect.provideService(Path.Path, pathService),
+      Effect.ignore,
+      Effect.forkScoped,
+    );
+  }
+
+  // Until the watchdog runs a working agentd, the listed cloud jobs are synced here, never often.
+  let lastCloudSync = 0;
+  const syncCloud = Effect.fn("AgentdBridge.syncCloud")(function* (
+    rows: ReadonlyArray<AgentdTaskRow>,
+  ) {
+    if (!hasOpenCloudJob(rows)) return;
+    const now = yield* Clock.currentTimeMillis;
+    if (now - lastCloudSync < Duration.toMillis(CLOUD_SYNC_INTERVAL)) return;
+    lastCloudSync = now;
+    yield* run(agentdArgs.cloudSync()).pipe(Effect.ignore);
   });
 
   const readTasks = run(agentdArgs.list()).pipe(
@@ -303,7 +377,13 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
           Effect.orElseSucceed(() => null),
         )
       : null;
-    return { ...status, defaultWorker, binary: yield* binary, install };
+    return {
+      ...status,
+      defaultWorker,
+      binary: yield* binary,
+      install,
+      ...(servicesRepair === null ? {} : { servicesRepair }),
+    };
   }).pipe(Effect.withSpan("AgentdBridge.status"));
 
   // The first read fails the stream; a later failed read keeps the last list until agentd answers.
@@ -319,6 +399,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
         if (!(yield* backgroundPolicy.shouldRunScopeWork(POLL_SCOPE))) {
           return [[], Option.some(previous)] as const;
         }
+        yield* syncCloud(previous);
         const rows = yield* readTasks.pipe(Effect.option);
         if (Option.isNone(rows) || sameRows(previous, rows.value)) {
           return [[], Option.some(previous)] as const;
@@ -582,6 +663,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     cloudSetup: cloud.cloudSetup,
     cloudReview,
     cloudConfigure: cloud.cloudConfigure,
+    cloudKeyFile,
     taskDefaults,
     taskOthers,
     binary,

@@ -884,3 +884,59 @@ it("says how to set up a plan with no credential, and starts with a chosen file"
     },
   });
 });
+
+it("keeps each model access mode's key paths to itself and submits only the shown ones", async () => {
+  setup("feature/export");
+  state.cloud = cloudReady({
+    subscription: {
+      claude: plan({ configured: false, valid: null }),
+      codex: plan({ configured: false, valid: null }),
+      setupUnavailable: false,
+    },
+  });
+  state.start.mockResolvedValue(
+    AsyncResult.success({ id: "hof-123abc", started: true, note: null }),
+  );
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await userEvent.fill(page.getByLabelText("Goal"), "Fix export");
+  const access = page.getByRole("combobox", { name: "Model access" });
+  await access.click();
+  await page.getByRole("option", { name: "Your API key" }).click();
+  await userEvent.fill(page.getByLabelText("OpenAI key file path"), "/home/me/openai.key");
+
+  await access.click();
+  await page.getByRole("option", { name: "Your subscription" }).click();
+  const token = page.getByLabelText("Claude token file path (optional)");
+  await expect.element(token).toHaveValue("");
+  await expect.element(token).not.toHaveFocus();
+  await userEvent.fill(token, "/home/me/claude.token");
+
+  await access.click();
+  await page.getByRole("option", { name: "Your API key" }).click();
+  await expect
+    .element(page.getByLabelText("OpenAI key file path"))
+    .toHaveValue("/home/me/openai.key");
+  await expect.element(page.getByLabelText("Anthropic key file path")).toHaveValue("");
+
+  await access.click();
+  await page.getByRole("option", { name: "Your subscription" }).click();
+  await expect.element(token).toHaveValue("/home/me/claude.token");
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await expect.element(page.getByText("Started task hof-123abc.")).toBeVisible();
+  expect(state.start).toHaveBeenCalledExactlyOnceWith({
+    environmentId: thread.environmentId,
+    input: {
+      cwd: "/repo/worktrees/export",
+      goal: "Fix export",
+      accept: [],
+      check: null,
+      cloud: {
+        budget: "60m,$5",
+        modelAccess: "subscription",
+        plan: "claude",
+        claudeTokenFile: "/home/me/claude.token",
+      },
+    },
+  });
+});
