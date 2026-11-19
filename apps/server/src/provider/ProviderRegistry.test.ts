@@ -76,7 +76,10 @@ import {
   resolveProviderStatusCachePath,
   writeProviderStatusCache,
 } from "./providerStatusCache.ts";
-import { COMPACT_SLASH_COMMAND } from "@t3tools/provider-core/server/snapshotProbe";
+import {
+  COMPACT_SLASH_COMMAND,
+  NO_SERVED_MODELS_MESSAGE,
+} from "@t3tools/provider-core/server/snapshotProbe";
 import type {
   ProviderInstance,
   ProviderWorkspaceSnapshot,
@@ -632,6 +635,35 @@ it.layer(
             input: { hint: "Describe the issue (optional)" },
           },
         ]);
+      }),
+    );
+
+    it.effect("lists only the Gateway key's models for a Gateway Codex agent", () =>
+      Effect.gen(function* () {
+        const catalog = ["gpt-6.2-sol", "gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna", "gpt-5.5"].map(
+          (slug) => ({ slug, name: slug, isCustom: false, capabilities: codexModelCapabilities }),
+        );
+        const check = (customModels: ReadonlyArray<string>) =>
+          checkCodexProviderStatus(
+            decodeCodexSettings({ customModels, onlyCustomModels: true }),
+            () => Effect.succeed(makeCodexProbeSnapshot({ models: catalog })),
+          );
+
+        const gateway = yield* check(["gpt-6-astra", "gpt-6-luna", "gpt-6.1-sol"]);
+        assert.deepStrictEqual(
+          gateway.models.map((model) => [model.slug, model.isCustom]),
+          [
+            ["gpt-6.1-sol", false],
+            ["gpt-6-astra", false],
+            ["gpt-6-luna", false],
+          ],
+        );
+        assert.strictEqual(gateway.status, "ready");
+
+        const none = yield* check([]);
+        assert.deepStrictEqual(none.models, []);
+        assert.strictEqual(none.status, "warning");
+        assert.strictEqual(none.message, NO_SERVED_MODELS_MESSAGE);
       }),
     );
 

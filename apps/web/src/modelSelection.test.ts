@@ -494,6 +494,36 @@ describe("instance-scoped model selection", () => {
     });
   });
 
+  it("shows a model the Gateway key no longer allows as unavailable", () => {
+    const instanceId = ProviderInstanceId.make("libraosCodex");
+    const providers = [
+      provider({ instanceId: "libraosCodex", models: ["gpt-6-astra"] }),
+      provider({ instanceId: "codex", models: ["gpt-6-astra"] }),
+    ];
+    const settings: UnifiedSettings = {
+      ...DEFAULT_UNIFIED_SETTINGS,
+      providerInstances: {
+        [instanceId]: {
+          driver: ProviderDriverKind.make("codex"),
+          config: { customModels: ["gpt-6-astra"], onlyCustomModels: true },
+        },
+      },
+    };
+    const [gateway, ownLogin] = deriveProviderInstanceEntries(providers);
+
+    expect(getAppModelOptionsForInstance(settings, gateway!, "gpt-6.2-sol")).toContainEqual(
+      expect.objectContaining({ slug: "gpt-6.2-sol", isUnavailable: true }),
+    );
+    expect(
+      resolveAppModelSelectionForInstance(instanceId, settings, providers, "gpt-6.2-sol", {
+        preserveUnavailableSelection: true,
+      }),
+    ).toBe("gpt-6.2-sol");
+    expect(
+      getAppModelOptionsForInstance(settings, ownLogin!, "gpt-6.2-sol").map((o) => o.slug),
+    ).toEqual(["gpt-6-astra"]);
+  });
+
   it("falls back from an explicit non-OpenCode draft with a missing model", () => {
     const instanceId = ProviderInstanceId.make("codex");
     const driver = ProviderDriverKind.make("codex");

@@ -43,6 +43,7 @@ import {
   isCommandMissingCause,
   parseCliVersionResult,
   providerModelsFromSettings,
+  withNoServedModelsNotice,
   providerProbeEnvironment,
   spawnAndCollect,
   type ServerProviderDraft,
@@ -85,12 +86,13 @@ const DEFAULT_CLAUDE_MODEL_CAPABILITIES: ModelCapabilities = createModelCapabili
 
 function claudeProviderModels(
   builtInModels: ReadonlyArray<ServerProviderModel>,
-  customModels: ClaudeSettings["customModels"],
+  settings: Pick<ClaudeSettings, "customModels" | "onlyCustomModels">,
 ): ReadonlyArray<ServerProviderModel> {
   return providerModelsFromSettings(
     builtInModels,
-    customModels,
+    settings.customModels,
     DEFAULT_CLAUDE_MODEL_CAPABILITIES,
+    { onlyCustomModels: settings.onlyCustomModels },
   ).map((model) =>
     model.isCustom ? { ...model, capabilities: withUltracodeToggle(model.capabilities) } : model,
   );
@@ -664,7 +666,7 @@ export const probeClaudeWorkspaceSnapshot = Effect.fn("probeClaudeWorkspaceSnaps
   };
 });
 
-export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(function* (
+const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(function* (
   claudeSettings: ClaudeSettings,
   resolveCapabilities?: (
     claudeSettings: ClaudeSettings,
@@ -684,7 +686,7 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
   const checkedAt = DateTime.formatIso(yield* DateTime.now);
   const allModels = claudeProviderModels(
     modelCatalog.models.map((entry) => entry.model),
-    claudeSettings.customModels,
+    claudeSettings,
   );
 
   if (!claudeSettings.enabled) {
@@ -794,7 +796,7 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
         ...resolveClaudeModelsForVersion(modelCatalog, parsedVersion),
         ...claudeReportedModels(modelCatalog, claudeSettings.customModels, capabilities?.models),
       ],
-      claudeSettings.customModels,
+      claudeSettings,
     ),
     capabilities?.effortCapSources ?? [],
   );
@@ -910,6 +912,11 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
   });
 });
 
+export const checkClaudeProviderStatus = (...args: Parameters<typeof probeClaudeProviderStatus>) =>
+  probeClaudeProviderStatus(...args).pipe(
+    Effect.map((draft) => withNoServedModelsNotice(draft, args[0].onlyCustomModels)),
+  );
+
 const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
 
 export const makePendingClaudeProvider = Effect.fn("ClaudeProvider.makePendingClaudeProvider")(
@@ -920,7 +927,7 @@ export const makePendingClaudeProvider = Effect.fn("ClaudeProvider.makePendingCl
     const checkedAt = yield* nowIso;
     const models = claudeProviderModels(
       modelCatalog.models.map((entry) => entry.model),
-      claudeSettings.customModels,
+      claudeSettings,
     );
 
     if (!claudeSettings.enabled) {

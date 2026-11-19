@@ -25,6 +25,7 @@ import * as ProcessRunner from "../processRunner.ts";
 import { ServerSettingsService } from "../serverSettings.ts";
 import {
   GATEWAY_INSTANCE_IDS,
+  gatewayInstanceUpdates,
   gatewayProviderInstances,
   gatewayRefusal,
   parseGatewayModels,
@@ -39,6 +40,8 @@ export class LibraosGateway extends Context.Service<
     readonly connect: (key: string) => Effect.Effect<LibraosGatewayStatus, LibraosGatewayError>;
     /** Removes the key, its agentd key file and the Gateway agents. */
     readonly disconnect: Effect.Effect<LibraosGatewayStatus, LibraosGatewayError>;
+    /** Asks the Gateway for the key's models again and gives the Gateway agents the new list. */
+    readonly refreshModels: Effect.Effect<void>;
   }
 >()("t3/gateway/LibraosGateway") {}
 
@@ -248,7 +251,28 @@ export const make = Effect.fn("LibraosGateway.make")(function* () {
     )
     .pipe(Effect.withSpan("LibraosGateway.disconnect"));
 
-  return LibraosGateway.of({ status, connect, disconnect });
+  // A Gateway that cannot be asked leaves the agents' last list in place.
+  const refreshModels: LibraosGateway["Service"]["refreshModels"] = lock
+    .withPermits(1)(
+      Effect.gen(function* () {
+        const key = yield* readKey;
+        if (Option.isNone(key)) return;
+        const list = yield* listModels(key.value);
+        yield* Ref.set(models, list);
+        const current = yield* settings.getSettings;
+        for (const update of gatewayInstanceUpdates(current.providerInstances, key.value, list)) {
+          yield* settings.updateProviderInstance({ operation: "upsert", ...update });
+        }
+      }),
+    )
+    .pipe(
+      Effect.catch((cause) =>
+        Effect.logWarning("LibraOS Gateway: could not refresh the key's models", { cause }),
+      ),
+      Effect.withSpan("LibraosGateway.refreshModels"),
+    );
+
+  return LibraosGateway.of({ status, connect, disconnect, refreshModels });
 });
 
 export const layer = Layer.effect(LibraosGateway, make()).pipe(

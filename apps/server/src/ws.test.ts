@@ -854,7 +854,7 @@ const layerUnusedConfigRpcServices = Layer.mergeAll(
   Layer.mock(AgentdBridge.AgentdBridge)({}),
   Layer.mock(AgentdTeamNode.AgentdTeamNode)({}),
   Layer.mock(AgentdInit.AgentdInit)({}),
-  Layer.mock(LibraosGateway.LibraosGateway)({}),
+  Layer.mock(LibraosGateway.LibraosGateway)({ refreshModels: Effect.void }),
   Layer.mock(ProcessResourceMonitor.ProcessResourceMonitor)({}),
   Layer.mock(ProjectCloneTracker.ProjectCloneTracker)({}),
   Layer.mock(ProjectService.ProjectService)({}),

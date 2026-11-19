@@ -74,14 +74,35 @@ export interface AppModelOption {
   isUnavailable?: boolean;
 }
 
+// An instance limited to its key's models (LibraOS Gateway) loses a model when the key does.
+function instanceListsOnlyCustomModels(
+  settings: UnifiedSettings,
+  instanceId: ProviderInstanceId,
+): boolean {
+  const config = settings.providerInstances?.[instanceId]?.config;
+  return (
+    config !== null &&
+    typeof config === "object" &&
+    (config as Record<string, unknown>).onlyCustomModels === true
+  );
+}
+
+function listsModelsAtRuntime(settings: UnifiedSettings, entry: ProviderInstanceEntry): boolean {
+  return (
+    hasRuntimeModelCatalog(entry.driverKind) ||
+    instanceListsOnlyCustomModels(settings, entry.instanceId)
+  );
+}
+
 function appendUnavailableDynamicModelSelection(
   options: AppModelOption[],
   rawModels: ReadonlyArray<ServerProvider["models"][number]>,
   provider: ProviderDriverKind,
+  runtimeCatalog: boolean,
   selectedModel: string | null | undefined,
   hiddenModels: ReadonlyArray<string>,
 ): AppModelOption[] {
-  if (!hasRuntimeModelCatalog(provider)) return options;
+  if (!runtimeCatalog) return options;
   const slug = normalizeCustomModelSlug(selectedModel);
   if (!slug) return options;
   if (isRuntimeModelDefaultAlias(provider, slug)) return options;
@@ -201,6 +222,7 @@ function getAppModelOptions(
     applyInstanceModelPreferences(options, preferences),
     rawModels,
     provider,
+    hasRuntimeModelCatalog(provider),
     selectedModel,
     preferences.hiddenModels,
   );
@@ -242,6 +264,7 @@ export function getAppModelOptionsForInstance(
     applyInstanceModelPreferences(options, preferences),
     entry.models,
     entry.driverKind,
+    listsModelsAtRuntime(settings, entry),
     selectedModel,
     preferences.hiddenModels,
   );
@@ -281,7 +304,7 @@ export function resolveAppModelSelectionForInstance(
   if (resolvedSelection) {
     return resolvedSelection;
   }
-  if (resolutionOptions?.preserveUnavailableSelection && hasRuntimeModelCatalog(entry.driverKind)) {
+  if (resolutionOptions?.preserveUnavailableSelection && listsModelsAtRuntime(settings, entry)) {
     const unavailableSelection = normalizeCustomModelSlug(selectedModel);
     const hiddenModels = readInstanceModelPreferences(settings, entry.instanceId).hiddenModels;
     if (

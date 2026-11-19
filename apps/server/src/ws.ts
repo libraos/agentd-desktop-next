@@ -243,6 +243,7 @@ import * as AgentdBridge from "./agentd/AgentdBridge.ts";
 import * as AgentdTeamNode from "./agentd/AgentdTeamNode.ts";
 import * as AgentdInit from "./agentd/agentdInit.ts";
 import * as LibraosGateway from "./gateway/LibraosGateway.ts";
+import { isGatewayInstanceId } from "./gateway/gatewaySetup.ts";
 import * as ProcessDiagnostics from "./diagnostics/ProcessDiagnostics.ts";
 import * as ProcessResourceMonitor from "./diagnostics/ProcessResourceMonitor.ts";
 import * as ResourceTelemetry from "./resourceTelemetry/ResourceTelemetry.ts";
@@ -2491,6 +2492,12 @@ export const layerWsRpc = (
             if (input.modelCatalogOnly === true) {
               yield* providerRegistry.refreshModelCatalog;
               return { providers: [] };
+            }
+            if (
+              input.refreshModels &&
+              (input.instanceId === undefined || isGatewayInstanceId(input.instanceId))
+            ) {
+              yield* libraosGateway.refreshModels;
             }
             if (input.refreshModels) {
               yield* providerRegistry.invalidateModelCaches({

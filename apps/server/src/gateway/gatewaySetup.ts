@@ -4,6 +4,7 @@ import {
   ProviderInstanceId,
   type LibraosGatewayModel,
   type ProviderInstanceConfig,
+  type ProviderInstanceConfigMap,
 } from "@t3tools/contracts";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
@@ -24,6 +25,9 @@ export const GATEWAY_INSTANCE_IDS = {
   codex: ProviderInstanceId.make("libraosCodex"),
   opencode: ProviderInstanceId.make("libraosOpencode"),
 } as const;
+
+export const isGatewayInstanceId = (instanceId: ProviderInstanceId): boolean =>
+  Object.values(GATEWAY_INSTANCE_IDS).includes(instanceId);
 
 /** A trimmed key of the shape Console issues, or why it is not one. */
 export function readGatewayKey(raw: string): { key: string } | { problem: string } {
@@ -124,7 +128,8 @@ export function gatewayProviderInstances(
           plain("ANTHROPIC_BASE_URL", LIBRAOS_GATEWAY_ORIGIN),
           secret("ANTHROPIC_API_KEY", key),
         ],
-        config: { customModels: familyModels(models, "anthropic") },
+        // The key's models replace Claude's catalog: any other model would fail on the Gateway.
+        config: { customModels: familyModels(models, "anthropic"), onlyCustomModels: true },
       },
     },
     {
@@ -138,6 +143,7 @@ export function gatewayProviderInstances(
           setupMode: "existing",
           launchArgs: codexGatewayLaunchArgs(),
           customModels: familyModels(models, "openai"),
+          onlyCustomModels: true,
         },
       },
     },
@@ -155,4 +161,49 @@ export function gatewayProviderInstances(
       },
     },
   ];
+}
+
+type GatewayInstance = ReturnType<typeof gatewayProviderInstances>[number];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const plainEnvironment = (instance: ProviderInstanceConfig) =>
+  JSON.stringify(
+    (instance.environment ?? [])
+      .filter((variable) => !variable.sensitive)
+      .map((variable) => [variable.name, variable.value]),
+  );
+
+/**
+ * The Gateway agents still present whose models no longer match the key's list. Each keeps what the
+ * user set on it (enabled, colour, other config fields); a removed agent is not brought back.
+ */
+export function gatewayInstanceUpdates(
+  current: ProviderInstanceConfigMap,
+  key: string,
+  models: ReadonlyArray<LibraosGatewayModel>,
+): ReadonlyArray<GatewayInstance> {
+  return gatewayProviderInstances(key, models).flatMap(({ instanceId, instance }) => {
+    const existing = current[instanceId];
+    if (existing === undefined) return [];
+    const config = {
+      ...(isRecord(existing.config) ? existing.config : {}),
+      ...(isRecord(instance.config) ? instance.config : {}),
+    };
+    const unchanged =
+      JSON.stringify(config) === JSON.stringify(existing.config ?? {}) &&
+      plainEnvironment(instance) === plainEnvironment(existing);
+    if (unchanged) return [];
+    return [
+      {
+        instanceId,
+        instance: {
+          ...existing,
+          environment: instance.environment ?? [],
+          config,
+        },
+      },
+    ];
+  });
 }

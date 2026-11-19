@@ -14,12 +14,17 @@ import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import * as ServerConfig from "../config.ts";
 import * as ProcessRunner from "../processRunner.ts";
 import { ServerSettingsService } from "../serverSettings.ts";
+import { codexGatewayLaunchArgs, GATEWAY_INSTANCE_IDS } from "./gatewaySetup.ts";
 import * as LibraosGateway from "./LibraosGateway.ts";
 
 const GOOD_KEY = "lk_good_key_0123456789";
 const GATEWAY_INSTANCES = ["libraosClaude", "libraosCodex", "libraosOpencode"];
 
 function setup() {
+  const served: Array<{ readonly id: string }> = [
+    { id: "anthropic/claude-opus-5-5" },
+    { id: "openai/gpt-5.5" },
+  ];
   const secrets = new Map<string, Uint8Array>();
   const runs: Array<{ readonly command: string; readonly args: ReadonlyArray<string> }> = [];
   const secretStore = ServerSecretStore.ServerSecretStore.of({
@@ -51,7 +56,7 @@ function setup() {
       HttpClientResponse.fromWeb(
         request,
         request.headers.authorization === `Bearer ${GOOD_KEY}`
-          ? Response.json({ data: [{ id: "anthropic/claude-opus-5-5" }, { id: "openai/gpt-5.5" }] })
+          ? Response.json({ data: served })
           : Response.json(
               { error: { message: "This API key is not valid.", type: "invalid_api_key" } },
               { status: 401 },
@@ -74,7 +79,7 @@ function setup() {
     ),
     Layer.provideMerge(NodeServices.layer),
   );
-  return { secrets, runs, layer };
+  return { served, secrets, runs, layer };
 }
 
 it.effect("a refused key shows the Gateway's message and keeps nothing", () => {
@@ -127,5 +132,39 @@ it.effect("connect keeps the key for agentd and the agents; disconnect removes i
     assert.isFalse(yield* fs.exists(keyFile));
     const remaining = Object.keys((yield* settings.getSettings).providerInstances);
     for (const id of GATEWAY_INSTANCES) assert.notInclude(remaining, id);
+  }).pipe(Effect.provide(layer));
+});
+
+it.effect("a refresh gives the Gateway agents the key's models as they are now", () => {
+  const { served, layer } = setup();
+  return Effect.gen(function* () {
+    const gateway = yield* LibraosGateway.LibraosGateway;
+    const settings = yield* ServerSettingsService;
+    yield* gateway.connect(GOOD_KEY);
+    const claude = (yield* settings.getSettings).providerInstances[GATEWAY_INSTANCE_IDS.claude];
+    assert.isDefined(claude);
+    if (claude === undefined) return;
+    yield* settings.updateProviderInstance({
+      operation: "upsert",
+      instanceId: GATEWAY_INSTANCE_IDS.claude,
+      instance: { ...claude, enabled: false },
+    });
+
+    // In Console the key loses its Claude model and gains a Codex one.
+    served.splice(0, served.length, { id: "openai/gpt-5.5" }, { id: "openai/gpt-6-luna" });
+    yield* gateway.refreshModels;
+
+    const instances = (yield* settings.getSettings).providerInstances;
+    assert.deepStrictEqual(instances[GATEWAY_INSTANCE_IDS.codex]?.config, {
+      setupMode: "existing",
+      launchArgs: codexGatewayLaunchArgs(),
+      customModels: [{ slug: "gpt-5.5" }, { slug: "gpt-6-luna" }],
+      onlyCustomModels: true,
+    });
+    assert.deepStrictEqual(instances[GATEWAY_INSTANCE_IDS.claude]?.config, {
+      customModels: [],
+      onlyCustomModels: true,
+    });
+    assert.strictEqual(instances[GATEWAY_INSTANCE_IDS.claude]?.enabled, false);
   }).pipe(Effect.provide(layer));
 });

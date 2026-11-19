@@ -23,7 +23,6 @@ import * as CodexErrors from "effect-codex-app-server/errors";
 
 import type {
   CodexSettings,
-  CustomModelSetting,
   ServerProvider,
   ServerProviderState,
   ModelCapabilities,
@@ -45,6 +44,7 @@ import {
   COMPACT_SLASH_COMMAND,
   DEFAULT_TIMEOUT_MS,
   providerModelsFromSettings,
+  withNoServedModelsNotice,
   providerProbeEnvironment,
   spawnAndCollect,
   type ServerProviderDraft,
@@ -485,10 +485,12 @@ function applyConfiguredCodexCyberAccess(
  */
 function appendCustomCodexModels(
   models: ReadonlyArray<ServerProviderModel>,
-  customModels: ReadonlyArray<CustomModelSetting>,
+  settings: Pick<CodexSettings, "customModels" | "onlyCustomModels">,
 ): ReadonlyArray<ServerProviderModel> {
   const fallbackCapabilities = models.find((model) => model.capabilities)?.capabilities ?? null;
-  return providerModelsFromSettings(models, customModels, fallbackCapabilities);
+  return providerModelsFromSettings(models, settings.customModels, fallbackCapabilities, {
+    onlyCustomModels: settings.onlyCustomModels,
+  });
 }
 
 function parseCodexSkillsListResponse(
@@ -938,7 +940,7 @@ export const makeCodexSkillsProbe = Effect.fn("makeCodexSkillsProbe")(function* 
 });
 
 const emptyCodexModelsFromSettings = (codexSettings: CodexSettings): ServerProvider["models"] =>
-  appendCustomCodexModels([], codexSettings.customModels);
+  appendCustomCodexModels([], codexSettings);
 
 const makePendingCodexProvider = Effect.fn("CodexProvider.makePendingCodexProvider")(function* (
   codexSettings: CodexSettings,
@@ -1021,7 +1023,7 @@ function accountProbeStatus(
   return { status: "ready", auth };
 }
 
-export const checkCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(function* (
+const probeCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(function* (
   codexSettings: CodexSettings,
   probe: (input: {
     readonly probeTimeoutMs: number;
@@ -1165,7 +1167,7 @@ export const checkCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(fu
     enabled: codexSettings.enabled,
     checkedAt,
     models: pipe(
-      appendCustomCodexModels(snapshot.models ?? [], codexSettings.customModels),
+      appendCustomCodexModels(snapshot.models ?? [], codexSettings),
       applyPreferredCodexDefaultModel,
       (models) => applyConfiguredCodexServiceTier(models, snapshot.serviceTier),
       (models) => applyConfiguredCodexCyberAccess(models, snapshot),
@@ -1200,5 +1202,10 @@ export const checkCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(fu
     },
   });
 });
+
+export const checkCodexProviderStatus = (...args: Parameters<typeof probeCodexProviderStatus>) =>
+  probeCodexProviderStatus(...args).pipe(
+    Effect.map((draft) => withNoServedModelsNotice(draft, args[0].onlyCustomModels)),
+  );
 
 export { makePendingCodexProvider };
