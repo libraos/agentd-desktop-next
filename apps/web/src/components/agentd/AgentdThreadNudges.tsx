@@ -91,7 +91,7 @@ function Nudges({
     showFirstTaskCard({
       shownForEnvironment: shown === true,
       codeThread: true,
-      agentdSetUp,
+      agentdOn: agentd.state === "on",
       isRepo: gitStatus?.isRepo,
     });
 

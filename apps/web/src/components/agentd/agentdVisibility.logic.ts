@@ -68,16 +68,14 @@ export function workerOffer(input: {
   return "local";
 }
 
-/** The "Try a worker" card: once per environment, after setup, in a Code thread in a git project. */
+/** The "Try a worker" card: once per environment, while agentd is healthy, in a Code thread in a git project. */
 export function showFirstTaskCard(input: {
   readonly shownForEnvironment: boolean;
   readonly codeThread: boolean;
-  readonly agentdSetUp: boolean;
+  readonly agentdOn: boolean;
   readonly isRepo: boolean | undefined;
 }): boolean {
-  return (
-    !input.shownForEnvironment && input.codeThread && input.agentdSetUp && input.isRepo === true
-  );
+  return !input.shownForEnvironment && input.codeThread && input.agentdOn && input.isRepo === true;
 }
 
 /** The budget Hand to a worker fills when agentd has no estimate, from Settings → Workers. */
