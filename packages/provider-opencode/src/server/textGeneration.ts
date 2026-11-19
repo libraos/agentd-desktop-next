@@ -212,7 +212,7 @@ export const makeOpenCodeTextGeneration = Effect.fn("makeOpenCodeTextGeneration"
           try: (signal) =>
             client.session.create(
               {
-                title: `AgentD Desktop ${input.operation}`,
+                title: `AgentD Next ${input.operation}`,
                 // OpenCode Zen refuses free-model requests that carry no tools, so keep read.
                 permission: [
                   { permission: "*", pattern: "*", action: "deny" },

@@ -95,7 +95,7 @@ const sendJson = Effect.fn("TextGenerator.sendJson")(function* <S extends Schema
     Effect.mapError(
       (cause) =>
         new TextGeneratorRequestError({
-          detail: `${label} returned a reply AgentD Desktop couldn't read.`,
+          detail: `${label} returned a reply AgentD Next couldn't read.`,
           cause,
         }),
     ),

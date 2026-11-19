@@ -80,7 +80,7 @@ export interface McpToolSession {
 }
 
 /**
- * One initialized MCP session over AgentD Desktop's HTTP endpoint, terminated when
+ * One initialized MCP session over AgentD Next's HTTP endpoint, terminated when
  * the scope closes. Used by the ACP terminal fallback and `t3 thread`.
  */
 export const mcpToolSession = (
@@ -115,7 +115,7 @@ export const mcpToolSession = (
     if (!response.ok) {
       yield* discardResponseBody(response);
       return yield* new AcpMcpBridgeError({
-        message: `AgentD Desktop MCP endpoint responded with HTTP ${response.status}.`,
+        message: `AgentD Next MCP endpoint responded with HTTP ${response.status}.`,
       });
     }
     const payloads: Array<unknown> = [];
@@ -140,7 +140,7 @@ export const mcpToolSession = (
     const envelope = asEnvelope(responses.find((entry) => asEnvelope(entry)?.id === id));
     if (envelope === null || envelope.error !== undefined) {
       return yield* new AcpMcpBridgeError({
-        message: `AgentD Desktop MCP ${method} failed${envelope?.error === undefined ? "." : `: ${JSON.stringify(envelope.error)}`}`,
+        message: `AgentD Next MCP ${method} failed${envelope?.error === undefined ? "." : `: ${JSON.stringify(envelope.error)}`}`,
       });
     }
     return envelope;
@@ -186,7 +186,7 @@ function callAcpMcpTool(options: {
   readonly tool: string;
   readonly arguments: Readonly<Record<string, unknown>>;
 }): Effect.Effect<unknown, AcpMcpBridgeError> {
-  return mcpToolSession({ ...options, clientName: "agentd-desktop-acp-cli" }).pipe(
+  return mcpToolSession({ ...options, clientName: "agentd-next-acp-cli" }).pipe(
     Effect.flatMap((session) => session.call(options.tool, options.arguments)),
     Effect.scoped,
   );
@@ -249,7 +249,7 @@ export function runAcpMcpStdioBridge(options: AcpMcpStdioBridgeOptions): Effect.
           if (envelope.id !== undefined) {
             yield* respondWithError(
               envelope.id,
-              `AgentD Desktop MCP endpoint responded with HTTP ${response.status}.`,
+              `AgentD Next MCP endpoint responded with HTTP ${response.status}.`,
             );
           }
           return yield* discardResponseBody(response);
@@ -263,7 +263,7 @@ export function runAcpMcpStdioBridge(options: AcpMcpStdioBridgeOptions): Effect.
             const error = Cause.squash(cause);
             return respondWithError(
               envelope.id,
-              `AgentD Desktop MCP bridge request failed: ${error instanceof Error ? error.message : String(error)}`,
+              `AgentD Next MCP bridge request failed: ${error instanceof Error ? error.message : String(error)}`,
             );
           }),
         ),

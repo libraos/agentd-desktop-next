@@ -649,7 +649,7 @@ export const resolveMiseProviderMaintenance = Effect.fn("resolveMiseProviderMain
     // Asked even off mise's usual paths, since `MISE_DATA_DIR` can put installs anywhere.
     const which = nonEmptyString(yield* runProbe(misePath, ["which", miseTool], context.env));
     const resolvedPath = which ? yield* realPath(which) : null;
-    // Through a shim AgentD Desktop runs whatever mise resolves; otherwise the configured binary.
+    // Through a shim AgentD Next runs whatever mise resolves; otherwise the configured binary.
     const binaryPath = isShim ? resolvedPath : context.realCommandPath;
     if (!binaryPath) return manual(context.realCommandPath);
     const binary = normalizeCommandPath(binaryPath);
@@ -1290,7 +1290,7 @@ export const makeCachedProviderMaintenanceResolution = Effect.fn(
 
 function manualUpdateMessage(latestVersion: string, installPath: string | undefined): string {
   return installPath
-    ? `Version ${latestVersion} is out. AgentD Desktop runs ${installPath}; update it with the app or tool that installed it.`
+    ? `Version ${latestVersion} is out. AgentD Next runs ${installPath}; update it with the app or tool that installed it.`
     : `Version ${latestVersion} is out. Update it with the app or tool that installed it.`;
 }
 

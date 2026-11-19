@@ -92,8 +92,8 @@ export function BackgroundTasksPane({ threadRef }: { readonly threadRef: ScopedT
         {failure?._tag === "AgentdNotFoundError" && failure.bundled ? (
           <p className="text-muted-foreground" role="status">
             <T>
-              AgentD Desktop carries its own agentd, and it could not be run. Reinstall AgentD
-              Desktop to restore it.
+              AgentD Next carries its own agentd, and it could not be run. Reinstall AgentD Next to
+              restore it.
             </T>
           </p>
         ) : failure?._tag === "AgentdNotFoundError" ? (

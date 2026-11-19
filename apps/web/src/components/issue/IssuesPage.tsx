@@ -455,7 +455,7 @@ export function IssuesPage() {
   const listBody: ReactNode = !issuesSupported ? (
     <PullRequestsUnavailableState
       title={gt("Issues unavailable")}
-      error={gt("Update this environment's AgentD Desktop server to browse issues.")}
+      error={gt("Update this environment's AgentD Next server to browse issues.")}
     />
   ) : noneAnswered && list.isPending ? (
     <PullRequestListGhost />

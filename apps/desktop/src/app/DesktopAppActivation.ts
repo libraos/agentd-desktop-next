@@ -164,7 +164,7 @@ export async function startDesktopAppControlServer(input: {
         finish(
           invalidResponse(
             parsed.requestId,
-            "AgentD Desktop could not process the desktop app request.",
+            "AgentD Next could not process the desktop app request.",
           ),
         );
       });

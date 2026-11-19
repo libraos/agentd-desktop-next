@@ -180,7 +180,7 @@ export const isProviderTurnStartRunStateMissingError = Schema.is(
 );
 
 const START_GAVE_UP_MESSAGE =
-  "AgentD Desktop could not start this turn. Send the message again; if it keeps failing, check the server logs.";
+  "AgentD Next could not start this turn. Send the message again; if it keeps failing, check the server logs.";
 
 const startFailureMessage = (error: Error): string => {
   const nestedCause = "cause" in error ? error.cause : undefined;

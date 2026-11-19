@@ -132,7 +132,7 @@ export function RightPanelSurfaceContent(props: {
         return (
           <PullRequestsUnavailableState
             title={gt("Pull requests unavailable")}
-            error={gt("Update this environment's AgentD Desktop server to browse pull requests.")}
+            error={gt("Update this environment's AgentD Next server to browse pull requests.")}
           />
         );
       }
@@ -185,7 +185,7 @@ export function RightPanelSurfaceContent(props: {
         return (
           <PullRequestsUnavailableState
             title={gt("Issues unavailable")}
-            error={gt("Update this environment's AgentD Desktop server to browse issues.")}
+            error={gt("Update this environment's AgentD Next server to browse issues.")}
           />
         );
       }

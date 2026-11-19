@@ -335,8 +335,8 @@ export const continueRestartedRun = Effect.fn("RestartContinuation.continueResta
           source: { kind: "system" },
           outcome: "updated",
           summary: note.settled
-            ? "AgentD Desktop restarted and stopped background work"
-            : "AgentD Desktop restarted and resumed this turn",
+            ? "AgentD Next restarted and stopped background work"
+            : "AgentD Next restarted and resumed this turn",
           detail: text,
         },
         attachments: [],

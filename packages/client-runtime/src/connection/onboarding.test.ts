@@ -45,7 +45,7 @@ const layerClientPresentation = Layer.succeed(
   ClientCapabilities.ClientPresentation,
   ClientCapabilities.ClientPresentation.of({
     metadata: {
-      label: "AgentD Desktop Test",
+      label: "AgentD Next Test",
       deviceType: "desktop",
       os: "Test OS",
     },
@@ -275,7 +275,7 @@ describe("connection onboarding", () => {
       const tokenParams = new URLSearchParams(tokenBody);
       expect(tokenParams.get("subject_token")).toBe("pairing-token");
       expect(tokenParams.has("scope")).toBe(false);
-      expect(tokenParams.get("client_label")).toBe("AgentD Desktop Test");
+      expect(tokenParams.get("client_label")).toBe("AgentD Next Test");
       expect(tokenParams.get("client_device_type")).toBe("desktop");
       expect(tokenParams.get("client_os")).toBe("Test OS");
     }),

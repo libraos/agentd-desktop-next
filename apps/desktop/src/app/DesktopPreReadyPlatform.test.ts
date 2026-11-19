@@ -170,7 +170,7 @@ describe("DesktopPreReadyPlatform", () => {
         const identity = yield* Effect.promise(() => portalIdentity);
         assert.equal(identity.desktopName, "ai.libraos.agentd-desktop.desktop");
         assert.include(identity.desktopEntry ?? "", "Exec=/Applications/current.AppImage %U");
-        assert.include(identity.desktopEntry ?? "", "Name=AgentD Desktop (Beta)");
+        assert.include(identity.desktopEntry ?? "", "Name=AgentD Next (Beta)");
         assert.include(identity.desktopEntry ?? "", "MimeType=x-scheme-handler/agentd-desktop;");
         assert.include(
           identity.desktopEntry ?? "",
@@ -240,7 +240,7 @@ describe("DesktopPreReadyPlatform", () => {
               DesktopConfig.layerTest({
                 XDG_DATA_HOME: "/xdg",
                 APPIMAGE: "/Applications/current.AppImage",
-                T3CODE_DESKTOP_LAUNCHER_PATH: " /opt/AgentD Desktop/t3code ",
+                T3CODE_DESKTOP_LAUNCHER_PATH: " /opt/AgentD Next/t3code ",
               }),
             ),
           ),
@@ -248,7 +248,7 @@ describe("DesktopPreReadyPlatform", () => {
         const entry = writeFileSyncMock.mock.calls.find(
           ([path]) => path === "/xdg/applications/ai.libraos.agentd-desktop.desktop",
         )?.[1];
-        assert.include(entry, 'Exec="/opt/AgentD Desktop/t3code" %U');
+        assert.include(entry, 'Exec="/opt/AgentD Next/t3code" %U');
       }),
     ).pipe(Effect.ensuring(Effect.sync(() => vi.unstubAllEnvs())));
   });

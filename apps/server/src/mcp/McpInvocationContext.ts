@@ -38,7 +38,7 @@ export interface McpClientCaller {
   readonly label: string;
   readonly access: AuthMcpClientAccess;
   /**
-   * Another AgentD Desktop environment's peer link. What it starts here carries its
+   * Another AgentD Next environment's peer link. What it starts here carries its
    * session as `linkOrigin`, and it changes only that work (`linkOrigin.ts`).
    */
   readonly linked?: boolean | undefined;
@@ -150,7 +150,7 @@ export interface McpInvocationScope {
 }
 
 /**
- * AgentD Desktop renders `t3-thread://` links as thread chips. Other MCP clients cannot open them, so
+ * AgentD Next renders `t3-thread://` links as thread chips. Other MCP clients cannot open them, so
  * they get the hosted link Copy thread copies, which opens the thread in either app or a browser.
  * A known `title` labels the chip for clients that cannot load this environment's threads.
  */
@@ -248,7 +248,7 @@ export const requireThreadMcpCapability = <const C extends "preview" | "device">
 const threadCallerRequired = (operation: string) =>
   new OrchestratorMcpFailure({
     code: "thread_credential_required",
-    message: `${operation} acts as the calling AgentD Desktop thread, so it needs an agent running inside AgentD Desktop. This MCP client signed in from outside a thread.`,
+    message: `${operation} acts as the calling AgentD Next thread, so it needs an agent running inside AgentD Next. This MCP client signed in from outside a thread.`,
   });
 
 export type McpThreadInvocationScope = McpInvocationScope & { readonly thread: McpThreadCaller };

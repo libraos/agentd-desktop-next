@@ -136,11 +136,11 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
       capabilities.serverSelfUpdate === "desktop-managed"
         ? gt(
             "Install {product} {version}. The desktop app will close and relaunch. Running threads may be interrupted.",
-            { product: "AgentD Desktop", version: targetVersion },
+            { product: "AgentD Next", version: targetVersion },
           )
         : gt(
             "Install {product} {version}. The server will restart and reconnect. Running threads may be interrupted.",
-            { product: "AgentD Desktop", version: targetVersion },
+            { product: "AgentD Next", version: targetVersion },
           ),
       [
         { text: gt("Cancel"), style: "cancel" },
@@ -253,7 +253,7 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
             {notice ? <Text className="px-2 text-sm text-foreground-muted">{notice}</Text> : null}
             {config && !outdated ? (
               <>
-                <SettingsSection title="AgentD Desktop">
+                <SettingsSection title="AgentD Next">
                   <View className="gap-1 p-4">
                     <Text className="text-base text-foreground">
                       <T>
@@ -297,7 +297,7 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
                         {capabilities?.serverSelfUpdate === "desktop-managed"
                           ? gt("Update the desktop app on this machine.")
                           : gt("Update and restart {product} on this machine.", {
-                              product: "AgentD Desktop",
+                              product: "AgentD Next",
                             })}
                       </Text>
                     ) : null}

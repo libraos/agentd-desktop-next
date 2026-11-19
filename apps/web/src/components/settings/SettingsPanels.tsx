@@ -2519,7 +2519,7 @@ export function AboutSettingsPanel() {
           description={
             telemetryOff === undefined
               ? gt(
-                  "How we handle your data, including the anonymous usage data AgentD Desktop collects.",
+                  "How we handle your data, including the anonymous usage data AgentD Next collects.",
                 )
               : gt("How we handle your data. {telemetryOff}", { telemetryOff })
           }
@@ -2536,7 +2536,7 @@ export function AboutSettingsPanel() {
         <SettingsRow
           {...setting("open-source-licenses")}
           description={gt(
-            "Notices for dependencies, assets, and optional tools used by AgentD Desktop.",
+            "Notices for dependencies, assets, and optional tools used by AgentD Next.",
           )}
           control={
             <Button

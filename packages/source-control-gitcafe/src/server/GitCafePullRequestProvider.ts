@@ -1163,10 +1163,7 @@ export const make = Effect.gen(function* () {
           };
         }
         default:
-          return yield* failure(
-            input.action,
-            `GitCafe cannot ${input.action} from AgentD Desktop.`,
-          );
+          return yield* failure(input.action, `GitCafe cannot ${input.action} from AgentD Next.`);
       }
     }),
     updateChangeRequest: Effect.fn("GitCafePullRequestProvider.updateChangeRequest")(

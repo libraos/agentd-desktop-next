@@ -62,12 +62,12 @@ export function relayRetryAfterMillis(error: unknown): number | undefined {
 function recoveryHint(error: RelayProtectedError): string {
   switch (error._tag) {
     case "RelayEnvironmentLinkLimitExceededError":
-      return "Unlink an unused environment in the hosted relay, then restart AgentD Desktop on this machine.";
+      return "Unlink an unused environment in the hosted relay, then restart AgentD Next on this machine.";
     case "RelayAuthInvalidError":
-      return "Run `agentd-desktop connect login` to check this machine's authorization. If the stored credential was revoked, sign out with `agentd-desktop connect logout`, then run `agentd-desktop connect` again. Restart AgentD Desktop after signing in.";
+      return "Run `agentd-next connect login` to check this machine's authorization. If the stored credential was revoked, sign out with `agentd-next connect logout`, then run `agentd-next connect` again. Restart AgentD Next after signing in.";
     case "RelayEnvironmentLinkProofExpiredError":
     case "RelayEnvironmentLinkProofInvalidError":
-      return "Check this machine's date and time, update AgentD Desktop, then restart it.";
+      return "Check this machine's date and time, update AgentD Next, then restart it.";
     default:
       return "Retry when the relay is available. If this continues, include the trace ID when reporting it.";
   }
@@ -84,7 +84,7 @@ export const filterRelayResponse = Effect.fn("cloud.filter_relay_response")(func
   const requestId = ray && /^[a-zA-Z0-9-]{1,128}$/.test(ray) ? ` Cloudflare Ray ID: ${ray}.` : "";
   const description = Option.isSome(decoded)
     ? `Hosted relay: ${decoded.value.message}. ${recoveryHint(decoded.value)} Trace ID: ${decoded.value.traceId}.`
-    : `The hosted relay returned HTTP ${response.status} without a recognized error response. Check relay access and any proxy or firewall restrictions, then restart AgentD Desktop.${requestId}`;
+    : `The hosted relay returned HTTP ${response.status} without a recognized error response. Check relay access and any proxy or firewall restrictions, then restart AgentD Next.${requestId}`;
 
   // Only a schema-decoded expired-proof 401 is retryable for clock skew; every other 401 is permanent.
   if (

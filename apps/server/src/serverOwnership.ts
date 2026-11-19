@@ -48,7 +48,7 @@ export class ServerAlreadyRunningError extends Schema.TaggedError<ServerAlreadyR
   override readonly [Runtime.errorExitCode] = SERVER_EXIT_CODE_STATE_DIR_OWNED;
 
   override get message(): string {
-    return `An AgentD Desktop server already owns ${this.stateDir}. Stop that server, or use a separate AgentD Desktop home and pair with it, then retry. No server was stopped. server-owner.sqlite is the ownership lock; do not delete it while a server is running.`;
+    return `An AgentD Next server already owns ${this.stateDir}. Stop that server, or use a separate AgentD Next home and pair with it, then retry. No server was stopped. server-owner.sqlite is the ownership lock; do not delete it while a server is running.`;
   }
 }
 
@@ -59,7 +59,7 @@ export class OlderBootServiceError extends Schema.TaggedError<OlderBootServiceEr
   override readonly [Runtime.errorExitCode] = SERVER_EXIT_CODE_STATE_DIR_OWNED;
 
   override get message(): string {
-    return `An AgentD Desktop background service set up for ${this.baseDir} may still run a release without the ownership lock. On that machine, try \`agentd-desktop update\` and let it restart (or run \`agentd-desktop service restart\` if the update is already installed). If the older launcher cannot update, run \`agentd-desktop service uninstall\`, then reinstall with \`agentd-desktop service install\` from a current CLI. You can also leave the service uninstalled. Pass \`--base-dir ${this.baseDir}\` to each command, and use \`npx t3@latest\` if \`t3\` is not installed or is outdated. Then retry. No server was stopped.`;
+    return `An AgentD Next background service set up for ${this.baseDir} may still run a release without the ownership lock. On that machine, try \`agentd-next update\` and let it restart (or run \`agentd-next service restart\` if the update is already installed). If the older launcher cannot update, run \`agentd-next service uninstall\`, then reinstall with \`agentd-next service install\` from a current CLI. You can also leave the service uninstalled. Pass \`--base-dir ${this.baseDir}\` to each command, and use \`npx t3@latest\` if \`t3\` is not installed or is outdated. Then retry. No server was stopped.`;
   }
 }
 
@@ -282,7 +282,7 @@ export const acquireServerOwnership = Effect.fn("acquireServerOwnership")(functi
         current.ino !== lock.identity.ino;
     }
     yield* Effect.logError(
-      `Server ownership lock at ${lockPath} was deleted or replaced. Another server may now share this AgentD Desktop home. Stop any other server using this home, then restart this server. Do not delete server-owner.sqlite while a server is running.`,
+      `Server ownership lock at ${lockPath} was deleted or replaced. Another server may now share this AgentD Next home. Stop any other server using this home, then restart this server. Do not delete server-owner.sqlite while a server is running.`,
     );
   }).pipe(Effect.forkScoped);
 

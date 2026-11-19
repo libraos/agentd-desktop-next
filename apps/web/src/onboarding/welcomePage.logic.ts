@@ -111,7 +111,7 @@ export function turnedOnInstance(instance: ProviderInstanceConfig): ProviderInst
   };
 }
 
-/** A CLI the server knows is too old or otherwise broken for AgentD Desktop; Settings updates it. */
+/** A CLI the server knows is too old or otherwise broken for AgentD Next; Settings updates it. */
 export function isBrokenVersion(provider: ServerProvider) {
   return provider.installed && provider.compatibilityAdvisory?.status === "broken";
 }

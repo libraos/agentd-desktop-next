@@ -130,7 +130,7 @@ const withDescriptorServer = <A, E, R>(
     (server) => Effect.sync(() => server.close()),
   );
 
-describe("agentd-desktop pair", () => {
+describe("agentd-next pair", () => {
   it.effect("publishes an IPv6-only server through Tailscale Serve when pairing", () =>
     withDescriptorServer(
       (origin) =>
@@ -313,7 +313,7 @@ describe("agentd-desktop pair", () => {
           readonly scopes: ReadonlyArray<string>;
         }>;
         assert.equal(credentials.length, 1);
-        assert.equal(credentials[0]?.label, "agentd-desktop pair");
+        assert.equal(credentials[0]?.label, "agentd-next pair");
         assert.deepEqual(credentials[0]?.scopes, AuthStandardClientScopes);
       }),
     ).pipe(
@@ -403,7 +403,7 @@ describe("agentd-desktop pair", () => {
     withDescriptorServer((origin) =>
       Effect.gen(function* () {
         const baseDir = NodeFS.mkdtempSync(
-          NodePath.join(NodeOS.tmpdir(), "agentd-desktop pair pid test-"),
+          NodePath.join(NodeOS.tmpdir(), "agentd-next pair pid test-"),
         );
         const statePath = NodePath.join(baseDir, "userdata", "server-runtime.json");
         const state = yield* makePersistedServerRuntimeState({
@@ -422,7 +422,7 @@ describe("agentd-desktop pair", () => {
         const rendered = String(
           typeof error === "object" && error !== null && "cause" in error ? error.cause : error,
         );
-        assert.include(rendered, "No running AgentD Desktop server found.");
+        assert.include(rendered, "No running AgentD Next server found.");
         for (const subcommand of ["serve", "connect"]) {
           const { command } = yield* resolveHostCliCommand(subcommand, ["--base-dir", baseDir]);
           assert.include(rendered, `\`${command}\``);
@@ -462,7 +462,7 @@ describe("agentd-desktop pair", () => {
           ),
         );
 
-        assert.include(String(error), "No running AgentD Desktop server found.");
+        assert.include(String(error), "No running AgentD Next server found.");
         assert.notInclude(String(error), sharedHome);
         assert.deepEqual(NodeFS.readdirSync(NodePath.join(sharedHome, "userdata")), [
           "server-runtime.json",
@@ -752,7 +752,7 @@ describe("auth scope options", () => {
       if (!CliError.isCliError(error) || error._tag !== "ShowHelp") {
         assert.fail(`Expected ShowHelp, got ${String(error)}`);
       }
-      assert.deepEqual(error.commandPath, ["agentd-desktop", ...command]);
+      assert.deepEqual(error.commandPath, ["agentd-next", ...command]);
       const scopeError = error.errors[0];
       if (scopeError?._tag !== "InvalidValue") {
         assert.fail(`Expected InvalidValue, got ${String(scopeError?._tag)}`);

@@ -23,7 +23,7 @@ export class DatabaseMissingError extends Schema.TaggedError<DatabaseMissingErro
   { path: Schema.String },
 ) {
   override get message() {
-    return "No existing AgentD Desktop database was found in this data directory.";
+    return "No existing AgentD Next database was found in this data directory.";
   }
 }
 
@@ -38,9 +38,9 @@ export class DatabaseInUseError extends Schema.TaggedError<DatabaseInUseError>()
 ) {
   override get message() {
     if (this.pid !== undefined) {
-      return `Stop AgentD Desktop server process ${this.pid}${this.serviceManaged ? "" : ", which the background service did not start,"} before repairing the database.`;
+      return `Stop AgentD Next server process ${this.pid}${this.serviceManaged ? "" : ", which the background service did not start,"} before repairing the database.`;
     }
-    return "Stop the AgentD Desktop server and desktop app, including any version before 0.1.0, before repairing the database.";
+    return "Stop the AgentD Next server and desktop app, including any version before 0.1.0, before repairing the database.";
   }
 }
 
@@ -353,7 +353,7 @@ export const runRequestedReclaim = Effect.fn("DatabaseMaintenance.runRequestedRe
             .writeFileString(
               files.failure,
               error._tag === "DatabaseInUseError"
-                ? "Another program kept the database open. Close other AgentD Desktop apps and t3 commands on this machine, then try again."
+                ? "Another program kept the database open. Close other AgentD Next apps and t3 commands on this machine, then try again."
                 : error.message,
             )
             .pipe(

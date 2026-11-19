@@ -96,7 +96,7 @@ export const homeOwnedMessage = (owner: Option.Option<HomeOwner>): string =>
     onNone: () =>
       m(
         msg(
-          "Another AgentD Desktop server, such as the background service, is using this data directory, or an older background service is set up for it. Stop that server or try `agentd-desktop update`. If the older launcher cannot update, run `agentd-desktop service uninstall` and optionally reinstall with `agentd-desktop service install` from a current CLI. Use `npx t3@latest` if `t3` is missing or outdated, and pass `--base-dir` with the service's data directory to each command. Then reopen AgentD Desktop. You can also set a separate T3CODE_HOME and pair with the running server.",
+          "Another AgentD Next server, such as the background service, is using this data directory, or an older background service is set up for it. Stop that server or try `agentd-next update`. If the older launcher cannot update, run `agentd-next service uninstall` and optionally reinstall with `agentd-next service install` from a current CLI. Use `npx t3@latest` if `t3` is missing or outdated, and pass `--base-dir` with the service's data directory to each command. Then reopen AgentD Next. You can also set a separate T3CODE_HOME and pair with the running server.",
         ),
       ),
     onSome: (owner) => {
@@ -109,13 +109,13 @@ export const homeOwnedMessage = (owner: Option.Option<HomeOwner>): string =>
         return owner.serverVersion
           ? m(
               msg(
-                "The AgentD Desktop background service is using this AgentD Desktop home (PID {pid}, port {port}, version {version}). Stop it with `agentd-desktop service uninstall`, passing `--base-dir` with this AgentD Desktop home, and reopen AgentD Desktop. You can also set a separate T3CODE_HOME and pair with the running server.",
+                "The AgentD Next background service is using this AgentD Next home (PID {pid}, port {port}, version {version}). Stop it with `agentd-next service uninstall`, passing `--base-dir` with this AgentD Next home, and reopen AgentD Next. You can also set a separate T3CODE_HOME and pair with the running server.",
               ),
               variables,
             )
           : m(
               msg(
-                "The AgentD Desktop background service is using this AgentD Desktop home (PID {pid}, port {port}). Stop it with `agentd-desktop service uninstall`, passing `--base-dir` with this AgentD Desktop home, and reopen AgentD Desktop. You can also set a separate T3CODE_HOME and pair with the running server.",
+                "The AgentD Next background service is using this AgentD Next home (PID {pid}, port {port}). Stop it with `agentd-next service uninstall`, passing `--base-dir` with this AgentD Next home, and reopen AgentD Next. You can also set a separate T3CODE_HOME and pair with the running server.",
               ),
               variables,
             );
@@ -123,13 +123,13 @@ export const homeOwnedMessage = (owner: Option.Option<HomeOwner>): string =>
       return owner.serverVersion
         ? m(
             msg(
-              "Another AgentD Desktop server (for example `agentd-desktop serve`, or one started over SSH) is using this AgentD Desktop home (PID {pid}, port {port}, version {version}). If an AgentD Desktop app on another machine started it over SSH, that app restarts it: remove or disconnect that SSH environment there, or quit that app. Then stop the server, and reopen AgentD Desktop. You can also set a separate T3CODE_HOME and pair with the running server.",
+              "Another AgentD Next server (for example `agentd-next serve`, or one started over SSH) is using this AgentD Next home (PID {pid}, port {port}, version {version}). If an AgentD Next app on another machine started it over SSH, that app restarts it: remove or disconnect that SSH environment there, or quit that app. Then stop the server, and reopen AgentD Next. You can also set a separate T3CODE_HOME and pair with the running server.",
             ),
             variables,
           )
         : m(
             msg(
-              "Another AgentD Desktop server (for example `agentd-desktop serve`, or one started over SSH) is using this AgentD Desktop home (PID {pid}, port {port}). If an AgentD Desktop app on another machine started it over SSH, that app restarts it: remove or disconnect that SSH environment there, or quit that app. Then stop the server, and reopen AgentD Desktop. You can also set a separate T3CODE_HOME and pair with the running server.",
+              "Another AgentD Next server (for example `agentd-next serve`, or one started over SSH) is using this AgentD Next home (PID {pid}, port {port}). If an AgentD Next app on another machine started it over SSH, that app restarts it: remove or disconnect that SSH environment there, or quit that app. Then stop the server, and reopen AgentD Next. You can also set a separate T3CODE_HOME and pair with the running server.",
             ),
             variables,
           );

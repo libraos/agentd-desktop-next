@@ -345,7 +345,7 @@ function TelemetryNotice({ environmentId }: { readonly environmentId: Environmen
     <p className="mt-9 text-center text-2xs leading-relaxed text-muted-foreground/70">
       {telemetryOff === undefined ? (
         <T>
-          AgentD Desktop collects anonymous usage data to improve the app. To opt out, see the{" "}
+          AgentD Next collects anonymous usage data to improve the app. To opt out, see the{" "}
           <a
             className="underline decoration-current/40 underline-offset-2 hover:text-muted-foreground"
             href={PRIVACY_POLICY_URL}
@@ -1278,7 +1278,7 @@ function useProjectImport({
       })),
     ),
   );
-  // Projects already in AgentD Desktop stay in the list, but reopening the page does not import their
+  // Projects already in AgentD Next stay in the list, but reopening the page does not import their
   // history again unless the user picks them. The scan can be 30 s old, so the live list decides.
   const projects = useProjects();
   const isNewProject = isNewOnboardingProject(projects);
@@ -1747,7 +1747,7 @@ function ImportRowMeta({
   );
 }
 
-/** The desktop app links `agentd-desktop` on a fresh install; this puts its folder on PATH when it is not. */
+/** The desktop app links `agentd-next` on a fresh install; this puts its folder on PATH when it is not. */
 function CliPathSetup() {
   const { state, busy, run } = useDesktopCliCommand();
   const setup = state?.pathSetup;
@@ -1761,12 +1761,12 @@ function CliPathSetup() {
         {setup.added ? (
           <T>
             Added to <Var>{setup.file}</Var>. Open a new terminal to use{" "}
-            <code className="font-mono">agentd-desktop</code>.
+            <code className="font-mono">agentd-next</code>.
           </T>
         ) : (
           <T>
-            Use <code className="font-mono">agentd-desktop</code> from any terminal. Adds one line
-            to <Var>{setup.file}</Var>.
+            Use <code className="font-mono">agentd-next</code> from any terminal. Adds one line to{" "}
+            <Var>{setup.file}</Var>.
           </T>
         )}
       </p>

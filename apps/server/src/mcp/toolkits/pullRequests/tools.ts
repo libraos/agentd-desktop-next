@@ -74,7 +74,7 @@ export class PullRequestThreadRequiredError extends Schema.TaggedError<PullReque
   {},
 ) {
   override get message(): string {
-    return "Pass threadId: this MCP client is not running inside an AgentD Desktop thread.";
+    return "Pass threadId: this MCP client is not running inside an AgentD Next thread.";
   }
 }
 

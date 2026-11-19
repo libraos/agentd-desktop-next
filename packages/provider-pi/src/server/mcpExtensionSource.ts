@@ -260,7 +260,7 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
     projectTrustChecked = true;
     if (ctx.isProjectTrusted() || process.argv.some((arg) => arg === "--no-approve" || arg === "-na")) return;
     ctx.ui.notify(
-      \`Pi did not load project settings, extensions, skills, prompts, MCP servers or system prompt files for \${ctx.cwd} because the folder is not trusted. To load them, run the configured Pi binary there with the same PI_CODING_AGENT_DIR (if set), trust the folder or its parent with /trust, then start a new thread in that same worktree. To trust every project, add --approve to Pi's launch arguments in AgentD Desktop settings; to keep them off without this notice, add --no-approve.\`,
+      \`Pi did not load project settings, extensions, skills, prompts, MCP servers or system prompt files for \${ctx.cwd} because the folder is not trusted. To load them, run the configured Pi binary there with the same PI_CODING_AGENT_DIR (if set), trust the folder or its parent with /trust, then start a new thread in that same worktree. To trust every project, add --approve to Pi's launch arguments in AgentD Next settings; to keep them off without this notice, add --no-approve.\`,
       "warning",
     );
   });
@@ -301,7 +301,7 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
   // Only a tier the active model advertises is sent; Standard sends none.
   let serviceTier: string | undefined;
   pi.registerCommand(SERVICE_TIER_COMMAND, {
-    description: "Set the service tier AgentD Desktop sends with provider requests",
+    description: "Set the service tier AgentD Next sends with provider requests",
     handler: async (args) => {
       serviceTier = args.trim() || undefined;
     },
@@ -375,7 +375,7 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
       { signal: ctx.signal },
     );
     if (!approved) {
-      return { block: true, reason: \`\${event.toolName} was declined in AgentD Desktop.\` };
+      return { block: true, reason: \`\${event.toolName} was declined in AgentD Next.\` };
     }
   });
 
@@ -384,7 +384,7 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
   if (endpoint === undefined || token === undefined) {
     pi.on("session_start", async (_event, ctx) => {
       ctx.ui.notify(
-        "agentd-desktop MCP unavailable: T3_MCP_URL or T3_MCP_BEARER_TOKEN is missing.",
+        "agentd-next MCP unavailable: T3_MCP_URL or T3_MCP_BEARER_TOKEN is missing.",
         "warning",
       );
     });
@@ -404,13 +404,13 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
   const registerTools = () => {
     // Preserve public names for saved loadouts and tool selectors. Hidden
     // canonical names reserve ownership against Pi's configured MCP servers.
-    const prefixes = supportsExposure ? ["mcp__agentd-desktop__", "mcp__agentd_desktop__"] : ["mcp__agentd-desktop__"];
+    const prefixes = supportsExposure ? ["mcp__agentd-next__", "mcp__agentd_next__"] : ["mcp__agentd-next__"];
     readOnlyMcpTools.clear();
     for (const tool of catalog) {
       const name = tool.name;
       for (const prefix of prefixes) {
         if (tool.annotations?.readOnlyHint === true) readOnlyMcpTools.add(\`\${prefix}\${name}\`);
-        const exposure = prefix === "mcp__agentd_desktop__" ? "hidden" :
+        const exposure = prefix === "mcp__agentd_next__" ? "hidden" :
           deferOptionalTools && !directTools.has(name) ? "deferred" : "direct";
         pi.registerTool({
           name: \`\${prefix}\${name}\`,
@@ -427,12 +427,12 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
             );
             const content = mcpModelContent(result);
             if (isMcpToolError(result) && !content.some((part) => part.type === "text" && part.text.length > 0)) {
-              content.push({ type: "text", text: "MCP tool agentd-desktop/" + name + " returned an error" });
+              content.push({ type: "text", text: "MCP tool agentd-next/" + name + " returned an error" });
             }
             return {
               content,
               structuredContent: mcpScriptResult(result),
-              details: { server: "agentd-desktop", tool: name },
+              details: { server: "agentd-next", tool: name },
               ...(isMcpToolError(result) ? { isError: true } : {}),
             };
           },
@@ -475,7 +475,7 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
     // Pi still applies --tools/--exclude-tools to this active loadout.
     const required = [
       ...(hasToolSearch ? ["tool_search"] : []),
-      ...(ctx.model?.api === "openai-completions" ? catalog.map((tool) => "mcp__agentd-desktop__" + tool.name) : []),
+      ...(ctx.model?.api === "openai-completions" ? catalog.map((tool) => "mcp__agentd-next__" + tool.name) : []),
     ];
     const missing = required.filter((name) => !active.includes(name));
     if (missing.length > 0) pi.setActiveTools([...active, ...missing]);
@@ -490,7 +490,7 @@ export default async function t3McpExtension(pi: ExtensionAPI) {
       await ensureStarted();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      ctx.ui.notify(\`agentd-desktop MCP unavailable: \${message}\`, "warning");
+      ctx.ui.notify(\`agentd-next MCP unavailable: \${message}\`, "warning");
     }
   });
 

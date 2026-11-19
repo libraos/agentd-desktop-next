@@ -89,7 +89,7 @@ export class ThemeFileInvalidError extends Schema.TaggedError<ThemeFileInvalidEr
   { filePath: Schema.String, cause: Schema.Defect() },
 ) {
   override get message(): string {
-    return `${this.filePath} is not a valid theme file. Use a theme exported from AgentD Desktop, or a seeded file with name, appearance, canvas, and accent.`;
+    return `${this.filePath} is not a valid theme file. Use a theme exported from AgentD Next, or a seeded file with name, appearance, canvas, and accent.`;
   }
 }
 
@@ -155,7 +155,7 @@ export class ThemeTargetMissingError extends Schema.TaggedError<ThemeTargetMissi
   {},
 ) {
   override get message(): string {
-    return "Provide a theme id or file, or run `agentd-desktop theme clear` to remove the theme.";
+    return "Provide a theme id or file, or run `agentd-next theme clear` to remove the theme.";
   }
 }
 

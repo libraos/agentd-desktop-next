@@ -97,19 +97,19 @@ function tool(
   return { displayName, labels, icon, summaryAction };
 }
 
-/** The name agents see the app's MCP server under: tools read as `mcp__agentd-desktop__<tool>`. */
-export const APP_MCP_SERVER_NAME = "agentd-desktop";
+/** The name agents see the app's MCP server under: tools read as `mcp__agentd-next__<tool>`. */
+export const APP_MCP_SERVER_NAME = "agentd-next";
 // Codex registers this second server for app tools kept out of Code Mode.
-export const APP_MCP_DIRECT_SERVER_NAME = "agentd-desktop-direct";
+export const APP_MCP_DIRECT_SERVER_NAME = "agentd-next-direct";
 /** Legacy server name and tool prefix (`mcp__t3-code__t3_thread_list`); stored allow lists and history still use them. */
 export const LEGACY_APP_MCP_SERVER_NAME = "t3-code"; // legacy: sessions started before the rename still send it
 const LEGACY_APP_MCP_TOOL_PREFIX = "t3_";
 
 const T3_MCP_SERVER_ALIASES = new Set([
   APP_MCP_SERVER_NAME,
-  "agentd_desktop",
+  "agentd_next",
   APP_MCP_DIRECT_SERVER_NAME,
-  "agentd_desktop_direct",
+  "agentd_next_direct",
   LEGACY_APP_MCP_SERVER_NAME,
   "t3_code", // legacy
   "t3code", // legacy
@@ -214,19 +214,16 @@ const T3_MCP_TOOLS: Readonly<Record<string, T3McpToolDefinition>> = {
     "schedule-delete",
   ),
   request_secret: tool(["Ask for", "Asking for", "Asked for", "a secret"], "secret-request"),
-  create_threads: tool(
-    ["Create", "Creating", "Created", "AgentD Desktop threads"],
-    "thread-create",
-  ),
-  thread_start: tool(["Start", "Starting", "Started", "an AgentD Desktop thread"], "thread-create"),
-  thread_list: tool(["List", "Listing", "Listed", "AgentD Desktop threads"], "thread-list"),
-  thread_read: tool(["Read", "Reading", "Read", "an AgentD Desktop thread"], "thread-read"),
-  thread_send: tool(["Send", "Sending", "Sent", "to an AgentD Desktop thread"], "thread-send"),
-  thread_wait: tool(["Wait", "Waiting", "Waited", "for an AgentD Desktop thread"], "thread-wait"),
+  create_threads: tool(["Create", "Creating", "Created", "AgentD Next threads"], "thread-create"),
+  thread_start: tool(["Start", "Starting", "Started", "an AgentD Next thread"], "thread-create"),
+  thread_list: tool(["List", "Listing", "Listed", "AgentD Next threads"], "thread-list"),
+  thread_read: tool(["Read", "Reading", "Read", "an AgentD Next thread"], "thread-read"),
+  thread_send: tool(["Send", "Sending", "Sent", "to an AgentD Next thread"], "thread-send"),
+  thread_wait: tool(["Wait", "Waiting", "Waited", "for an AgentD Next thread"], "thread-wait"),
   workflow_stop: tool(["Stop", "Stopping", "Requested a stop for", "a workflow"], "workflow-stop"),
   background_wait: tool(["Update", "Updating", "Updated", "background waits"], "background-wait"),
   thread_interrupt: tool(
-    ["Interrupt", "Interrupting", "Requested an interrupt of", "an AgentD Desktop thread"],
+    ["Interrupt", "Interrupting", "Requested an interrupt of", "an AgentD Next thread"],
     "thread-interrupt",
   ),
   worktree_handoff: tool(
@@ -374,7 +371,7 @@ const T3_MCP_TOOLS: Readonly<Record<string, T3McpToolDefinition>> = {
   thread_transfers: tool(["Read", "Reading", "Read", "thread transfers"], "thread-transfers"),
   thread_organize: tool(["Organize", "Organizing", "Organized", "a thread"], "thread-organize"),
   thread_update: tool(
-    ["Update", "Updating", "Updated", "AgentD Desktop thread metadata"],
+    ["Update", "Updating", "Updated", "AgentD Next thread metadata"],
     "thread-update",
   ),
   worktree_list: tool(["List", "Listing", "Listed", "workspace branches"], "worktree-list"),
@@ -459,7 +456,7 @@ function parseT3McpToolName(value: string): string | null {
   }
 
   const namespaceMatch =
-    /^(?<server>(?:agentd|t3)[-_](?:desktop|code)[-_]direct|agentd[-_]desktop|t3-code|t3_code|t3code)(?:[.:/]|\s*·\s*)(?<tool>.+)$/i.exec(
+    /^(?<server>(?:agentd[-_]next|t3[-_]code)[-_]direct|agentd[-_]next|t3-code|t3_code|t3code)(?:[.:/]|\s*·\s*)(?<tool>.+)$/i.exec(
       label,
     );
   if (namespaceMatch?.groups) {
@@ -468,15 +465,13 @@ function parseT3McpToolName(value: string): string | null {
   }
 
   const prefixed =
-    /^(?:mcp[-_]{1,2})?(?:agentd[-_ ]?desktop|t3[-_ ]?code)(?:__|[-_.:/ ])(?<tool>.+)$/i.exec(
-      label,
-    );
+    /^(?:mcp[-_]{1,2})?(?:agentd[-_ ]?next|t3[-_ ]?code)(?:__|[-_.:/ ])(?<tool>.+)$/i.exec(label);
   const candidate = prefixed?.groups?.tool ?? label;
   if (Object.hasOwn(T3_MCP_TOOLS, candidate)) return candidate;
   const current = normalizeLegacyAppMcpToolName(candidate);
   if (current !== candidate && Object.hasOwn(T3_MCP_TOOLS, current)) return current;
   // OpenCode 2 thread prefixes can contain underscores; choose the longest known tool-name suffix.
-  if (!/^(?:agentd-desktop|t3-code)-/i.test(label)) return null;
+  if (!/^(?:agentd-next|t3-code)-/i.test(label)) return null;
   let longest: string | null = null;
   for (const tool of Object.keys(T3_MCP_TOOLS)) {
     if (label.endsWith(`_${tool}`) && tool.length > (longest?.length ?? 0)) longest = tool;

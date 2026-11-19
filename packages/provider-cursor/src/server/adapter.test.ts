@@ -897,8 +897,8 @@ describe("CursorAdapterV2", () => {
           lastProviderTurn = providerTurn.providerTurn;
         const sent = sentMessages.at(-1)!;
         return {
-          orchestration: sent.includes("## AgentD Desktop orchestration"),
-          devices: sent.includes("## AgentD Desktop devices"),
+          orchestration: sent.includes("## AgentD Next orchestration"),
+          devices: sent.includes("## AgentD Next devices"),
         };
       });
       const told = (orchestration: boolean, devices: boolean) => ({ orchestration, devices });
@@ -2545,7 +2545,7 @@ describe("CursorAdapterV2", () => {
     };
 
     assert.deepEqual(cursorMcpServers(mcpSession), {
-      "agentd-desktop": {
+      "agentd-next": {
         type: "http",
         url: "http://127.0.0.1:43123/mcp",
         headers: {

@@ -388,7 +388,7 @@ export function startDesktopUpdateLaunchNotice(): () => void {
           title: m(msg("Update did not apply")),
           description: m(
             msg(
-              "AgentD Desktop is still on {current}. Install {version} again from the update button.",
+              "AgentD Next is still on {current}. Install {version} again from the update button.",
               {
                 current: APP_VERSION,
                 version: notAppliedVersion,

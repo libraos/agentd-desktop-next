@@ -62,7 +62,7 @@ const connectUnavailableCommand = Command.make("connect", {
   Command.withHandler(() =>
     Effect.fail(
       new CliError.ShowHelp({
-        commandPath: ["agentd-desktop", "connect"],
+        commandPath: ["agentd-next", "connect"],
         errors: [new ConnectPublicConfigMissingError({ cause: connectPublicConfigMissingMessage })],
       }),
     ),
@@ -70,16 +70,16 @@ const connectUnavailableCommand = Command.make("connect", {
 );
 
 export const makeCli = ({ cloudEnabled = hasCloudPublicConfig } = {}) =>
-  Command.make("agentd-desktop", { ...sharedServerCommandFlags }).pipe(
+  Command.make("agentd-next", { ...sharedServerCommandFlags }).pipe(
     Command.withDescription(
-      "Run AgentD Desktop in this terminal and open it in your browser. To use it from your other devices, run `agentd-desktop up`.",
+      "Run AgentD Next in this terminal and open it in your browser. To use it from your other devices, run `agentd-next up`.",
     ),
     Command.withHandler(runDefaultServerCommand),
     Command.withSubcommands([
       Command.make("help").pipe(
         Command.withDescription("Show command help."),
         Command.withHandler(() =>
-          Effect.fail(new CliError.ShowHelp({ commandPath: ["agentd-desktop"], errors: [] })),
+          Effect.fail(new CliError.ShowHelp({ commandPath: ["agentd-next"], errors: [] })),
         ),
       ),
       acpMcpBridgeCommand,

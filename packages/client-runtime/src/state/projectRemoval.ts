@@ -71,15 +71,13 @@ export function planProjectRemoval<
       ? [
           resolve(
             msg(
-              "Those threads and any archived threads are deleted from AgentD Desktop. Provider sessions are kept.",
+              "Those threads and any archived threads are deleted from AgentD Next. Provider sessions are kept.",
             ),
           ),
         ]
       : [
           resolve(
-            msg(
-              "Any archived threads are deleted from AgentD Desktop. Provider sessions are kept.",
-            ),
+            msg("Any archived threads are deleted from AgentD Next. Provider sessions are kept."),
           ),
         ]),
     isWholeGroup && !hasOtherMembers

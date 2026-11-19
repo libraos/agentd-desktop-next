@@ -67,7 +67,7 @@ export class IssueTargetIncompleteError extends Schema.TaggedError<IssueTargetIn
   {},
 ) {
   override get message(): string {
-    return "Pass either url, or key (with projectId when not running inside an AgentD Desktop thread).";
+    return "Pass either url, or key (with projectId when not running inside an AgentD Next thread).";
   }
 }
 
@@ -76,7 +76,7 @@ export class IssueProjectRequiredError extends Schema.TaggedError<IssueProjectRe
   {},
 ) {
   override get message(): string {
-    return "Pass projectId: this MCP client is not running inside an AgentD Desktop thread.";
+    return "Pass projectId: this MCP client is not running inside an AgentD Next thread.";
   }
 }
 
@@ -85,7 +85,7 @@ export class IssueThreadRequiredError extends Schema.TaggedError<IssueThreadRequ
   {},
 ) {
   override get message(): string {
-    return "Pass threadId: this MCP client is not running inside an AgentD Desktop thread.";
+    return "Pass threadId: this MCP client is not running inside an AgentD Next thread.";
   }
 }
 
@@ -335,7 +335,7 @@ const SetIssueStateTool = Tool.make("set_issue_state", {
 
 const LinkIssueTool = Tool.make("link_issue", {
   description:
-    "Link an issue to a thread so AgentD Desktop shows it beside the thread. Link every issue you work on or file.",
+    "Link an issue to a thread so AgentD Next shows it beside the thread. Link every issue you work on or file.",
   parameters: Schema.Struct({ ...IssueTargetInput.fields, ...ThreadTargetInput.fields }),
   success: LinkIssueResult,
   failure: IssueToolError,
