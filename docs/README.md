@@ -22,7 +22,6 @@
 - [Secrets](./user/secrets.md)
 - [Product usage data](./user/telemetry.md)
 - [Remote access](./user/remote-access.md)
-- [Guest links](./user/guest-links.md)
 - [Outside agents (MCP)](./user/outside-agents.md)
 - [Running in the background](./user/background-service.md)
 - [Updating T3 Code](./user/updating.md)
