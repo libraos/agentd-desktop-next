@@ -349,6 +349,7 @@ const EMPTY_THREADS: readonly EnvironmentThreadShell[] = [];
 const SETTLED_TAIL_INITIAL_COUNT = 10;
 const SETTLED_TAIL_PAGE_COUNT = 25;
 const SETTLED_SHELF_EXPANDED_KEY = "t3code:sidebar:settled-expanded";
+const ALL_PROJECTS_SETTLED_SCOPE = "all-projects";
 const SNOOZED_SHELF_EXPANDED_KEY = "t3code:sidebar:snoozed-expanded";
 const WORKING_SHELF_EXPANDED_KEY = "t3code:sidebar:working-expanded";
 
@@ -510,13 +511,13 @@ function useSidebarThreads(input: {
 
   const { pinnedThreads, activeThreads, workingThreads, snoozedThreads, settledThreads } =
     partition;
-  // A project with only settled threads, such as one just imported, opens its Settled shelf
-  // until it is closed there, so choosing that project does not show an empty list.
+  // A list with only settled threads, such as one just imported, opens its Settled shelf until
+  // it is closed there, so the sidebar does not look empty.
+  const settledScope = projectScopeKey ?? ALL_PROJECTS_SETTLED_SCOPE;
   const [closedSettledScope, setClosedSettledScope] = useState<string | null>(null);
   const settledOpenedForScope =
     !settledShelfExpanded &&
-    scopedProjectKeys !== null &&
-    closedSettledScope !== projectScopeKey &&
+    closedSettledScope !== settledScope &&
     pinnedThreads.length + activeThreads.length + workingThreads.length + snoozedThreads.length ===
       0;
   const settledExpanded = settledShelfExpanded || settledOpenedForScope;
@@ -614,7 +615,7 @@ function useSidebarThreads(input: {
     settledShelfExpanded: settledExpanded,
     toggleSettledShelf: () =>
       settledOpenedForScope
-        ? setClosedSettledScope(projectScopeKey)
+        ? setClosedSettledScope(settledScope)
         : setSettledShelfExpanded((value) => !value),
     snoozedShelfExpanded,
     toggleSnoozedShelf: () => setSnoozedShelfExpanded((value) => !value),
@@ -3753,6 +3754,9 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                                 )}
                                 label={gt("Settled", { $context: "sidebar section" })}
                                 count={settledCount}
+                                title={gt(
+                                  "Idle, finished and imported threads. Open one to continue it.",
+                                )}
                                 dragging={from !== null}
                                 isDropTarget={dragTargetSection === "settled"}
                                 toggle={{
