@@ -20,6 +20,7 @@ import { AppAtomRegistryProvider } from "~/rpc/atomRegistry";
 import { makeThreadFixture } from "~/test-fixtures";
 import { render } from "../../../test/render";
 import { ToastProvider } from "../ui/toast";
+import { CloudWorkersSetup } from "./CloudWorkersSetup";
 import { openStartTaskDialog, StartTaskDialogHost } from "./StartTaskDialog";
 import { EMPTY_TASK_FIELDS } from "./startTask.logic";
 import { TaskDraftCard } from "./TaskDraftCard";
@@ -514,6 +515,7 @@ it("renders a drafted task as a card that starts it or opens the dialog with its
 const cloudReady = (fields: Partial<AgentdCloudSetup> = {}): AgentdCloudSetup => ({
   supported: true,
   canConfigure: true,
+  setupUrl: "https://cloud-api.libraos.com",
   subscription: null,
   project: "acme/app",
   balanceUsd: 20,
@@ -539,8 +541,7 @@ it("sets Cloud Workers up from the Start dialog with a pasted key, showing a ref
       AsyncResult.failure(
         Cause.fail(
           new AgentdCommandError({
-            message:
-              "LibraOS refused this account key. Copy the whole key from LibraOS Console and try again.",
+            message: "The Job API refused this account key. Copy the whole key and try again.",
             notSetUp: false,
           }),
         ),
@@ -558,9 +559,7 @@ it("sets Cloud Workers up from the Start dialog with a pasted key, showing a ref
 
   await userEvent.fill(field, key);
   await setUp.click();
-  await expect
-    .element(page.getByText(/LibraOS refused this account key/))
-    .toHaveAttribute("role", "alert");
+  await expect.element(page.getByText(/refused this account key/)).toHaveAttribute("role", "alert");
   await expect.element(field).toHaveValue("");
   expect(state.cloudRefresh).not.toHaveBeenCalled();
 
@@ -569,11 +568,72 @@ it("sets Cloud Workers up from the Start dialog with a pasted key, showing a ref
   await expect
     .element(page.getByRole("status").filter({ hasText: "Cloud Workers are set up." }))
     .toHaveTextContent("Cloud Workers are set up. Available LibraOS credit: $12.50");
+  const input = { key, url: "https://cloud-api.libraos.com" };
   expect(state.configure.mock.calls).toEqual([
-    [{ environmentId: thread.environmentId, input: { key } }],
-    [{ environmentId: thread.environmentId, input: { key } }],
+    [{ environmentId: thread.environmentId, input }],
+    [{ environmentId: thread.environmentId, input }],
   ]);
   expect(state.cloudRefresh).toHaveBeenCalled();
+});
+
+it("names a separately hosted Job API before asking for its key", async () => {
+  setup("feature/export");
+  const custom = "https://jobs.example.com";
+  state.cloud = cloudReady({ balanceUsd: null, problem: "setup", setupUrl: custom });
+  state.configure.mockResolvedValueOnce(AsyncResult.success({ balanceUsd: null }));
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await expect
+    .element(page.getByText(/AgentD sends it to https:\/\/jobs\.example\.com to check it/))
+    .toBeVisible();
+  await expect.element(page.getByText(/A LibraOS Console key won’t work there/)).toBeVisible();
+  await expect
+    .element(page.getByRole("link", { name: "Create a key in LibraOS Console" }))
+    .not.toBeInTheDocument();
+  await userEvent.fill(page.getByLabelText("Cloud Workers account key"), "custom-key");
+  await page.getByRole("button", { name: "Set up Cloud Workers" }).click();
+  await expect.element(page.getByText("Cloud Workers are set up.")).toBeVisible();
+  expect(state.configure).toHaveBeenCalledExactlyOnceWith({
+    environmentId: thread.environmentId,
+    input: { key: "custom-key", url: custom },
+  });
+});
+
+it("asks for no account key while agentd won't say where it would send one", async () => {
+  setup("feature/export");
+  state.cloud = cloudReady({ balanceUsd: null, problem: "setup", setupUrl: null });
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await expect.element(page.getByLabelText("Cloud Workers account key")).not.toBeInTheDocument();
+  await expect
+    .element(page.getByText(/didn’t say where it would send an account key/))
+    .toBeVisible();
+});
+
+it("offers no Keep the current key once a replacement key is on its way", async () => {
+  setup("feature/export", false);
+  let answer: (value: unknown) => void = () => {};
+  state.configure.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+  const cancel = vi.fn();
+  await using _screen = await render(
+    <AppAtomRegistryProvider>
+      <CloudWorkersSetup
+        environmentId={thread.environmentId}
+        canConfigure
+        setupUrl="https://cloud-api.libraos.com"
+        onCancel={cancel}
+      />
+    </AppAtomRegistryProvider>,
+  );
+  const keep = page.getByRole("button", { name: "Keep the current key" });
+  await expect.element(keep).toBeEnabled();
+  await userEvent.fill(page.getByLabelText("Cloud Workers account key"), "new-key");
+  await page.getByRole("button", { name: "Set up Cloud Workers" }).click();
+  await expect.element(page.getByRole("button", { name: "Setting up…" })).toBeVisible();
+  await expect.element(keep).toBeDisabled();
+  answer(AsyncResult.success({ balanceUsd: 1 }));
+  await expect.element(page.getByText(/Cloud Workers are set up/)).toBeVisible();
+  expect(cancel).not.toHaveBeenCalled();
 });
 
 it("keeps the Console link and asks for agentd upgrade when agentd has no cloud setup", async () => {
@@ -677,7 +737,9 @@ it("says how to set up a plan with no credential, and starts with a chosen file"
   await page.getByRole("combobox", { name: "Plan" }).click();
   await page.getByRole("option", { name: "ChatGPT (Codex)" }).click();
   await expect.element(page.getByText(/codex login$/)).toBeVisible();
-  await expect.element(page.getByText(/usually ~\/\.codex\/auth\.json/)).toBeVisible();
+  await expect
+    .element(page.getByText(/absolute path of Codex’s auth.json on that machine/))
+    .toBeVisible();
   await expect.element(page.getByText(/^Billed to your ChatGPT plan\./)).toBeVisible();
   await userEvent.fill(
     page.getByLabelText("ChatGPT auth.json path (optional)"),

@@ -224,6 +224,7 @@ export function StartTaskCloud({
               <CloudWorkersSetup
                 environmentId={cloud.environmentId}
                 canConfigure={setup.canConfigure === true}
+                setupUrl={setup.setupUrl}
                 onConfigured={cloud.refresh}
               />
             </div>
@@ -461,10 +462,10 @@ function SubscriptionPlan({
             <p className="text-muted-foreground">
               {plan === "codex" ? (
                 <T>
-                  Then enter the path of Codex’s auth.json below (usually ~/.codex/auth.json, or
-                  auth.json in CODEX_HOME), or set it once with agentd config set
-                  cloud.codex_auth_file PATH. Run agentd config set in a terminal, then reopen this
-                  dialog.
+                  Then enter the absolute path of Codex’s auth.json on that machine below (in the
+                  .codex folder of its home folder, or in CODEX_HOME), or set it once with agentd
+                  config set cloud.codex_auth_file PATH. Run agentd config set in a terminal, then
+                  reopen this dialog.
                 </T>
               ) : (
                 <T>

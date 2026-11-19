@@ -13,6 +13,7 @@ import {
   type AgentdStartTaskResult,
 } from "@t3tools/contracts";
 import * as Cache from "effect/Cache";
+import * as Clock from "effect/Clock";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
 import * as Schema from "effect/Schema";
@@ -79,15 +80,19 @@ const planJson = Schema.Struct({
   valid: Schema.optionalKey(Schema.NullOr(Schema.Boolean)),
   expires_about: Schema.optionalKey(Schema.NullOr(Schema.String)),
 });
-// agentd's per-provider credential report. Codex may be named chatgpt.
+// `agentd cloud subscription --json`: each plan under providers.
 const subscriptionJson = Schema.decodeUnknownOption(
   Schema.fromJsonString(
     Schema.Struct({
-      claude: Schema.optionalKey(Schema.NullOr(planJson)),
-      codex: Schema.optionalKey(Schema.NullOr(planJson)),
-      chatgpt: Schema.optionalKey(Schema.NullOr(planJson)),
+      providers: Schema.Struct({
+        claude: Schema.optionalKey(Schema.NullOr(planJson)),
+        codex: Schema.optionalKey(Schema.NullOr(planJson)),
+      }),
     }),
   ),
+);
+const setupTarget = Schema.decodeUnknownOption(
+  Schema.fromJsonString(Schema.Struct({ url: Schema.String })),
 );
 const configJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown));
 const EXPIRY = /^\d{4}-\d{2}-\d{2}$/;
@@ -118,16 +123,24 @@ function usdAmount(value: unknown): number | null {
   return typeof usd === "number" && Number.isFinite(usd) ? usd : null;
 }
 
+/** `today` is YYYY-MM-DD: an expiry before it is not valid, whatever else agentd said. */
 function planState(
   supported: boolean,
   plan: typeof planJson.Type | null | undefined,
+  today: string,
 ): AgentdCloudPlanState {
-  const expires = plan?.expires_about ?? null;
+  const configured = plan?.configured === true;
+  const date = plan?.expires_about ?? null;
+  const expiresAbout = configured && date !== null && EXPIRY.test(date) ? date : null;
   return {
     supported,
-    configured: plan?.configured === true,
-    valid: plan?.valid ?? null,
-    expiresAbout: expires !== null && EXPIRY.test(expires) ? expires : null,
+    configured,
+    valid: !configured
+      ? null
+      : expiresAbout !== null && expiresAbout < today
+        ? false
+        : (plan?.valid ?? null),
+    expiresAbout,
   };
 }
 
@@ -274,6 +287,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
     features: CloudFeatures,
   ) {
     const setupUnavailable = platform === "win32";
+    const today = new Date(yield* Clock.currentTimeMillis).toISOString().slice(0, 10);
     if (features.codex) {
       const report = yield* run(agentdArgs.cloudSubscription(), { command }).pipe(
         Effect.map(subscriptionJson),
@@ -281,8 +295,8 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       );
       if (report?._tag === "Some") {
         return {
-          claude: planState(true, report.value.claude),
-          codex: planState(true, report.value.codex ?? report.value.chatgpt),
+          claude: planState(true, report.value.providers.claude, today),
+          codex: planState(true, report.value.providers.codex, today),
           setupUnavailable,
         } satisfies AgentdCloudSubscription;
       }
@@ -296,16 +310,26 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       { concurrency: 3 },
     );
     return {
-      // agentd gives no expiry for a token file it cannot read or that holds no setup-token.
-      claude: planState(true, {
-        configured: claudeFile !== null,
-        valid: claudeFile === null ? null : expires !== null,
-        expires_about: expires,
-      }),
-      codex: planState(features.codex, { configured: codexFile !== null, valid: null }),
+      // Older agentd dates any nonempty file without checking it holds a setup-token: an estimate.
+      claude: planState(
+        true,
+        { configured: claudeFile !== null, valid: null, expires_about: expires },
+        today,
+      ),
+      codex: planState(features.codex, { configured: codexFile !== null, valid: null }, today),
       setupUnavailable,
     } satisfies AgentdCloudSubscription;
   });
+
+  // Where `cloud setup` would send a key: [cloud] url, else LibraOS. Null when agentd won't say.
+  const setupDestination = (command: string) =>
+    run(agentdArgs.cloudSetupTarget(), { command }).pipe(
+      Effect.map((stdout) => {
+        const target = setupTarget(stdout);
+        return target._tag === "Some" ? target.value.url : null;
+      }),
+      Effect.orElseSucceed(() => null),
+    );
 
   const originProject = Effect.fn("AgentdCloud.originProject")(function* (cwd: string) {
     if (!isAbsolute(cwd) || cwd.includes("\0")) return null;
@@ -328,9 +352,11 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
     if (found === null) return { ...emptySetup, supported: false };
     const { command, version, features } = found;
     const project = cwd === null ? null : yield* originProject(cwd);
+    const canConfigure = yield* Cache.get(setupCommand, [command, version]);
     const base = {
       supported: true,
-      canConfigure: yield* Cache.get(setupCommand, [command, version]),
+      canConfigure,
+      setupUrl: canConfigure ? yield* setupDestination(command) : null,
       subscription: null,
     };
     if ((cwd !== null && project === null) || !includeBalance)
@@ -359,18 +385,18 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
 
   const cloudConfigure = Effect.fn("AgentdCloud.configure")(function* ({
     key,
+    url,
   }: AgentdCloudConfigureInput) {
     const secret = key.trim();
     if (secret === "" || /[\r\n\0]/.test(secret))
-      return yield* commandError(
-        "Paste the account key on one line, exactly as LibraOS Console shows it.",
-      );
+      return yield* commandError("Paste the account key on one line.");
     const found = yield* cloudAgentd;
     if (found === null || !(yield* Cache.get(setupCommand, [found.command, found.version])))
       return yield* commandError(UPGRADE_SETUP);
     // agentd never prints the key; the reason is scrubbed of it all the same.
     const scrub = (message: string) => message.split(secret).join("[redacted]");
-    const stdout = yield* run(agentdArgs.cloudConfigure(), {
+    const argv = yield* args(() => agentdArgs.cloudConfigure(url));
+    const stdout = yield* run(argv, {
       command: found.command,
       stdin: `${secret}\n`,
     }).pipe(
@@ -387,27 +413,33 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
     } satisfies AgentdCloudConfigured;
   });
 
-  // With both plans configured agentd asks which to use, so the chosen one's own file is named.
-  const namedPlan = Effect.fn("AgentdCloud.namedPlan")(function* (
+  // The chosen plan's configured file, always named: with no flag agentd runs on whichever plan
+  // is set up, which may not be the one chosen.
+  const boundPlan = Effect.fn("AgentdCloud.boundPlan")(function* (
     command: string,
     input: AgentdCloudTaskInput,
   ) {
-    const [claude, codex] = yield* Effect.all(
-      [
-        configured(command, "cloud.claude_token_file"),
-        configured(command, "cloud.codex_auth_file"),
-      ],
-      { concurrency: 2 },
+    const codex = input.cloud.plan === "codex";
+    const file = yield* run(
+      agentdArgs.configGet(codex ? "cloud.codex_auth_file" : "cloud.claude_token_file"),
+      { command },
+    ).pipe(
+      Effect.map(configText),
+      Effect.mapError(() =>
+        commandError(
+          codex
+            ? "AgentD couldn’t read which ChatGPT sign-in is set up, so nothing was submitted. Try again."
+            : "AgentD couldn’t read which Claude token is set up, so nothing was submitted. Try again.",
+        ),
+      ),
     );
-    if (claude === null || codex === null) return input;
-    const file = input.cloud.plan === "codex" ? codex : claude;
-    if (!isKeyFile(file) || !isAbsolute(file)) return input;
+    if (file === null || !isKeyFile(file) || !isAbsolute(file))
+      return yield* commandError(
+        codex ? CLOUD_REASONS.chatgptAuth : CLOUD_REASONS.subscriptionToken,
+      );
     return {
       ...input,
-      cloud: {
-        ...input.cloud,
-        ...(input.cloud.plan === "codex" ? { codexAuthFile: file } : { claudeTokenFile: file }),
-      },
+      cloud: { ...input.cloud, ...(codex ? { codexAuthFile: file } : { claudeTokenFile: file }) },
     };
   });
 
@@ -443,9 +475,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
     if (subscribed && input.cloud.plan === "codex" && !features.codex)
       return yield* commandError(UPGRADE_CHATGPT);
     const resolved =
-      subscribed && planFile === undefined && features.codex
-        ? yield* namedPlan(command, input)
-        : input;
+      subscribed && planFile === undefined ? yield* boundPlan(command, input) : input;
     const project = yield* originProject(input.cwd);
     if (project === null) return yield* commandError(originError);
     if (inFlight.has(project))

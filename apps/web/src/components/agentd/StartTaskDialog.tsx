@@ -456,6 +456,7 @@ function StartTaskDialog({
                 <CloudWorkersSetup
                   environmentId={environmentId}
                   canConfigure={cloud.setup?.canConfigure === true}
+                  setupUrl={cloud.setup?.setupUrl}
                   onConfigured={cloud.refresh}
                 />
               ) : null}

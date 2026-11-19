@@ -18,6 +18,8 @@ export const CLOUD_REASONS = {
     "Your Claude plan reached its usage limit. Wait for it to reset before trying again.",
   subscriptionToken:
     "Your Claude subscription isn’t set up. Run claude setup-token in a terminal and save the token in a private file.",
+  subscriptionTokenFormat:
+    "Your Claude token file doesn’t hold a token from claude setup-token. Run claude setup-token in a terminal and save the token alone in the file.",
   chatgptUnavailable:
     "Running on your ChatGPT plan isn’t available yet. Use LibraOS or your API key.",
   chatgptSignIn: "Your ChatGPT sign-in for Codex isn’t valid. Run codex login again.",
@@ -70,6 +72,8 @@ export function cloudReason(message: string): string | null {
     return CLOUD_REASONS.privateFile;
   const chatgpt = chatgptReason(message);
   if (chatgpt !== null) return chatgpt;
+  if (/must hold the token from claude setup-token/i.test(message))
+    return CLOUD_REASONS.subscriptionTokenFormat;
   if (/subscription needs your Claude token|needs cloud\.claude_token_file/i.test(message))
     return CLOUD_REASONS.subscriptionToken;
   if (
@@ -132,13 +136,13 @@ function chatgptReason(message: string): string | null {
 export function cloudSetupReason(message: string): string {
   const said = message.replace(/^cloud setup:\s*/i, "").trim();
   if (/refused the account key/i.test(said))
-    return "LibraOS refused this account key. Copy the whole key from LibraOS Console and try again.";
+    return "The Job API refused this account key. Copy the whole key and try again.";
   if (/could not reach the Job API|TLS certificate/i.test(said))
     return "AgentD couldn’t reach Cloud Workers. Check this machine’s connection and try again.";
   if (/account balance/i.test(said))
     return "Cloud Workers couldn’t confirm the account balance. Try again in a moment.";
   if (/on one line|too long|could not read the account key/i.test(said))
-    return "Paste the account key on one line, exactly as LibraOS Console shows it.";
+    return "Paste the account key on one line.";
   return said === "" ? "AgentD couldn’t set up Cloud Workers." : said;
 }
 

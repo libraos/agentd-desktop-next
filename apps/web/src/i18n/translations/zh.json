@@ -3091,7 +3091,6 @@
     }
   ],
   "faff20f08da2ce6c": "无法获取 LibraOS 余额。",
-  "5d5e894500e502ae": "保留当前 key",
   "25844d3596093e37": "更换账号 key",
   "a778b88e13c3f7eb": "无法读取 AgentD",
   "5a0125dd9241cdec": "加载中…",
@@ -3276,11 +3275,30 @@
   "1cdcb8450d2249b5": "在 LibraOS Console 中打开 Cloud Workers 设置",
   "1b459a8c87861ade": "在 LibraOS Console 中创建 key",
   "3ba6d7ffc9419c80": "要在这里设置 Cloud Workers，需要先升级 AgentD。运行下面的命令，然后重新打开此页面：",
+  "95ac78289e7df823": "AgentD 没有说明会把账户密钥发送到哪里，因此这里不会要求输入密钥。",
   "d4303d9c68fbd944": "这个连接无法设置 Cloud Workers。",
   "ea576c20385d20ea": "设置 Cloud Workers",
   "c0cc5c88f4caee14": "在 LibraOS Console 中创建一个 Cloud Workers 账号 key。",
-  "292dc5c3393d8e3a": "把 key 粘贴到这里。AgentD 会把它保存在此环境所在机器上的私有文件中。",
+  "6ef12fe7234ea88b": [
+    "请向运营 ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " 上 Job API 的人员获取账户密钥。LibraOS Console 的密钥在那里无法使用。"
+  ],
+  "cd2bc6844ecf0869": [
+    "在此粘贴密钥。AgentD 会把它发送到 ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " 进行验证，然后保存在此环境所在机器上的私有文件中。"
+  ],
   "204a8f2f6030de66": "Cloud Workers 账号 key",
+  "5d5e894500e502ae": "保留当前 key",
   "fe52cec33306562c": "Cloud Workers 已设置好。",
   "bc22db6a4c001038": [
     "Cloud Workers 已设置好。可用 LibraOS 额度：",
@@ -3350,7 +3368,7 @@
   "75191ad4c65ff49d": "你的 ChatGPT 套餐还没有为 Cloud Workers 设置。请在终端里登录：",
   "6f96d6861970cb51": "你的 Claude token 缺失、已过期或无效。请在终端里生成一个新的：",
   "7921f79830f7d147": "你的 Claude 套餐还没有为 Cloud Workers 设置。请在终端里生成 token：",
-  "e89d494e9b58c529": "然后在下面填写 Codex 的 auth.json 路径（通常是 ~/.codex/auth.json，或 CODEX_HOME 中的 auth.json），或者用 agentd config set cloud.codex_auth_file PATH 设置一次。在终端里运行 agentd config set，然后重新打开此对话框。",
+  "46ff2c979a96422f": "然后在下方输入该机器上 Codex 的 auth.json 的绝对路径（位于其主目录的 .codex 文件夹中，或在 CODEX_HOME 中），或者用 agentd config set cloud.codex_auth_file PATH 设置一次。在终端中运行 agentd config set，然后重新打开此对话框。",
   "da55459cbf687a40": "把 token 单独保存到一个私有文件中（chmod 600），然后在下面填写它的路径，或者用 agentd config set cloud.claude_token_file PATH 设置一次。保存好后回到此对话框。",
   "70e1f86eec65c64b": "正在使用 AgentD 已设置的 ChatGPT 登录。",
   "cd454f65356379e5": "正在使用 AgentD 已设置的 Claude token。",

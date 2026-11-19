@@ -126,7 +126,7 @@ export function useAgentdCommands() {
 }
 
 /** The Cloud Workers account alone, with no project: balance, setup and plans. */
-export function useAgentdCloudAccount(target: EnvironmentId) {
+export function useAgentdCloudAccount(target: EnvironmentId | null) {
   const environmentId = useAgentdEnvironment(target);
   return useEnvironmentQuery(
     environmentId === null

@@ -490,6 +490,7 @@ describe("AgentdBridge", () => {
       expect(yield* bridge.cloudSetup({ cwd, includeBalance: true })).toEqual({
         supported: true,
         canConfigure: false,
+        setupUrl: null,
         subscription: null,
         project: "fork-owner/its-fork",
         balanceUsd: 12.75,
@@ -730,15 +731,17 @@ describe("AgentdBridge", () => {
     }),
   );
 
-  it.effect("runs cloud tasks on a Claude or ChatGPT plan, naming a file only when chosen", () =>
+  it.effect("runs cloud tasks on the chosen Claude or ChatGPT plan's own file, or none", () =>
     Effect.gen(function* () {
       const runs: Array<ProcessRunner.ProcessRunInput> = [];
       let help =
         "usage: agentd handoff offer [--cloud] [--model-access libraos|byok|subscription] [--claude-token-file F] [--codex-auth-file F]";
+      // Recorded shape of `agentd cloud subscription --json`, trimmed.
       let report = output(
-        '{"claude":{"configured":true,"valid":true,"expires_about":"2027-11-01"},"codex":{"configured":false,"valid":null}}',
+        '{"providers":{"claude":{"provider":"claude","configured":true,"file":"/home/me/.secrets/claude-token","valid":true,"expires_about":"2027-11-01"},"codex":{"provider":"codex","configured":false,"valid":false}},"default_provider":"claude","model_access":"subscription"}',
       );
-      let codexFile = '""';
+      let claudeFile = output('"/home/me/.secrets/claude-token"');
+      let codexFile = output('""');
       const ledger = cloudLedger();
       let handoff = 0;
       const bridge = yield* makeBridge({ AGENTD_BIN: process.execPath }, (input) => {
@@ -749,11 +752,11 @@ describe("AgentdBridge", () => {
           case "cloud subscription --json":
             return Effect.succeed(report);
           case "config get cloud.claude_token_file":
-            return Effect.succeed(output('"/home/me/.secrets/claude-token"'));
+            return Effect.succeed(claudeFile);
           case "config get cloud.claude_token_expires_about":
             return Effect.succeed(output('"2027-10-02"'));
           case "config get cloud.codex_auth_file":
-            return Effect.succeed(output(codexFile));
+            return Effect.succeed(codexFile);
         }
         switch (input.args.slice(0, 2).join(" ")) {
           case "version":
@@ -813,14 +816,27 @@ describe("AgentdBridge", () => {
         codex: { supported: true, configured: false, valid: null, expiresAbout: null },
         setupUnavailable: platform === "win32",
       });
+      // With no flag agentd runs on whichever plan is set up, so the chosen plan's file is named.
       yield* task("On the configured Claude token", { plan: "claude" });
       yield* task("On a chosen Claude token", { plan: "claude", claudeTokenFile: authFile });
       yield* task("On a chosen ChatGPT login", { plan: "codex", codexAuthFile: authFile });
-      // Both plans configured: agentd would ask which, so the chosen plan's own file is named.
-      codexFile = '"/home/me/.codex/auth.json"';
+      // Only Claude is set up: ChatGPT is refused before anything is submitted, never run on Claude.
+      expect((yield* Effect.flip(task("ChatGPT, not set up", { plan: "codex" }))).message).toBe(
+        "Your ChatGPT plan isn’t set up for Codex. Run codex login in a terminal.",
+      );
+      codexFile = output('"/home/me/.codex/auth.json"');
       yield* task("On the configured ChatGPT login", { plan: "codex" });
+      claudeFile = output('""');
+      expect((yield* Effect.flip(task("Claude, not set up", { plan: "claude" }))).message).toBe(
+        "Your Claude subscription isn’t set up. Run claude setup-token in a terminal and save the token in a private file.",
+      );
+      claudeFile = output("config is locked", 1);
+      expect((yield* Effect.flip(task("Claude, unreadable", { plan: "claude" }))).message).toBe(
+        "AgentD couldn’t read which Claude token is set up, so nothing was submitted. Try again.",
+      );
+      claudeFile = output('"/home/me/.secrets/claude-token"');
       expect(credentialFlags()).toEqual([
-        ["--model-access", "subscription"],
+        ["--model-access", "subscription", "--claude-token-file", "/home/me/.secrets/claude-token"],
         ["--model-access", "subscription", "--claude-token-file", authFile],
         ["--model-access", "subscription", "--codex-auth-file", authFile],
         ["--model-access", "subscription", "--codex-auth-file", "/home/me/.codex/auth.json"],
@@ -828,15 +844,23 @@ describe("AgentdBridge", () => {
       expect((yield* Effect.flip(task("No plan", {}))).message).toBe(
         "Choose the plan this cloud task runs on.",
       );
+      // An expiry already past is not valid, whatever else agentd says.
+      yield* TestClock.setTime(Date.parse("2027-11-02T00:00:00Z"));
+      expect(
+        (yield* bridge.cloudSetup({ cwd, includeBalance: true })).subscription?.claude,
+      ).toEqual({ supported: true, configured: true, valid: false, expiresAbout: "2027-11-01" });
+      yield* TestClock.setTime(0);
 
-      // v0.1.14: Claude only; the token state comes from agentd's config keys.
+      // v0.1.14: Claude only; the token state comes from agentd's config keys. Its expiry dates any
+      // nonempty file, so whether the token is valid is not known until a task runs.
       help = "usage: agentd handoff offer [--cloud] [--claude-token-file F]";
       report = output("unknown cloud command", 2);
       expect((yield* bridge.cloudSetup({ cwd, includeBalance: true })).subscription).toEqual({
-        claude: { supported: true, configured: true, valid: true, expiresAbout: "2027-10-02" },
+        claude: { supported: true, configured: true, valid: null, expiresAbout: "2027-10-02" },
         codex: { supported: false, configured: false, valid: null, expiresAbout: null },
         setupUnavailable: platform === "win32",
       });
+      yield* task("v0.1.14, on the configured Claude token", { plan: "claude" });
       expect((yield* Effect.flip(task("Too old", { plan: "codex" }))).message).toBe(
         "This version of AgentD can’t run Codex on your ChatGPT plan. Run agentd upgrade, then try again.",
       );
@@ -845,15 +869,23 @@ describe("AgentdBridge", () => {
       expect((yield* Effect.flip(task("Older", { plan: "claude" }))).message).toBe(
         "This version of AgentD can’t run Cloud Workers on your own subscription. Run agentd upgrade, then try again.",
       );
-      expect(credentialFlags()).toHaveLength(4);
+      expect(credentialFlags()).toHaveLength(5);
+      expect(credentialFlags()[4]).toEqual([
+        "--model-access",
+        "subscription",
+        "--claude-token-file",
+        "/home/me/.secrets/claude-token",
+      ]);
       expect(runs.some(({ args }) => args.join(" ") === "cloud subscription --json")).toBe(true);
     }),
   );
 
-  it.effect("installs the cloud account key from stdin only and reports its balance", () =>
+  it.effect("installs the cloud account key from stdin only, to the Job API shown", () =>
     Effect.gen(function* () {
       const runs: Array<ProcessRunner.ProcessRunInput> = [];
       const key = "lcw_live_0123456789abcdefghij";
+      const libraos = "https://cloud-api.libraos.com";
+      let target = output(`{"url":"${libraos}","dry_run":true}`);
       let cloudHelp = "usage: agentd cloud sync | balance";
       let setup = output(
         '{"url":"https://cloud-api.libraos.com","balance":{"available_usd":12.5}}',
@@ -884,7 +916,7 @@ describe("AgentdBridge", () => {
         project: null,
         problem: "setup",
       });
-      expect((yield* Effect.flip(bridge.cloudConfigure({ key }))).message).toBe(
+      expect((yield* Effect.flip(bridge.cloudConfigure({ key, url: libraos }))).message).toBe(
         "This version of AgentD can’t set up Cloud Workers. Run agentd upgrade, then try again.",
       );
       expect(setups()).toEqual([]);
@@ -898,32 +930,62 @@ describe("AgentdBridge", () => {
         if (input.args[0] === "version") return Effect.succeed(output("agentd v0.1.15"));
         if (input.args.join(" ") === "handoff offer --help")
           return Effect.succeed(output("usage: agentd handoff offer [--cloud]"));
+        if (input.args.join(" ") === "cloud setup --dry-run --json") return Effect.succeed(target);
         if (input.args[1] === "setup") return Effect.succeed(setup);
         return Effect.die(`unexpected agentd ${input.args.join(" ")}`);
       });
       expect(yield* upgraded.cloudSetup({ cwd: null, includeBalance: false })).toMatchObject({
         canConfigure: true,
+        setupUrl: libraos,
       });
-      expect(yield* upgraded.cloudConfigure({ key: `  ${key}\n` })).toEqual({ balanceUsd: 12.5 });
+      expect(yield* upgraded.cloudConfigure({ key: `  ${key}\n`, url: libraos })).toEqual({
+        balanceUsd: 12.5,
+      });
 
       setup = output("cloud setup: the Job API refused the account key (HTTP 401)", 1);
-      expect((yield* Effect.flip(upgraded.cloudConfigure({ key }))).message).toBe(
-        "LibraOS refused this account key. Copy the whole key from LibraOS Console and try again.",
+      expect((yield* Effect.flip(upgraded.cloudConfigure({ key, url: libraos }))).message).toBe(
+        "The Job API refused this account key. Copy the whole key and try again.",
       );
       setup = output(`cloud setup: unexpected answer near ${key}`, 1);
-      expect((yield* Effect.flip(upgraded.cloudConfigure({ key }))).message).toBe(
+      expect((yield* Effect.flip(upgraded.cloudConfigure({ key, url: libraos }))).message).toBe(
         "unexpected answer near [redacted]",
       );
-      expect((yield* Effect.flip(upgraded.cloudConfigure({ key: "two\nlines" }))).message).toBe(
-        "Paste the account key on one line, exactly as LibraOS Console shows it.",
-      );
+      expect(
+        (yield* Effect.flip(upgraded.cloudConfigure({ key: "two\nlines", url: libraos }))).message,
+      ).toBe("Paste the account key on one line.");
 
-      expect(setups().map(({ args, stdin }) => [args, stdin])).toEqual(
-        Array.from({ length: 3 }, () => [
-          ["cloud", "setup", "--key-file", "-", "--json"],
+      // A separately hosted Job API ([cloud] url) is shown, and the key is bound to it.
+      const custom = "https://jobs.example.com";
+      target = output(`{"url":"${custom}","dry_run":true}`);
+      expect(yield* upgraded.cloudSetup({ cwd: null, includeBalance: false })).toMatchObject({
+        setupUrl: custom,
+      });
+      setup = output(`{"url":"${custom}","balance":{"available_usd":"3.00"}}`);
+      expect(yield* upgraded.cloudConfigure({ key, url: custom })).toEqual({ balanceUsd: 3 });
+      // agentd that won't say where: no destination, so the app asks for no key.
+      target = output("cloud setup: use an HTTPS Job API URL", 1);
+      expect(yield* upgraded.cloudSetup({ cwd: null, includeBalance: false })).toMatchObject({
+        setupUrl: null,
+      });
+      for (const url of ["http://jobs.example.com", "https://u:p@jobs.example.com", "--url"]) {
+        expect((yield* Effect.flip(upgraded.cloudConfigure({ key, url }))).message).toMatch(
+          /Job API address/,
+        );
+      }
+
+      const keyed = setups().filter(({ args }) => !args.includes("--dry-run"));
+      expect(keyed.map(({ args, stdin }) => [args, stdin])).toEqual([
+        ...Array.from({ length: 3 }, () => [
+          ["cloud", "setup", "--url", libraos, "--key-file", "-", "--json"],
           `${key}\n`,
         ]),
-      );
+        [["cloud", "setup", "--url", custom, "--key-file", "-", "--json"], `${key}\n`],
+      ]);
+      expect(
+        setups()
+          .filter(({ args }) => args.includes("--dry-run"))
+          .every(({ stdin }) => stdin === undefined),
+      ).toBe(true);
       expect(JSON.stringify(runs.map(({ args }) => args))).not.toContain(key);
     }),
   );

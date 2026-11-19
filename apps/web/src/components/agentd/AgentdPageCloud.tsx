@@ -28,14 +28,16 @@ export function AgentdPageCloud({ environmentId }: { readonly environmentId: Env
       : new Intl.NumberFormat(locale, { style: "currency", currency: "USD" }).format(
           setup.balanceUsd,
         );
-  const form = (
+  const form = (cancel?: () => void) => (
     <CloudWorkersSetup
       environmentId={environmentId}
       canConfigure={setup.canConfigure === true}
+      setupUrl={setup.setupUrl}
       onConfigured={() => {
         setReplacing(false);
         account.refresh();
       }}
+      onCancel={cancel}
     />
   );
   if (!configured)
@@ -44,7 +46,7 @@ export function AgentdPageCloud({ environmentId }: { readonly environmentId: Env
         <p>
           <T>Cloud Workers aren’t set up on this machine.</T>
         </p>
-        {form}
+        {form()}
       </div>
     );
   return (
@@ -63,12 +65,7 @@ export function AgentdPageCloud({ environmentId }: { readonly environmentId: Env
         </p>
       )}
       {replacing ? (
-        <>
-          {form}
-          <Button type="button" size="xs" variant="ghost" onClick={() => setReplacing(false)}>
-            <T>Keep the current key</T>
-          </Button>
-        </>
+        form(() => setReplacing(false))
       ) : setup.canConfigure ? (
         <Button type="button" size="xs" variant="outline" onClick={() => setReplacing(true)}>
           <T>Replace the account key</T>

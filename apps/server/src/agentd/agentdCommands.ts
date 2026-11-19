@@ -55,6 +55,27 @@ function agentdServerUrl(value: string): string {
   return url.origin + url.pathname.replace(/\/+$/, "");
 }
 
+/** A Job API URL as `cloud setup` reported it: https, or http to loopback, with no query. */
+function jobApiUrl(value: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new AgentdArgumentError({ message: "the Job API address must be a URL" });
+  }
+  const loopback = /^(?:localhost|127\.\d+\.\d+\.\d+|\[::1\])$/i.test(url.hostname);
+  if (
+    !(url.protocol === "https:" || (url.protocol === "http:" && loopback)) ||
+    url.username !== "" ||
+    url.password !== "" ||
+    url.search !== "" ||
+    url.hash !== ""
+  ) {
+    throw new AgentdArgumentError({ message: "the Job API address must be an https:// URL" });
+  }
+  return value;
+}
+
 export function agentdTicket(value: string): string {
   const ticket = value.trim();
   if (!TICKET.test(ticket)) {
@@ -131,8 +152,18 @@ export const agentdArgs = {
   cloudHelp: () => ["handoff", "offer", "--help"],
   cloudBalance: () => ["cloud", "balance", "--json"],
   cloudCommands: () => ["help", "cloud"],
-  // The account key goes on stdin only.
-  cloudConfigure: () => ["cloud", "setup", "--key-file", "-", "--json"],
+  // The Job API setup would send the key to; reads no key and writes nothing.
+  cloudSetupTarget: () => ["cloud", "setup", "--dry-run", "--json"],
+  // The account key goes on stdin only, to the Job API the user was shown.
+  cloudConfigure: (url: string) => [
+    "cloud",
+    "setup",
+    "--url",
+    jobApiUrl(url),
+    "--key-file",
+    "-",
+    "--json",
+  ],
   // The per-plan credential report; older agentd answers the config keys below.
   cloudSubscription: () => ["cloud", "subscription", "--json"],
   configGet: (

@@ -3087,7 +3087,6 @@
     }
   ],
   "faff20f08da2ce6c": "LibraOS balance unavailable.",
-  "5d5e894500e502ae": "Keep the current key",
   "25844d3596093e37": "Replace the account key",
   "a778b88e13c3f7eb": "Couldn't read AgentD",
   "5a0125dd9241cdec": "Loading…",
@@ -3273,11 +3272,30 @@
   "1cdcb8450d2249b5": "Open Cloud Workers setup in LibraOS Console",
   "1b459a8c87861ade": "Create a key in LibraOS Console",
   "3ba6d7ffc9419c80": "To set up Cloud Workers here, AgentD needs an upgrade. Run this, then reopen this view:",
+  "95ac78289e7df823": "AgentD didn’t say where it would send an account key, so none is asked for here.",
   "d4303d9c68fbd944": "This connection can’t set up Cloud Workers.",
   "ea576c20385d20ea": "Set up Cloud Workers",
   "c0cc5c88f4caee14": "Create a Cloud Workers account key in LibraOS Console.",
-  "292dc5c3393d8e3a": "Paste the key here. AgentD saves it in a private file on this environment’s machine.",
+  "6ef12fe7234ea88b": [
+    "Get an account key from whoever runs the Job API at ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ". A LibraOS Console key won’t work there."
+  ],
+  "cd2bc6844ecf0869": [
+    "Paste the key here. AgentD sends it to ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " to check it, then saves it in a private file on this environment’s machine."
+  ],
   "204a8f2f6030de66": "Cloud Workers account key",
+  "5d5e894500e502ae": "Keep the current key",
   "fe52cec33306562c": "Cloud Workers are set up.",
   "bc22db6a4c001038": [
     "Cloud Workers are set up. Available LibraOS credit: ",
@@ -3347,7 +3365,7 @@
   "75191ad4c65ff49d": "Your ChatGPT plan isn’t set up for Cloud Workers. Sign in in a terminal:",
   "6f96d6861970cb51": "Your Claude token is missing, expired or not valid. Make a new one in a terminal:",
   "7921f79830f7d147": "Your Claude plan isn’t set up for Cloud Workers. Make a token in a terminal:",
-  "e89d494e9b58c529": "Then enter the path of Codex’s auth.json below (usually ~/.codex/auth.json, or auth.json in CODEX_HOME), or set it once with agentd config set cloud.codex_auth_file PATH. Run agentd config set in a terminal, then reopen this dialog.",
+  "46ff2c979a96422f": "Then enter the absolute path of Codex’s auth.json on that machine below (in the .codex folder of its home folder, or in CODEX_HOME), or set it once with agentd config set cloud.codex_auth_file PATH. Run agentd config set in a terminal, then reopen this dialog.",
   "da55459cbf687a40": "Save the token alone in a private file (chmod 600), then enter its path below, or set it once with agentd config set cloud.claude_token_file PATH. Come back to this dialog when it’s saved.",
   "70e1f86eec65c64b": "Using the ChatGPT sign-in AgentD has set up.",
   "cd454f65356379e5": "Using the Claude token AgentD has set up.",

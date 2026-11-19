@@ -13,6 +13,7 @@ import { useState } from "react";
 
 import {
   useAgentdApprovals,
+  useAgentdCloudAccount,
   useAgentdInbox,
   useAgentdPeople,
   useAgentdStatus,
@@ -56,6 +57,7 @@ export function AgentdPage() {
     environmentId: NonNullable<typeof environmentId>;
   } | null>(null);
   const task = useAgentdTask(selectedTask?.id ?? null, selectedTask?.environmentId ?? null);
+  const cloudAccount = useAgentdCloudAccount(activeEnvironmentId);
 
   const refresh = () => {
     status.refresh();
@@ -64,6 +66,7 @@ export function AgentdPage() {
     approvals.refresh();
     inbox.refresh();
     task.refresh();
+    cloudAccount.refresh();
   };
 
   const openTask = (row: AgentdTaskRow) => {

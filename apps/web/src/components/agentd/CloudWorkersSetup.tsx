@@ -15,6 +15,8 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 
 const CONSOLE_URL = "https://console.libraos.com/agentd";
+// agentd's own default Job API; any other is a separately hosted one with its own keys.
+const LIBRAOS_JOB_API = "https://cloud-api.libraos.com";
 
 function CloudWorkersSetupLink() {
   return (
@@ -47,17 +49,24 @@ function ConsoleButton() {
 
 /**
  * Set up Cloud Workers: create an account key in Console, paste it, and agentd installs it with
- * `agentd cloud setup`. The key is read from the field at submit and kept in no React state.
+ * `agentd cloud setup`. The key is read from the field at submit and kept in no React state, and
+ * goes only to the Job API shown here.
  */
 export function CloudWorkersSetup({
   environmentId,
   canConfigure,
+  setupUrl,
   onConfigured,
+  onCancel,
 }: {
   readonly environmentId: EnvironmentId;
   /** agentd has `cloud setup` (v0.1.15+); older agentd keeps the Console link. */
   readonly canConfigure: boolean;
+  /** The Job API agentd would send the key to; no key is asked for while it is unknown. */
+  readonly setupUrl: string | null | undefined;
   readonly onConfigured?: () => void;
+  /** Shown as "Keep the current key"; unavailable once a replacement is sent. */
+  readonly onCancel?: (() => void) | undefined;
 }) {
   const gt = useGT();
   const locale = useLocale();
@@ -88,6 +97,18 @@ export function CloudWorkersSetup({
       </div>
     );
   }
+  if (!setupUrl) {
+    return (
+      <div className="space-y-1 text-xs">
+        <p>
+          <T>AgentD didn’t say where it would send an account key, so none is asked for here.</T>
+        </p>
+        <CloudWorkersSetupLink />
+      </div>
+    );
+  }
+  const destination = setupUrl;
+  const libraos = destination.replace(/\/+$/, "") === LIBRAOS_JOB_API;
   if (!allowed) {
     return (
       <div className="space-y-1 text-xs">
@@ -107,7 +128,7 @@ export function CloudWorkersSetup({
     input.value = "";
     setBusy(true);
     setOutcome(null);
-    const result = await configure({ environmentId, input: { key } });
+    const result = await configure({ environmentId, input: { key, url: destination } });
     setBusy(false);
     if (result._tag === "Failure") {
       const cause = squashAtomCommandFailure(result);
@@ -137,15 +158,23 @@ export function CloudWorkersSetup({
       </p>
       <ol className="list-decimal space-y-1 ps-4">
         <li>
-          <T>Create a Cloud Workers account key in LibraOS Console.</T>
+          {libraos ? (
+            <T>Create a Cloud Workers account key in LibraOS Console.</T>
+          ) : (
+            <T>
+              Get an account key from whoever runs the Job API at <Var>{setupUrl}</Var>. A LibraOS
+              Console key won’t work there.
+            </T>
+          )}
         </li>
         <li>
           <T>
-            Paste the key here. AgentD saves it in a private file on this environment’s machine.
+            Paste the key here. AgentD sends it to <Var>{setupUrl}</Var> to check it, then saves it
+            in a private file on this environment’s machine.
           </T>
         </li>
       </ol>
-      <ConsoleButton />
+      {libraos ? <ConsoleButton /> : null}
       <div className="space-y-1.5">
         <Label htmlFor={`${id}-key`}>
           <T>Cloud Workers account key</T>
@@ -163,9 +192,17 @@ export function CloudWorkersSetup({
           onChange={() => setOutcome(null)}
         />
       </div>
-      <Button type="submit" size="xs" disabled={busy}>
-        {busy ? <T>Setting up…</T> : <T>Set up Cloud Workers</T>}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" size="xs" disabled={busy}>
+          {busy ? <T>Setting up…</T> : <T>Set up Cloud Workers</T>}
+        </Button>
+        {onCancel ? (
+          // Once sent, the new key is installed if it checks out: there is no keeping the old one.
+          <Button type="button" size="xs" variant="ghost" disabled={busy} onClick={onCancel}>
+            <T>Keep the current key</T>
+          </Button>
+        ) : null}
+      </div>
       {outcome?.ok === true ? (
         <p role="status">
           {balance === null ? (

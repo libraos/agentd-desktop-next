@@ -50,6 +50,10 @@ describe("cloudReason", () => {
       "both cloud.claude_token_file and cloud.codex_auth_file are set: pass --claude-token-file or --codex-auth-file",
       CLOUD_REASONS.pickPlan,
     ],
+    [
+      "cloud.claude_token_file must hold the token from claude setup-token (it starts sk-ant-oat) alone, on one line",
+      CLOUD_REASONS.subscriptionTokenFormat,
+    ],
   ] as const)("%s", (message, reason) => {
     expect(cloudReason(message)).toBe(reason);
   });

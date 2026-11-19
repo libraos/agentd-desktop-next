@@ -491,6 +491,8 @@ export const AgentdCloudSetup = Schema.Struct({
   supported: Schema.Boolean,
   /** agentd has `cloud setup`, so the app can install the account key. */
   canConfigure: Schema.optionalKey(Schema.Boolean),
+  /** The Job API `cloud setup` sends the account key to; null when agentd didn't say. */
+  setupUrl: Schema.optionalKey(Schema.NullOr(Schema.String)),
   /** Null when this agentd has no subscription jobs or the balance was not read. */
   subscription: Schema.optionalKey(Schema.NullOr(AgentdCloudSubscription)),
   project: Schema.NullOr(Schema.String),
@@ -504,6 +506,8 @@ export type AgentdCloudSetup = typeof AgentdCloudSetup.Type;
 /** A Cloud Workers account key for `agentd cloud setup`; goes to agentd's stdin only. */
 export const AgentdCloudConfigureInput = Schema.Struct({
   key: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(4096)),
+  /** The Job API the user was shown; the key goes there and nowhere else. */
+  url: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(2048)),
 });
 export type AgentdCloudConfigureInput = typeof AgentdCloudConfigureInput.Type;
 export const AgentdCloudConfigured = Schema.Struct({
