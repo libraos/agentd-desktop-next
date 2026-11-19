@@ -1,6 +1,6 @@
 # AgentD Next
 
-AgentD Next is an IDE for working with coding agents. You chat with an agent, work on a project with it, and hand tasks to workers that [agentd](https://github.com/libraos/agentd-core) runs, each with a goal, acceptance criteria, a check and a budget.
+AgentD Next is an IDE for working with coding agents. You chat with an agent, work on a project with it, and hand tasks to workers that [agentd](https://github.com/libraos/agentd) runs, each with a goal, acceptance criteria, a check and a budget.
 
 It uses the agents already installed and signed in on your machine, such as Claude Code, Codex and opencode. It has no model access of its own and favours no agent. agentd is the authority on tasks, approvals and workers: the app shows them and keeps no copy of its own as the truth.
 
@@ -46,7 +46,7 @@ The app finds agents on your login shell's `PATH` and in the folders their insta
 
 ## Run it from source
 
-You need [agentd](https://github.com/libraos/agentd-core) on `PATH` (the installers bring their own), and the agents you want to use installed and signed in.
+You need [agentd](https://github.com/libraos/agentd) on `PATH` (the installers bring their own), and the agents you want to use installed and signed in.
 
 Install [Vite+](https://viteplus.dev/guide/), which provides the `vp` command and the pinned Node version:
 
@@ -72,7 +72,7 @@ To build on your own machine, use `agentd/scripts/build-desktop.sh linux`, `win`
 ## Contributing
 
 - Rules for anyone changing this repository, people or agents: [AGENTS.md](./AGENTS.md).
-- The design and the plan of work: [libraos/agentd-core#898](https://github.com/libraos/agentd-core/issues/898), with notes for each part in [agentd/design](./agentd/design).
+- Design notes for each part: [agentd/design](./agentd/design).
 - How upstream changes are merged: [agentd/UPSTREAM.md](./agentd/UPSTREAM.md).
 
 ## Licence
