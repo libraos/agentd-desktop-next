@@ -33,7 +33,11 @@ export type AgentdError = typeof AgentdError.Type;
 
 const NullableString = Schema.optionalKey(Schema.NullOr(Schema.String));
 const NullableNumber = Schema.optionalKey(Schema.NullOr(Schema.Number));
-const AgentdCloudModelAccess = Schema.Literals(["libraos", "byok"]);
+export const AgentdCloudModelAccess = Schema.Literals(["libraos", "byok", "subscription"]);
+export type AgentdCloudModelAccess = typeof AgentdCloudModelAccess.Type;
+/** Whose plan a subscription job runs on: Claude Code on a Claude plan, Codex on a ChatGPT plan. */
+export const AgentdCloudPlan = Schema.Literals(["claude", "codex"]);
+export type AgentdCloudPlan = typeof AgentdCloudPlan.Type;
 
 export const AgentdDoctorJson = Schema.Struct({
   ok: Schema.optionalKey(Schema.Boolean),
@@ -79,6 +83,9 @@ export const AgentdHandoffShowJson = Schema.Struct({
       Schema.Struct({
         goal: NullableString,
         model_access: NullableString,
+        /** Set on a subscription job: the credential file each plan reads (a path, never its contents). */
+        claude_token_file: NullableString,
+        codex_auth_file: NullableString,
         state: Schema.optionalKey(NullableString),
       }),
     ),
@@ -295,6 +302,8 @@ export const AgentdTask = Schema.Struct({
     Schema.Struct({
       state: Schema.String,
       modelAccess: Schema.NullOr(AgentdCloudModelAccess),
+      /** The plan a subscription job bills; null for other model access. */
+      plan: Schema.optionalKey(Schema.NullOr(AgentdCloudPlan)),
       workerUsd: Schema.NullOr(Schema.Number),
       inferenceUsd: Schema.NullOr(Schema.Number),
       totalUsd: Schema.NullOr(Schema.Number),
@@ -440,6 +449,10 @@ export const AgentdCloudTaskInput = Schema.Struct({
     modelAccess: AgentdCloudModelAccess,
     anthropicKeyFile: Schema.optionalKey(AgentdCloudKeyFile),
     openaiKeyFile: Schema.optionalKey(AgentdCloudKeyFile),
+    /** With subscription: the plan, and the file that overrides its configured one for this task. */
+    plan: Schema.optionalKey(AgentdCloudPlan),
+    claudeTokenFile: Schema.optionalKey(AgentdCloudKeyFile),
+    codexAuthFile: Schema.optionalKey(AgentdCloudKeyFile),
     /** The user saw that agentd has no task for this earlier submission and offers this draft in its place. */
     replaceSubmission: Schema.optionalKey(
       Schema.String.check(
@@ -451,12 +464,35 @@ export const AgentdCloudTaskInput = Schema.Struct({
 export type AgentdCloudTaskInput = typeof AgentdCloudTaskInput.Type;
 
 export const AgentdCloudSetupInput = Schema.Struct({
-  cwd: AbsolutePath,
+  /** Null reads the account alone, with no project (the AgentD page). */
+  cwd: Schema.NullOr(AbsolutePath),
   includeBalance: Schema.Boolean,
 });
 export type AgentdCloudSetupInput = typeof AgentdCloudSetupInput.Type;
+/** One plan's credential as agentd reports it; the app never opens the file. */
+export const AgentdCloudPlanState = Schema.Struct({
+  /** The installed agentd takes this plan's jobs. */
+  supported: Schema.Boolean,
+  configured: Schema.Boolean,
+  /** Null when agentd cannot say without a job. */
+  valid: Schema.NullOr(Schema.Boolean),
+  /** About when the credential runs out, YYYY-MM-DD. */
+  expiresAbout: Schema.NullOr(Schema.String),
+});
+export type AgentdCloudPlanState = typeof AgentdCloudPlanState.Type;
+export const AgentdCloudSubscription = Schema.Struct({
+  claude: AgentdCloudPlanState,
+  codex: AgentdCloudPlanState,
+  /** Setting a plan up is not offered on this host (Windows); a configured one still runs. */
+  setupUnavailable: Schema.Boolean,
+});
+export type AgentdCloudSubscription = typeof AgentdCloudSubscription.Type;
 export const AgentdCloudSetup = Schema.Struct({
   supported: Schema.Boolean,
+  /** agentd has `cloud setup`, so the app can install the account key. */
+  canConfigure: Schema.optionalKey(Schema.Boolean),
+  /** Null when this agentd has no subscription jobs or the balance was not read. */
+  subscription: Schema.optionalKey(Schema.NullOr(AgentdCloudSubscription)),
   project: Schema.NullOr(Schema.String),
   balanceUsd: Schema.NullOr(Schema.Number),
   balanceText: Schema.NullOr(Schema.String),
@@ -464,6 +500,16 @@ export const AgentdCloudSetup = Schema.Struct({
   problem: Schema.NullOr(Schema.Literals(["setup", "credit", "repository", "balance"])),
 });
 export type AgentdCloudSetup = typeof AgentdCloudSetup.Type;
+
+/** A Cloud Workers account key for `agentd cloud setup`; goes to agentd's stdin only. */
+export const AgentdCloudConfigureInput = Schema.Struct({
+  key: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(4096)),
+});
+export type AgentdCloudConfigureInput = typeof AgentdCloudConfigureInput.Type;
+export const AgentdCloudConfigured = Schema.Struct({
+  balanceUsd: Schema.NullOr(Schema.Number),
+});
+export type AgentdCloudConfigured = typeof AgentdCloudConfigured.Type;
 
 /** A finished cloud task's pushed branch, compared in a checkout whose origin is its repository. */
 export const AgentdCloudReviewInput = Schema.Struct({ id: AgentdHandoffId, cwd: AbsolutePath });

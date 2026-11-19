@@ -63,6 +63,18 @@ export function agentdTicket(value: string): string {
   return ticket;
 }
 
+// A subscription job names its plan's file only when one is chosen; else agentd reads its config.
+function subscriptionFile(cloud: AgentdCloudTaskInput["cloud"]): ReadonlyArray<string> {
+  if (cloud.modelAccess !== "subscription") return [];
+  if (cloud.plan === "codex")
+    return cloud.codexAuthFile === undefined
+      ? []
+      : ["--codex-auth-file", text("ChatGPT auth file", cloud.codexAuthFile)];
+  return cloud.claudeTokenFile === undefined
+    ? []
+    : ["--claude-token-file", text("Claude token file", cloud.claudeTokenFile)];
+}
+
 export const agentdArgs = {
   version: () => ["version"],
   doctor: () => ["doctor", "--json"],
@@ -118,6 +130,14 @@ export const agentdArgs = {
   ],
   cloudHelp: () => ["handoff", "offer", "--help"],
   cloudBalance: () => ["cloud", "balance", "--json"],
+  cloudCommands: () => ["help", "cloud"],
+  // The account key goes on stdin only.
+  cloudConfigure: () => ["cloud", "setup", "--key-file", "-", "--json"],
+  // The per-plan credential report; older agentd answers the config keys below.
+  cloudSubscription: () => ["cloud", "subscription", "--json"],
+  configGet: (
+    key: "cloud.claude_token_file" | "cloud.claude_token_expires_about" | "cloud.codex_auth_file",
+  ) => ["config", "get", key, "--json"],
   estimate: (type: "small" | "feature" | "complex" | "implement") => [
     "handoff",
     "estimate",
@@ -185,6 +205,7 @@ export const agentdArgs = {
     ...(input.cloud.modelAccess === "byok" && input.cloud.openaiKeyFile !== undefined
       ? ["--openai-key-file", text("OpenAI key file", input.cloud.openaiKeyFile)]
       : []),
+    ...subscriptionFile(input.cloud),
     "--project",
     project,
     "--goal",

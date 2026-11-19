@@ -17,6 +17,8 @@ import {
   type AgentdCloudReview,
   type AgentdCloudReviewInput,
   type AgentdCloudSetupInput,
+  type AgentdCloudConfigureInput,
+  type AgentdCloudConfigured,
   type AgentdTaskDefaults,
   type AgentdTaskDefaultsInput,
   type AgentdCloudTaskInput,
@@ -87,6 +89,10 @@ export class AgentdBridge extends Context.Service<
     readonly cloudReview: (
       input: AgentdCloudReviewInput,
     ) => Effect.Effect<AgentdCloudReview, AgentdError>;
+    /** `agentd cloud setup` with the account key on stdin; the balance it verified. */
+    readonly cloudConfigure: (
+      input: AgentdCloudConfigureInput,
+    ) => Effect.Effect<AgentdCloudConfigured, AgentdError>;
     readonly taskDefaults: (
       input: AgentdTaskDefaultsInput,
     ) => Effect.Effect<AgentdTaskDefaults, AgentdError>;
@@ -237,6 +243,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     runProcess: runner.run,
     isAbsolute: pathService.isAbsolute,
     args,
+    platform,
   });
 
   const readShow = (id: string) =>
@@ -574,6 +581,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     }),
     cloudSetup: cloud.cloudSetup,
     cloudReview,
+    cloudConfigure: cloud.cloudConfigure,
     taskDefaults,
     taskOthers,
     binary,

@@ -152,11 +152,17 @@ export function agentdTask(show: AgentdHandoffShowJson): AgentdTask {
           cloud: {
             state: cloudState,
             modelAccess:
-              modelAccess === "byok"
-                ? "byok"
+              modelAccess === "byok" || modelAccess === "subscription"
+                ? modelAccess
                 : modelAccess === null || modelAccess === "libraos"
                   ? "libraos"
                   : null,
+            plan:
+              modelAccess !== "subscription"
+                ? null
+                : nonEmpty(show.body?.codex_auth_file) !== null
+                  ? "codex"
+                  : "claude",
             workerUsd: show.cloud?.worker_usd ?? null,
             inferenceUsd: show.cloud?.inference_usd ?? null,
             totalUsd: show.cloud?.total_usd ?? null,
