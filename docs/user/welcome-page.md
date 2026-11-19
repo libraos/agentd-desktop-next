@@ -1,16 +1,12 @@
 # Welcome page
 
-AgentD Next shows a Welcome page when you open a new installation. Existing
-workspaces skip it. You can check your agents and import projects you have used
-before. You do not need an account to open the page.
+AgentD Next shows a Welcome page, **Connect an agent you already use**, when you
+open a new installation. Existing workspaces skip it. You can check your agents,
+connect a key or gateway, join a team, and import projects you have used before.
+You do not need an account to open the page.
 
 To see the page again, go to **Settings → About → Welcome page** and select
 **Open**. Direct links, such as Settings, open normally before setup is done.
-
-The hosted app at app.t3.codes does not open the page. With no computer connected,
-it asks you to sign in to T3 Connect, then to install T3 Code and run
-`t3 connect` on your computer. From home, it adds compatible computers linked to your account and
-opens the app. To add more computers later, use **Settings → Environments**.
 
 If AgentD Next cannot confirm the workspace during startup, it shows
 **Still connecting** instead of opening the app. Select **Reload** to try again.
@@ -40,6 +36,27 @@ Checked projects are imported when you continue.
 The setup terminal uses the home directory and environment configured for the
 provider instance. Sensitive values remain redacted in Settings and
 terminal metadata while the terminal process can use them.
+
+If no agent is ready, **Skip for now** finishes setup without one; connect an
+agent later in **Settings → Providers**.
+
+## API keys, gateways and teams
+
+**Use an API key or gateway** lets you choose **LibraOS Gateway** and the agent to
+use it with, then paste a **LibraOS API key** and press **Connect**. The key stays
+on that environment; **Disconnect** removes it. Other gateways show **Not available
+yet** on that screen; use a provider instance's environment variables for those
+([Providers](./install.md#providers)).
+
+**Join a team** takes a **Team invitation link** from your team and enrolls this
+device with its agentd server. Joining needs maintenance access to the
+environment.
+
+## The `agentd-next` command
+
+In the desktop app, when the `agentd-next` command is installed but its folder is
+not on your `PATH`, the page offers **Add to PATH**, which adds one line to your
+shell's startup file ([Install](./install.md#the-agentd-next-command)).
 
 ## Projects
 

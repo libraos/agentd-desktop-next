@@ -1,144 +1,86 @@
 # Install AgentD Next
 
 AgentD Next runs coding agents on your computer and lets you control them from its
-desktop, web, or mobile app. Set up the machine where the agents will work first.
+desktop or web app. Install it on the machine where the agents will work.
 
 ## Requirements
 
 You need an installed, authenticated provider before starting a thread. You can
 launch AgentD Next and configure providers afterwards.
 
-## Command line
-
-```bash
-curl -fsSL https://t3.codes/install.sh | sh
-```
-
-On Windows, in PowerShell:
-
-```powershell
-irm https://t3.codes/install.ps1 | iex
-```
-
-This installs the `t3` command to `~/.local/bin`. If that folder is not on your
-`PATH` yet, the installer says so and, for zsh, bash on Linux, and fish, prints
-a command to add it. On Windows, `t3` works in the same PowerShell window right
-away; add the folder to your `PATH` for new windows. If a `t3` that the
-installer or the desktop app did not create is already there, it leaves that
-one alone and stops. Set `T3CODE_CHANNEL=nightly` to install the nightly train, or
-`T3CODE_VERSION` to pin an exact version.
-
-| Task                                  | Command                                                                 |
-| ------------------------------------- | ----------------------------------------------------------------------- |
-| Start the server and open the web app | `t3`                                                                    |
-| Start the server without a browser    | `t3 serve`                                                              |
-| Use it from your other devices        | `t3 up` ([details](./remote-access.md))                                 |
-| Keep it running in the background     | `t3 service install` ([details](./background-service.md))               |
-| Move to the newest release            | `t3 update`                                                             |
-| Reclaim database space                | `t3 doctor` ([details](./background-service.md#reclaim-database-space)) |
-| Remove it again                       | `t3 uninstall`                                                          |
-
-Run `t3 help` or `t3 --help` for the full reference. To start in a new working
-directory, use an explicit path such as `t3 ./my-project`. A bare directory name
-is accepted only if it already exists.
-
-If `t3` or `t3 start` reports an already running server, run the `t3 pair`
-command it names and open the pairing URL to connect to that server. Stop it
-before starting a replacement, or use a different `--base-dir` for an
-independent server.
-
-To try AgentD Next once without installing it, run `npx t3@latest` instead (needs
-Node.js for `npx`). It offers to install the `t3` command first. If you say no,
-it asks again at the next minor release, and `npx t3 install` installs it later.
-`npx t3` always runs the version npm picked, even when a `t3` is installed. On
-the nightly train, run your installed `t3` (for example `t3 connect`), not
-`npx t3`, which runs the latest stable release.
-
-### Intel Macs
-
-There is no `t3` executable for Intel Macs (the desktop app is available). To
-run a server there, build it from source with `vp`, which provides the Node version it needs
-([Install vp](../operations/development.md#first-checkout)):
-
-```bash
-git clone https://github.com/pingdotgg/t3code
-cd t3code && vp i && vp run build:desktop
-node apps/server/dist/bin.mjs
-```
-
-`t3 update` and the background service do not apply to a server run this way;
-update it with `git pull` and a rebuild.
-
 ## Desktop app
 
-Download a release from [GitHub Releases](https://github.com/pingdotgg/t3code/releases),
-or use a package manager:
+Download an installer from the
+[releases page](https://github.com/libraos/agentd-desktop-next/releases). Each
+release lists its files and a `SHA256SUMS` file; installers are named
+`AgentD-Next-<version>-<arch>.<ext>`.
 
-| Platform           | Install                                                      |
-| ------------------ | ------------------------------------------------------------ |
-| Windows            | `winget install T3Tools.T3Code`                              |
-| Windows (Scoop)    | `scoop install extras/t3code`                                |
-| macOS              | `brew install --cask t3-code`                                |
-| Debian, Ubuntu     | `sudo apt install ./T3-Code-*.deb`                           |
-| Arch Linux         | `yay -S t3code-bin`                                          |
-| Arch Linux nightly | `yay -S t3code-nightly-bin`                                  |
-| Nix                | `nix profile add github:NixOS/nixpkgs/nixos-unstable#t3code` |
+| System                | File                                                            |
+| --------------------- | --------------------------------------------------------------- |
+| macOS (Apple silicon) | `AgentD-Next-<version>-arm64.dmg` or `…-arm64.zip`              |
+| macOS (Intel)         | `AgentD-Next-<version>-x64.dmg` or `…-x64.zip`                  |
+| Windows (x64)         | `AgentD-Next-<version>-x64.exe`                                 |
+| Linux (x64)           | `AgentD-Next-x64.AppImage` or `AgentD-Next-<version>-amd64.deb` |
+
+Releases up to 0.1.10-agentd.6 carry the earlier name, AgentD Desktop, in their
+file names (`AgentD-Desktop-…`).
+
+Check the download against `SHA256SUMS` before opening it, for example with
+`sha256sum` on Linux or `shasum -a 256` on macOS. A matching checksum shows the
+file is the one published; it is not a publisher signature. macOS builds are not
+notarized and Windows installers are unsigned, so the operating system may warn
+the first time you open the app. On macOS, try to open the app once, then use
+**System Settings → Privacy & Security → Open Anyway**. On Windows, choose
+**More info → Run anyway** in the SmartScreen dialog. Do not override a malware
+warning or a block your organization enforces.
+
+The installers include agentd and its Skills. AgentD Next is not in app stores
+or package managers such as Homebrew, winget, the AUR or nixpkgs; the packages
+there are upstream's and not part of AgentD Next.
 
 ### Linux
 
-AppImage and `.deb` downloads are available for x86_64 and ARM64. Check your
-architecture with `uname -m`: for `x86_64`, choose a file ending in
-`x86_64.AppImage` or `amd64.deb`; for `aarch64`, choose `arm64.AppImage` or
-`arm64.deb`.
-
-To launch an AppImage, open a terminal in its download folder. Replace
-`T3-Code.AppImage` below with the exact filename you downloaded:
+To launch the AppImage, open a terminal in its download folder:
 
 ```bash
-chmod +x ./T3-Code.AppImage
-./T3-Code.AppImage
+chmod +x ./AgentD-Next-x64.AppImage
+./AgentD-Next-x64.AppImage
 ```
 
-The `.deb` updates itself like the other desktop builds. It asks for your
-password to install each update. If your desktop has no password prompt, the
-update fails. Download the new `.deb` and install it the same way.
+To install the `.deb`:
 
-The AUR packages currently support x86_64 only; on ARM64, use the AppImage.
-Update AUR installs with your AUR helper, such as `yay -Syu`, instead of the
-in-app updater.
-
-### Nix (nixpkgs)
-
-AgentD Next is maintained in [nixpkgs](https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/by-name/t3/t3code).
-The command above installs from `nixos-unstable` and requires Nix 2.30 or later with
-`nix-command` and `flakes` enabled. Launch the desktop app with `t3code-desktop`;
-the package also includes the `t3` command.
-
-On NixOS, you can instead add the package to your system configuration, using
-a nixpkgs revision that includes `t3code`:
-
-```nix
-environment.systemPackages = [ pkgs.t3code ];
+```bash
+sudo apt install ./AgentD-Next-<version>-amd64.deb
 ```
 
-Apply the change with `sudo nixos-rebuild switch`. For Home Manager, add
-`pkgs.t3code` to `home.packages` and run `home-manager switch`.
+### The `agentd-next` command
 
-Update a profile installation with `nix profile upgrade t3code`. For NixOS or
-Home Manager, update your configuration's nixpkgs input or channel and rebuild.
-Nix manages both the desktop app and the bundled
-`t3` command; use Nix to update them instead of the in-app updater or `t3 update`.
+The desktop app includes the `agentd-next` command-line tool
+(`agentd-next.cmd` on Windows), with `t3` installed beside it as an alias for
+scripts written for upstream. A new install sets it up on first launch; after an
+update, or any time, choose **Install** next to the command in
+**Settings → About**. On macOS and Linux it adds a link in `~/.local/bin` (or
+`~/bin`); on Windows it adds the app's command folder to your `PATH`. Open a new
+terminal afterwards. If the folder is not on your `PATH`, **Add to PATH** on the
+Welcome page or in **Settings → About** adds one line to your shell's startup
+file. **Remove** takes it off, and the app does not add it again.
 
-### The `t3` command
+| Task                                  | Command                                                                          |
+| ------------------------------------- | -------------------------------------------------------------------------------- |
+| Start the server and open the web app | `agentd-next`                                                                    |
+| Start the server without a browser    | `agentd-next serve`                                                              |
+| Allow access from your other devices  | `agentd-next up --lan` ([details](./remote-access.md))                           |
+| Keep it running in the background     | `agentd-next service install` ([details](./background-service.md))               |
+| Reclaim database space                | `agentd-next doctor` ([details](./background-service.md#reclaim-database-space)) |
 
-The desktop app includes the `t3` command-line tool. A new install sets it up
-on first launch; after an update, or any time, choose **Install** next to
-**t3 command** in **Settings → About**. On macOS and Linux it adds a `t3` link
-in `~/.local/bin` (or `~/bin`); on Windows it adds the app's command folder to
-your `PATH`. Open a new terminal afterwards. If the folder is not on your
-`PATH`, **Add to PATH** on the Welcome page or in **Settings → About** adds one
-line to your shell's startup file. **Remove** takes it off, and the app does not
-add it again. If you already have another `t3`, it stays as it is.
+Run `agentd-next --help` for the full reference. If it reports an already running
+server, run the `pair` command it names and open the pairing URL to connect to that
+server. Stop it before starting a replacement, or use a different `--base-dir` for
+an independent server.
+
+There is no install script and no npm package for AgentD Next. To run a server
+without the desktop app, build it from source as described in the repository's
+README.
 
 ### Windows Subsystem for Linux
 
@@ -152,48 +94,31 @@ take longer.
 With the desktop app already running on the same machine:
 
 ```bash
-t3 app
+agentd-next app
 ```
 
 This opens a new thread for the current directory, adding the project if needed.
-Pass a path, such as `t3 app ../my-project`, to open another directory. It requires
-the desktop app, so a standalone server or an SSH session is not enough. If the
-command cannot reach the app, start or update the desktop app and try again.
+Pass a path, such as `agentd-next app ../my-project`, to open another directory. It
+requires the desktop app, so a standalone server or an SSH session is not enough. If
+the command cannot reach the app, start or update the desktop app and try again.
 
 ### Drop a folder on the sidebar
 
 Drag one or more folders from Finder, Explorer, or your file manager onto the
-sidebar. Each one opens as a project on this computer, the same as `t3 app`.
+sidebar. Each one opens as a project on this computer, the same as `agentd-next app`.
 Files dropped on a thread still attach to that thread. Browsers do not share
 folder paths, so in the web app use **Add project** instead.
 
 ## Mobile app
 
-Install T3 Code from the
-[App Store](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824) or
-[Google Play](https://play.google.com/store/apps/details?id=com.t3tools.t3code).
-The phone connects to a server on another machine. Follow
-[remote access](./remote-access.md) to link it through T3 Connect or a pairing URL.
-
-Store links and QR codes are also available in **Settings → About → Mobile app**
-on web and desktop. The store apps work with both stable and Nightly servers. Test builds are optional:
-
-- **iPhone and iPad:** TestFlight is invite-only.
-- **Android:** download an APK from the
-  [Android beta releases](https://github.com/pingdotgg/t3code/releases?q=android-beta-).
-
-If the app crashes during launch, open Settings → Diagnostics on the next launch
-that succeeds. It lists startup crashes from the last 7 days with the error and
-component stack that store crash reports leave out. Copy the report and paste it
-into a GitHub issue. Error messages can quote values from the app, so read it over
-before sharing.
+AgentD Next does not publish a mobile app. The iOS and Android apps in the app
+stores are upstream's and not part of AgentD Next.
 
 ## Providers
 
 Open **Settings → Providers** in the web or desktop app, select the environment,
 and enable the provider you want. Installation, login, and configuration belong
-to that environment's machine, even when you connect from a phone or another
-computer.
+to that environment's machine, even when you connect from another computer.
 
 | Provider    | Install and authenticate                                                                                                                                  |
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -251,14 +176,14 @@ For provider-specific setup and accounts, see [Codex](./providers-codex.md),
 ### Provider check timeouts
 
 If a provider works in its CLI but AgentD Next reports a timeout while checking it,
-allow more time in the T3 server's environment. For example, give Codex and
+allow more time in the AgentD Next server's environment. For example, give Codex and
 Claude readiness checks 60 seconds:
 
 ```bash
-T3CODE_CODEX_PROBE_TIMEOUT_MS=60000 T3CODE_CLAUDE_PROBE_TIMEOUT_MS=60000 t3 serve
+T3CODE_CODEX_PROBE_TIMEOUT_MS=60000 T3CODE_CLAUDE_PROBE_TIMEOUT_MS=60000 agentd-next serve
 ```
 
-For a remote environment, set these on the machine running the T3 server.
+For a remote environment, set these on the machine running the AgentD Next server.
 Keep them in your launcher or service configuration to retain them across
 updates, then restart the server. For systemd, add
 `Environment=T3CODE_CODEX_PROBE_TIMEOUT_MS=60000` under `[Service]` in a service
@@ -295,5 +220,5 @@ installation, update checks, and shutdown limits keep their existing behavior.
 - [Permission modes](./permission-modes.md): choose when agents ask before acting.
 - [Remote access](./remote-access.md): connect from another device.
 - [Running in the background](./background-service.md): keep a host available.
-- [Updating AgentD Next](./updating.md): update the app and connected servers.
+- [Updating AgentD Next](./updating.md): install a new release.
 - [Managed policy](./managed-policy.md): configure AgentD Next for everyone on a machine.
