@@ -2,6 +2,9 @@ import {
   AgentdStartTaskInput,
   AgentdTaskSize,
   AgentdWorkerTool,
+  type AgentdCloudModelAccess,
+  type AgentdCloudPlan,
+  type AgentdCloudSubscription,
   type AgentdTaskEstimate,
   type MessageId,
   type OrchestrationV2ThreadProjection,
@@ -204,9 +207,47 @@ export function defaultModelAccess(signedIn: boolean, gatewayConnected: boolean)
   return signedIn || gatewayConnected ? ("libraos" as const) : ("byok" as const);
 }
 
+/**
+ * Why a plan cannot run this task: agentd too old for it, setup not offered on this host (Windows),
+ * no credential configured, or one agentd cannot use. Null when it can; a chosen file always can.
+ */
+export type CloudPlanProblem = "agentd" | "windows" | "not-set-up" | "invalid";
+
+export function cloudPlanProblem(
+  subscription: AgentdCloudSubscription | null | undefined,
+  plan: AgentdCloudPlan,
+  fileChosen: boolean,
+): CloudPlanProblem | null {
+  const state = subscription?.[plan];
+  if (!state?.supported) return "agentd";
+  if (fileChosen || (state.configured && state.valid !== false)) return null;
+  if (subscription?.setupUnavailable) return "windows";
+  return state.configured ? "invalid" : "not-set-up";
+}
+
+/** The plan a subscription starts on: Claude unless only the ChatGPT plan is ready. */
+export function defaultCloudPlan(
+  subscription: AgentdCloudSubscription | null | undefined,
+): AgentdCloudPlan {
+  return cloudPlanProblem(subscription, "claude", false) !== null &&
+    cloudPlanProblem(subscription, "codex", false) === null
+    ? "codex"
+    : "claude";
+}
+
+/** The Model access menu: subscription is listed, and disabled while agentd can't run it. */
+export function modelAccessChoices(subscription: AgentdCloudSubscription | null | undefined) {
+  return [
+    { value: "libraos", disabled: false },
+    { value: "byok", disabled: false },
+    { value: "subscription", disabled: !subscription?.claude.supported },
+  ] as const satisfies ReadonlyArray<{ value: AgentdCloudModelAccess; disabled: boolean }>;
+}
+
 export type TaskStartProblem =
   | "balance"
   | "sign-in"
+  | "subscription"
   | "worker"
   | "no-directory"
   | "not-repo"
@@ -218,7 +259,9 @@ export function taskStartProblem(input: {
   readonly cloud: boolean;
   readonly balanceUsd: number | null;
   readonly creditProblem: boolean;
-  readonly modelAccess: "libraos" | "byok";
+  readonly modelAccess: AgentdCloudModelAccess;
+  /** With subscription: why the chosen plan can't run it. */
+  readonly planProblem: CloudPlanProblem | null;
   readonly signedIn: boolean;
   readonly gatewayConnected: boolean;
   readonly worker: AgentdWorkerTool | null;
@@ -231,6 +274,7 @@ export function taskStartProblem(input: {
       return "balance";
     if (input.modelAccess === "libraos" && !input.signedIn && !input.gatewayConnected)
       return "sign-in";
+    if (input.modelAccess === "subscription" && input.planProblem !== null) return "subscription";
     return null;
   }
   if (input.branch !== null) return input.branch;

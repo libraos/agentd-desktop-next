@@ -55,12 +55,45 @@ function agentdServerUrl(value: string): string {
   return url.origin + url.pathname.replace(/\/+$/, "");
 }
 
+/** A Job API URL as `cloud setup` reported it: https, or http to loopback, with no query. */
+function jobApiUrl(value: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new AgentdArgumentError({ message: "the Job API address must be a URL" });
+  }
+  const loopback = /^(?:localhost|127\.\d+\.\d+\.\d+|\[::1\])$/i.test(url.hostname);
+  if (
+    !(url.protocol === "https:" || (url.protocol === "http:" && loopback)) ||
+    url.username !== "" ||
+    url.password !== "" ||
+    url.search !== "" ||
+    url.hash !== ""
+  ) {
+    throw new AgentdArgumentError({ message: "the Job API address must be an https:// URL" });
+  }
+  return value;
+}
+
 export function agentdTicket(value: string): string {
   const ticket = value.trim();
   if (!TICKET.test(ticket)) {
     throw new AgentdArgumentError({ message: "that is not an agentd ticket (one starts adt_)" });
   }
   return ticket;
+}
+
+// A subscription job names its plan's file only when one is chosen; else agentd reads its config.
+function subscriptionFile(cloud: AgentdCloudTaskInput["cloud"]): ReadonlyArray<string> {
+  if (cloud.modelAccess !== "subscription") return [];
+  if (cloud.plan === "codex")
+    return cloud.codexAuthFile === undefined
+      ? []
+      : ["--codex-auth-file", text("ChatGPT auth file", cloud.codexAuthFile)];
+  return cloud.claudeTokenFile === undefined
+    ? []
+    : ["--claude-token-file", text("Claude token file", cloud.claudeTokenFile)];
 }
 
 export const agentdArgs = {
@@ -118,6 +151,24 @@ export const agentdArgs = {
   ],
   cloudHelp: () => ["handoff", "offer", "--help"],
   cloudBalance: () => ["cloud", "balance", "--json"],
+  cloudCommands: () => ["help", "cloud"],
+  // The Job API setup would send the key to; reads no key and writes nothing.
+  cloudSetupTarget: () => ["cloud", "setup", "--dry-run", "--json"],
+  // The account key goes on stdin only, to the Job API the user was shown.
+  cloudConfigure: (url: string) => [
+    "cloud",
+    "setup",
+    "--url",
+    jobApiUrl(url),
+    "--key-file",
+    "-",
+    "--json",
+  ],
+  // The per-plan credential report; older agentd answers the config keys below.
+  cloudSubscription: () => ["cloud", "subscription", "--json"],
+  configGet: (
+    key: "cloud.claude_token_file" | "cloud.claude_token_expires_about" | "cloud.codex_auth_file",
+  ) => ["config", "get", key, "--json"],
   estimate: (type: "small" | "feature" | "complex" | "implement") => [
     "handoff",
     "estimate",
@@ -185,6 +236,7 @@ export const agentdArgs = {
     ...(input.cloud.modelAccess === "byok" && input.cloud.openaiKeyFile !== undefined
       ? ["--openai-key-file", text("OpenAI key file", input.cloud.openaiKeyFile)]
       : []),
+    ...subscriptionFile(input.cloud),
     "--project",
     project,
     "--goal",

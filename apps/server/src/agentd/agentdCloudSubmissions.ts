@@ -20,6 +20,7 @@ const submissionDigest = (value: unknown) =>
 
 export function submissionFingerprint(input: AgentdCloudTaskInput, project: string): string {
   const { budget, modelAccess, anthropicKeyFile, openaiKeyFile } = input.cloud;
+  const plan = input.cloud.plan ?? "claude";
   return submissionDigest([
     project,
     input.goal,
@@ -29,6 +30,10 @@ export function submissionFingerprint(input: AgentdCloudTaskInput, project: stri
     modelAccess,
     modelAccess === "byok" ? (anthropicKeyFile ?? null) : null,
     modelAccess === "byok" ? (openaiKeyFile ?? null) : null,
+    // Appended only for subscription, so earlier LibraOS and BYOK reservations keep their digest.
+    ...(modelAccess === "subscription"
+      ? [plan, (plan === "codex" ? input.cloud.codexAuthFile : input.cloud.claudeTokenFile) ?? null]
+      : []),
   ]);
 }
 

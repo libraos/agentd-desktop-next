@@ -301,6 +301,25 @@ export const toLocalBackendPath = DesktopIpc.makeIpcMethod({
   }),
 });
 
+export const pickFiles = DesktopIpc.makeIpcMethod({
+  channel: IpcChannels.PICK_FILES_CHANNEL,
+  payload: Schema.Void,
+  result: Schema.NullOr(Schema.String),
+  handler: Effect.fn("desktop.ipc.window.pickFiles")(function* () {
+    const appSettings = yield* DesktopAppSettings.DesktopAppSettings;
+    if (!(yield* appSettings.get).localEnvironmentEnabled) return null;
+    const dialog = yield* ElectronDialog.ElectronDialog;
+    const electronWindow = yield* ElectronWindow.ElectronWindow;
+    const paths = yield* dialog.pickFiles({
+      owner: yield* electronWindow.focusedMainOrFirst,
+      defaultPath: Option.none(),
+      multiple: false,
+      filters: [],
+    });
+    return paths[0] ?? null;
+  }),
+});
+
 export const pickProjectFavicon = DesktopIpc.makeIpcMethod({
   channel: IpcChannels.PICK_PROJECT_FAVICON_CHANNEL,
   payload: Schema.UndefinedOr(Schema.String),

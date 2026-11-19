@@ -39,12 +39,12 @@ const LIST_JSON = `[
  {
   "a2a_state": "completed",
   "claimer": "claude-8c11cb50d2",
-  "goal": "Implement libraos/agentd-core#897 (read it first: gh issue view 897 -R libraos/agentd-core): in the factory report, spli",
+  "goal": "Implement acme/api#897 (read it first: gh issue view 897 -R acme/api): in the weekly report, spli",
   "id": "hof-a6e5f4e329",
-  "issue": "libraos/agentd-core#897",
-  "project": "libraos/agentd-core",
+  "issue": "acme/api#897",
+  "project": "acme/api",
   "state": "done",
-  "title": "Factory report: split redone into review rework, abandoned and a narrowed false accept",
+  "title": "Weekly report: split retries by cause",
   "updated": "2026-11-18T06:47:57+00:00",
   "version": 3,
   "worker_state": null
@@ -54,10 +54,10 @@ const LIST_JSON = `[
 const SHOW_JSON = `{
  "a2a_state": "completed",
  "accept": ["A done with a passed check", "B created on the same PR after it merged: A is redone"],
- "body": { "goal": "Implement libraos/agentd-core#897", "keep": "reverted stays a false accept" },
+ "body": { "goal": "Implement acme/api#897", "keep": "reverted stays a false accept" },
  "budget": "120m,$12",
  "budget_state": null,
- "check_cmd": "go test ./internal/agentd/ -run 'Outcome' -count=1",
+ "check_cmd": "npm test -- report",
  "cloud_state": null,
  "cost": {
   "inference": { "usd": 2.87 },
@@ -67,12 +67,12 @@ const SHOW_JSON = `{
  "id": "hof-a6e5f4e329",
  "lease_branch": null,
  "lease_device": null,
- "project": "libraos/agentd-core",
+ "project": "acme/api",
  "state": "done",
  "title": null,
  "updated": "2026-11-18T06:47:57+00:00",
  "verdict": {
-  "check": "passed: go test ./internal/agentd/",
+  "check": "passed: npm test -- report",
   "delivery": "unmerged: 18 commit(s) on agentd/hof-a6e5f4e329 not in main",
   "next": "verified: merge it as it is.",
   "verdict": "verified"
@@ -238,16 +238,15 @@ describe("AgentdBridge", () => {
         },
         {
           id: "hof-a6e5f4e329",
-          title:
-            "Factory report: split redone into review rework, abandoned and a narrowed false accept",
+          title: "Weekly report: split retries by cause",
           state: "done",
           workerState: null,
           workerRunning: false,
           workerTool: "claude",
           workerName: "claude-8c11cb50d2",
           runsOn: "local",
-          project: "libraos/agentd-core",
-          issue: "libraos/agentd-core#897",
+          project: "acme/api",
+          issue: "acme/api#897",
           started: null,
           branch: null,
           updated: "2026-11-18T06:47:57+00:00",
@@ -256,8 +255,8 @@ describe("AgentdBridge", () => {
 
       expect(yield* bridge.task({ id: "hof-a6e5f4e329" })).toEqual({
         id: "hof-a6e5f4e329",
-        title: "Implement libraos/agentd-core#897",
-        goal: "Implement libraos/agentd-core#897",
+        title: "Implement acme/api#897",
+        goal: "Implement acme/api#897",
         state: "done",
         workerState: null,
         workerTool: "claude",
@@ -266,10 +265,10 @@ describe("AgentdBridge", () => {
           "A done with a passed check",
           "B created on the same PR after it merged: A is redone",
         ],
-        check: "go test ./internal/agentd/ -run 'Outcome' -count=1",
+        check: "npm test -- report",
         verdict: {
           verdict: "verified",
-          check: "passed: go test ./internal/agentd/",
+          check: "passed: npm test -- report",
           delivery: "unmerged: 18 commit(s) on agentd/hof-a6e5f4e329 not in main",
           next: "verified: merge it as it is.",
         },
@@ -279,7 +278,7 @@ describe("AgentdBridge", () => {
         budgetState: null,
         branch: "agentd/hof-a6e5f4e329",
         note: null,
-        project: "libraos/agentd-core",
+        project: "acme/api",
         hasLog: true,
         started: "2026-11-18T06:24:58+00:00",
         updated: "2026-11-18T06:47:57+00:00",
@@ -349,6 +348,13 @@ describe("AgentdBridge", () => {
                 "result":"the GitHub App is not installed on owner/fork: the repository's owner installs it once for that repository"}
             }`),
             );
+          case "handoff show hof-abc789 --json":
+            return Effect.succeed(
+              output(`{
+              "id":"hof-abc789", "state":"claimed", "cloud_state":"running",
+              "body":{"goal":"On my plan","model_access":"subscription","codex_auth_file":"/private/auth.json"}
+            }`),
+            );
           case "handoff done hof-abc456 --cancel --reason Stopped from AgentD Next":
             return Effect.succeed(output("{}"));
           default:
@@ -380,6 +386,7 @@ describe("AgentdBridge", () => {
         cloud: {
           state: "failed",
           modelAccess: "byok",
+          plan: null,
           workerUsd: 0.75,
           inferenceUsd: 0,
           totalUsd: 0.75,
@@ -387,6 +394,9 @@ describe("AgentdBridge", () => {
         note: "The repository owner must install the Cloud Workers GitHub App on this repository.",
       });
       expect(JSON.stringify(task)).not.toContain("/private/model-key");
+      const subscribed = yield* bridge.task({ id: "hof-abc789" });
+      expect(subscribed.cloud).toMatchObject({ modelAccess: "subscription", plan: "codex" });
+      expect(JSON.stringify(subscribed)).not.toContain("/private/auth.json");
       expect(
         yield* bridge.stopTask({ id: "hof-abc456", reason: "Stopped from AgentD Next" }),
       ).toEqual({});
@@ -460,6 +470,8 @@ describe("AgentdBridge", () => {
             return Effect.succeed(output(origin));
           case "cloud balance":
             return Effect.succeed(balance);
+          case "help cloud":
+            return Effect.succeed(output("usage: agentd cloud sync | balance"));
           case "session join":
             return Effect.succeed(output("{}"));
           case "handoff offer":
@@ -476,6 +488,9 @@ describe("AgentdBridge", () => {
       const input = { cwd, goal: "Fix the check", accept: ["Pass it"], check: "pnpm test" };
       expect(yield* bridge.cloudSetup({ cwd, includeBalance: true })).toEqual({
         supported: true,
+        canConfigure: false,
+        setupUrl: null,
+        subscription: null,
         project: "fork-owner/its-fork",
         balanceUsd: 12.75,
         balanceText: null,
@@ -715,6 +730,280 @@ describe("AgentdBridge", () => {
     }),
   );
 
+  it.effect("runs cloud tasks on the chosen Claude or ChatGPT plan's own file, or none", () =>
+    Effect.gen(function* () {
+      const runs: Array<ProcessRunner.ProcessRunInput> = [];
+      let help =
+        "usage: agentd handoff offer [--cloud] [--model-access libraos|byok|subscription] [--claude-token-file F] [--codex-auth-file F]";
+      // Recorded shape of `agentd cloud subscription --json`, trimmed.
+      let report = output(
+        '{"providers":{"claude":{"provider":"claude","configured":true,"file":"/home/me/.secrets/claude-token","valid":true,"expires_about":"2027-11-01"},"codex":{"provider":"codex","configured":false,"valid":false}},"default_provider":"claude","model_access":"subscription"}',
+      );
+      let claudeFile = output('"/home/me/.secrets/claude-token"');
+      let codexFile = output('""');
+      const ledger = cloudLedger();
+      let handoff = 0;
+      const bridge = yield* makeBridge({ AGENTD_BIN: process.execPath }, (input) => {
+        runs.push(input);
+        const recorded = ledger.answer(input.args);
+        if (recorded !== null) return Effect.succeed(recorded);
+        switch (input.args.slice(0, 3).join(" ")) {
+          case "cloud subscription --json":
+            return Effect.succeed(report);
+          case "config get cloud.claude_token_file":
+            return Effect.succeed(claudeFile);
+          case "config get cloud.claude_token_expires_about":
+            return Effect.succeed(output('"2027-10-02"'));
+          case "config get cloud.codex_auth_file":
+            return Effect.succeed(codexFile);
+        }
+        switch (input.args.slice(0, 2).join(" ")) {
+          case "version":
+            // agentd's help is read once per version.
+            return Effect.succeed(
+              output(
+                help.includes("codex")
+                  ? "agentd v0.1.16"
+                  : help.includes("claude")
+                    ? "agentd v0.1.14"
+                    : "agentd v0.1.13",
+              ),
+            );
+          case "help cloud":
+            return Effect.succeed(output("usage: agentd cloud sync | balance"));
+          case "remote get-url":
+            return Effect.succeed(output("git@github.com:acme/app.git"));
+          case "cloud balance":
+            return Effect.succeed(output('{"available_usd":"4.00"}'));
+          case "session join":
+            return Effect.succeed(output("{}"));
+          case "handoff offer": {
+            if (input.args.includes("--help")) return Effect.succeed(output(help));
+            const id = `hof-abc12${handoff++}`;
+            ledger.record(input.args, id, "queued");
+            return Effect.succeed(output(`{"handoff":"${id}","cloud":{"state":"queued"}}`));
+          }
+          default:
+            return Effect.die(`unexpected agentd ${input.args.join(" ")}`);
+        }
+      });
+      const platform = yield* HostProcess.Platform;
+      const path = yield* Effect.provide(Path.Path, NodeServices.layer);
+      const cwd = platform === "win32" ? "C:\\work\\app" : "/work/app";
+      const authFile = path.join(cwd, "private", "auth.json");
+      const task = (goal: string, cloud: Record<string, string>) =>
+        bridge.startTask({
+          cwd,
+          goal,
+          accept: [],
+          check: null,
+          cloud: { budget: "$3", modelAccess: "subscription", ...cloud },
+        });
+      const credentialFlags = () =>
+        runs
+          .filter(({ args }) => args.includes("--cloud"))
+          .map(({ args }) =>
+            args.filter(
+              (arg, i) =>
+                /^--(?:model-access|claude-token-file|codex-auth-file)$/.test(args[i - 1] ?? "") ||
+                /^--(?:model-access|claude-token-file|codex-auth-file)$/.test(arg),
+            ),
+          );
+
+      expect((yield* bridge.cloudSetup({ cwd, includeBalance: true })).subscription).toEqual({
+        claude: { supported: true, configured: true, valid: true, expiresAbout: "2027-11-01" },
+        codex: { supported: true, configured: false, valid: null, expiresAbout: null },
+        setupUnavailable: platform === "win32",
+      });
+      // With no flag agentd runs on whichever plan is set up, so the chosen plan's file is named.
+      yield* task("On the configured Claude token", { plan: "claude" });
+      yield* task("On a chosen Claude token", { plan: "claude", claudeTokenFile: authFile });
+      yield* task("On a chosen ChatGPT login", { plan: "codex", codexAuthFile: authFile });
+      // Only Claude is set up: ChatGPT is refused before anything is submitted, never run on Claude.
+      expect((yield* Effect.flip(task("ChatGPT, not set up", { plan: "codex" }))).message).toBe(
+        "Your ChatGPT plan isn’t set up for Codex. Run codex login in a terminal.",
+      );
+      codexFile = output('"/home/me/.codex/auth.json"');
+      yield* task("On the configured ChatGPT login", { plan: "codex" });
+      claudeFile = output('""');
+      expect((yield* Effect.flip(task("Claude, not set up", { plan: "claude" }))).message).toBe(
+        "Your Claude subscription isn’t set up. Run claude setup-token in a terminal and save the token in a private file.",
+      );
+      claudeFile = output("config is locked", 1);
+      expect((yield* Effect.flip(task("Claude, unreadable", { plan: "claude" }))).message).toBe(
+        "AgentD couldn’t read which Claude token is set up, so nothing was submitted. Try again.",
+      );
+      claudeFile = output('"/home/me/.secrets/claude-token"');
+      expect(credentialFlags()).toEqual([
+        ["--model-access", "subscription", "--claude-token-file", "/home/me/.secrets/claude-token"],
+        ["--model-access", "subscription", "--claude-token-file", authFile],
+        ["--model-access", "subscription", "--codex-auth-file", authFile],
+        ["--model-access", "subscription", "--codex-auth-file", "/home/me/.codex/auth.json"],
+      ]);
+      expect((yield* Effect.flip(task("No plan", {}))).message).toBe(
+        "Choose the plan this cloud task runs on.",
+      );
+      // An expiry already past is not valid, whatever else agentd says.
+      yield* TestClock.setTime(Date.parse("2027-11-02T00:00:00Z"));
+      expect(
+        (yield* bridge.cloudSetup({ cwd, includeBalance: true })).subscription?.claude,
+      ).toEqual({ supported: true, configured: true, valid: false, expiresAbout: "2027-11-01" });
+      yield* TestClock.setTime(0);
+
+      // v0.1.14: Claude only; the token state comes from agentd's config keys. Its expiry dates any
+      // nonempty file, so whether the token is valid is not known until a task runs.
+      help = "usage: agentd handoff offer [--cloud] [--claude-token-file F]";
+      report = output("unknown cloud command", 2);
+      expect((yield* bridge.cloudSetup({ cwd, includeBalance: true })).subscription).toEqual({
+        claude: { supported: true, configured: true, valid: null, expiresAbout: "2027-10-02" },
+        codex: { supported: false, configured: false, valid: null, expiresAbout: null },
+        setupUnavailable: platform === "win32",
+      });
+      yield* task("v0.1.14, on the configured Claude token", { plan: "claude" });
+      expect((yield* Effect.flip(task("Too old", { plan: "codex" }))).message).toBe(
+        "This version of AgentD can’t run Codex on your ChatGPT plan. Run agentd upgrade, then try again.",
+      );
+      help = "usage: agentd handoff offer [--cloud]";
+      expect((yield* bridge.cloudSetup({ cwd, includeBalance: true })).subscription).toBeNull();
+      expect((yield* Effect.flip(task("Older", { plan: "claude" }))).message).toBe(
+        "This version of AgentD can’t run Cloud Workers on your own subscription. Run agentd upgrade, then try again.",
+      );
+      expect(credentialFlags()).toHaveLength(5);
+      expect(credentialFlags()[4]).toEqual([
+        "--model-access",
+        "subscription",
+        "--claude-token-file",
+        "/home/me/.secrets/claude-token",
+      ]);
+      expect(runs.some(({ args }) => args.join(" ") === "cloud subscription --json")).toBe(true);
+    }),
+  );
+
+  it.effect("installs the cloud account key from stdin only, to the Job API shown", () =>
+    Effect.gen(function* () {
+      const runs: Array<ProcessRunner.ProcessRunInput> = [];
+      const key = "lcw_live_0123456789abcdefghij";
+      const libraos = "https://cloud-api.libraos.com";
+      let target = output(`{"url":"${libraos}","dry_run":true}`);
+      let cloudHelp = "usage: agentd cloud sync | balance";
+      let setup = output(
+        '{"url":"https://cloud-api.libraos.com","balance":{"available_usd":12.5}}',
+      );
+      const bridge = yield* makeBridge({ AGENTD_BIN: process.execPath }, (input) => {
+        runs.push(input);
+        switch (input.args.slice(0, 2).join(" ")) {
+          case "version":
+            return Effect.succeed(output("agentd v0.1.15"));
+          case "help cloud":
+            return Effect.succeed(output(cloudHelp));
+          case "handoff offer":
+            return Effect.succeed(output("usage: agentd handoff offer [--cloud]"));
+          case "cloud setup":
+            return Effect.succeed(setup);
+          case "cloud balance":
+            return Effect.succeed(
+              output(
+                "a cloud handoff needs [cloud] url for the Job API. Run agentd cloud setup",
+                1,
+              ),
+            );
+          default:
+            return Effect.die(`unexpected agentd ${input.args.join(" ")}`);
+        }
+      });
+      const setups = () => runs.filter(({ args }) => args[1] === "setup");
+
+      // Before v0.1.15 there is nothing to run: the app keeps the Console link.
+      expect(yield* bridge.cloudSetup({ cwd: null, includeBalance: true })).toMatchObject({
+        supported: true,
+        canConfigure: false,
+        project: null,
+        problem: "setup",
+      });
+      expect((yield* Effect.flip(bridge.cloudConfigure({ key, url: libraos }))).message).toBe(
+        "This version of AgentD can’t set up Cloud Workers. Run agentd upgrade, then try again.",
+      );
+      expect(setups()).toEqual([]);
+
+      cloudHelp =
+        "usage: agentd cloud sync | balance | setup [--url URL] [--key-file FILE|-] [--dry-run] [--json]";
+      // The version is the cache key: the same agentd version keeps its answer, a new one asks again.
+      const upgraded = yield* makeBridge({ AGENTD_BIN: process.execPath }, (input) => {
+        runs.push(input);
+        if (input.args.join(" ") === "help cloud") return Effect.succeed(output(cloudHelp));
+        if (input.args[0] === "version") return Effect.succeed(output("agentd v0.1.15"));
+        if (input.args.join(" ") === "handoff offer --help")
+          return Effect.succeed(output("usage: agentd handoff offer [--cloud]"));
+        if (input.args.join(" ") === "cloud setup --dry-run --json") return Effect.succeed(target);
+        if (input.args[1] === "setup") return Effect.succeed(setup);
+        if (input.args.join(" ") === "cloud balance --json")
+          return Effect.succeed(
+            output("a cloud handoff needs [cloud] url for the Job API. Run agentd cloud setup", 1),
+          );
+        return Effect.die(`unexpected agentd ${input.args.join(" ")}`);
+      });
+      // A fresh install, [cloud] unset: v0.1.15's balance refusal is a setup problem, with the form.
+      expect(yield* upgraded.cloudSetup({ cwd: null, includeBalance: true })).toMatchObject({
+        canConfigure: true,
+        setupUrl: libraos,
+        problem: "setup",
+      });
+      expect(yield* upgraded.cloudSetup({ cwd: null, includeBalance: false })).toMatchObject({
+        canConfigure: true,
+        setupUrl: libraos,
+      });
+      expect(yield* upgraded.cloudConfigure({ key: `  ${key}\n`, url: libraos })).toEqual({
+        balanceUsd: 12.5,
+      });
+
+      setup = output("cloud setup: the Job API refused the account key (HTTP 401)", 1);
+      expect((yield* Effect.flip(upgraded.cloudConfigure({ key, url: libraos }))).message).toBe(
+        "The Job API refused this account key. Copy the whole key and try again.",
+      );
+      setup = output(`cloud setup: unexpected answer near ${key}`, 1);
+      expect((yield* Effect.flip(upgraded.cloudConfigure({ key, url: libraos }))).message).toBe(
+        "unexpected answer near [redacted]",
+      );
+      expect(
+        (yield* Effect.flip(upgraded.cloudConfigure({ key: "two\nlines", url: libraos }))).message,
+      ).toBe("Paste the account key on one line.");
+
+      // A separately hosted Job API ([cloud] url) is shown, and the key is bound to it.
+      const custom = "https://jobs.example.com";
+      target = output(`{"url":"${custom}","dry_run":true}`);
+      expect(yield* upgraded.cloudSetup({ cwd: null, includeBalance: false })).toMatchObject({
+        setupUrl: custom,
+      });
+      setup = output(`{"url":"${custom}","balance":{"available_usd":"3.00"}}`);
+      expect(yield* upgraded.cloudConfigure({ key, url: custom })).toEqual({ balanceUsd: 3 });
+      // agentd that won't say where: no destination, so the app asks for no key.
+      target = output("cloud setup: use an HTTPS Job API URL", 1);
+      expect(yield* upgraded.cloudSetup({ cwd: null, includeBalance: false })).toMatchObject({
+        setupUrl: null,
+      });
+      for (const url of ["http://jobs.example.com", "https://u:p@jobs.example.com", "--url"]) {
+        expect((yield* Effect.flip(upgraded.cloudConfigure({ key, url }))).message).toMatch(
+          /Job API address/,
+        );
+      }
+
+      const keyed = setups().filter(({ args }) => !args.includes("--dry-run"));
+      expect(keyed.map(({ args, stdin }) => [args, stdin])).toEqual([
+        ...Array.from({ length: 3 }, () => [
+          ["cloud", "setup", "--url", libraos, "--key-file", "-", "--json"],
+          `${key}\n`,
+        ]),
+        [["cloud", "setup", "--url", custom, "--key-file", "-", "--json"], `${key}\n`],
+      ]);
+      expect(
+        setups()
+          .filter(({ args }) => args.includes("--dry-run"))
+          .every(({ stdin }) => stdin === undefined),
+      ).toBe(true);
+      expect(JSON.stringify(runs.map(({ args }) => args))).not.toContain(key);
+    }),
+  );
+
   it.effect("names cloud refusals in one line, and reads GitHub origins in every form", () =>
     Effect.gen(function* () {
       let origin = "";
@@ -727,6 +1016,8 @@ describe("AgentdBridge", () => {
         switch (input.args.slice(0, 2).join(" ")) {
           case "version":
             return Effect.succeed(output("agentd v0.1.14"));
+          case "help cloud":
+            return Effect.succeed(output("usage: agentd cloud sync | balance"));
           case "remote get-url":
             return Effect.succeed(output(`${origin}\n`));
           case "session join":

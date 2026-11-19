@@ -121,7 +121,19 @@ export function useAgentdCommands() {
     connectAgent: useAtomCommand(agentdEnvironment.connectAgent),
     joinTeam: useAtomCommand(agentdEnvironment.joinTeam),
     setTeamNode: useAtomCommand(agentdEnvironment.setTeamNode),
+    cloudConfigure: useAtomCommand(agentdEnvironment.cloudConfigure),
   };
+}
+
+/** The Cloud Workers account alone, with no project: balance, setup and plans. */
+export function useAgentdCloudAccount(target: EnvironmentId | null) {
+  const environmentId = useAgentdEnvironment(target);
+  return useEnvironmentQuery(
+    environmentId === null
+      ? null
+      : agentdEnvironment.cloudSetup({ environmentId, input: { cwd: null, includeBalance: true } }),
+    useMessages(),
+  );
 }
 
 export function useAgentdCloudSetup(

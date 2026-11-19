@@ -1,7 +1,5 @@
 # 84: Start a task with one look
 
-Design: `docs/superpowers/specs/2026-11-19-auto-start-task-design.md`.
-
 A Start fills in what it can and shows it as one line with Start: the worker (or Cloud Workers), "budget up to $N", the model access and the check. A second line gives the estimate behind the budget. Problems show as a single line, and Start stays disabled until they are fixed.
 
 - **Budget.** The new read `agentd.taskDefaults` runs `agentd handoff estimate --type TYPE --json` on the environment's host. The type comes from the draft's size, and is `implement` when there is no size. The dollar cap is agentd's `high` rounded up to a whole dollar. For Cloud Workers it is also capped by the available credit. Minutes come from agentd's `default_budget` in the cloud balance answer, else 60. With no estimate (fewer than 5 priced past jobs, or no answer), the budget is `60m,$5`. When the person empties the budget, the filled one comes back. The Cloud Workers estimate line says it comes from local runs of similar tasks.

@@ -2975,6 +2975,8 @@
   "7cda14a9e8aaefb0": "Stopped",
   "61fd8a69256ec45d": "Budget exceeded",
   "1b7494da22e37c28": "Status unavailable",
+  "5be144476e4fe449": "Your ChatGPT subscription",
+  "a0a9216d601d2a9f": "Your Claude subscription",
   "35c01798af22a7d2": "Your API key",
   "91b7cf85b9257618": [
     "Worker cost: ",
@@ -2984,6 +2986,8 @@
       "v": "v"
     }
   ],
+  "657d054cf2cf8072": "Inference: billed to your ChatGPT plan",
+  "d4aed6cf1f1320c1": "Inference: billed to your Claude plan",
   "f0a3b6c634005437": "Inference: billed by your provider",
   "55ef559afc9d79f5": [
     "Inference: ",
@@ -3069,6 +3073,19 @@
   ],
   "1b7c524fccf06537": "Needs you",
   "db2fec7c6c08a6b4": "Workers",
+  "8921053c4410665e": "Cloud Workers",
+  "84bc880c5d7799c4": "This version of AgentD has no Cloud Workers.",
+  "1df964aa41b32b25": "Cloud Workers aren’t set up on this machine.",
+  "e959699c0a2955e1": [
+    "Available LibraOS credit: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "faff20f08da2ce6c": "LibraOS balance unavailable.",
+  "25844d3596093e37": "Replace the account key",
   "a778b88e13c3f7eb": "Couldn't read AgentD",
   "5a0125dd9241cdec": "読み込んでいます…",
   "7fec02fafc537109": "Checks passed",
@@ -3099,7 +3116,6 @@
   "0f5e80eaf21b47af": "Unknown node",
   "5b2287f7b10cfa2f": "オフライン",
   "ff7073d416e5882b": "No task reported.",
-  "8921053c4410665e": "Cloud Workers",
   "5d4dbe8e9827c146": "No active workers or team nodes reported.",
   "6504cbf31f8c20ec": "AgentD could not start agentd init.",
   "cb388ed2ffb145e6": "agentd init asked a question this app does not answer, so it was stopped. Run agentd init in a terminal to answer it.",
@@ -3250,6 +3266,43 @@
     }
   ],
   "efa55bbb1d3aa45e": "変更を確認",
+  "e904d5feb2033d95": "AgentD couldn’t set up Cloud Workers.",
+  "1cdcb8450d2249b5": "Open Cloud Workers setup in LibraOS Console",
+  "1b459a8c87861ade": "Create a key in LibraOS Console",
+  "3ba6d7ffc9419c80": "To set up Cloud Workers here, AgentD needs an upgrade. Run this, then reopen this view:",
+  "95ac78289e7df823": "AgentD didn’t say where it would send an account key, so none is asked for here.",
+  "d4303d9c68fbd944": "This connection can’t set up Cloud Workers.",
+  "ea576c20385d20ea": "Set up Cloud Workers",
+  "c0cc5c88f4caee14": "Create a Cloud Workers account key in LibraOS Console.",
+  "6ef12fe7234ea88b": [
+    "Get an account key from whoever runs the Job API at ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ". A LibraOS Console key won’t work there."
+  ],
+  "cd2bc6844ecf0869": [
+    "Paste the key here. AgentD sends it to ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " to check it, then saves it in a private file on this environment’s machine."
+  ],
+  "204a8f2f6030de66": "Cloud Workers account key",
+  "5d5e894500e502ae": "Keep the current key",
+  "fe52cec33306562c": "Cloud Workers are set up.",
+  "bc22db6a4c001038": [
+    "Cloud Workers are set up. Available LibraOS credit: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "668e353261860b41": "Background work",
   "65328c7f8bf4cd56": "Waiting for an AgentD worker",
   "8e7bdb314813b183": "Running",
@@ -3273,7 +3326,10 @@
   ],
   "7c6c8fba08df7b9a": "Running. The agent reads this command's output when it finishes.",
   "480b43a826eb2720": "Your API key",
-  "1cdcb8450d2249b5": "Open Cloud Workers setup in LibraOS Console",
+  "ddd1940b8d6bbdd7": "Your subscription",
+  "2582796b9cd929a5": "Claude (Claude Code)",
+  "bb58748e4b230007": "ChatGPT (Codex)",
+  "4283cbba1d675ef8": "ChatGPT (Codex): needs a newer AgentD",
   "0606bddb2fb895bd": "Run in the cloud",
   "e2f5cc2eeccfc92b": "Cloud Workers require a GitHub repository as the checkout’s origin.",
   "16c7fc3b7eaea196": [
@@ -3285,27 +3341,48 @@
     }
   ],
   "8b21ccdccad92c0a": "Checking LibraOS credit…",
-  "e959699c0a2955e1": [
-    "Available LibraOS credit: ",
-    {
-      "i": 1,
-      "k": "_gt_value_1",
-      "v": "v"
-    }
-  ],
   "eb6e2b6aae32f93b": "Cloud Workers aren’t set up. Check the cloud configuration and account key file.",
   "d016144cc5a6dbad": "The repository owner must install the Cloud Workers GitHub App on this repository.",
   "893f91bfccd064b9": "There is not enough LibraOS credit.",
-  "faff20f08da2ce6c": "LibraOS balance unavailable.",
   "188b5f5868e1ceea": "Dollar cap (USD)",
   "8f3320315e697b15": "Time limit in minutes (optional)",
   "4952a48d2f114ac9": "Enter a positive dollar cap and, if needed, a positive time limit.",
   "168a996246dfcd04": "Model access",
+  "715f60441697c965": "Your subscription (needs AgentD v0.1.14 or later)",
+  "75a0a0ea5970711f": "Your subscription",
   "0d575788064a43d5": "Enter at least one absolute key file path on this environment’s machine. Do not paste the API key itself.",
+  "83af98b27cd62acf": "テキストファイルの1行にキーだけを保存してから、そのファイルを選択してください。",
+  "e17f9689603be8f4": "参照…",
+  "256f4ab9a895674d": "キーそのものが入力されているようです。ファイルに保存して、そのファイルを選択してください。",
   "07420cedda5d2275": "Anthropic key file path",
   "553eb762abefeda2": "OpenAI key file path",
   "7d7bb753c7e99807": "Worker time is billed to LibraOS credits. Your provider bills inference separately; it isn’t covered by this dollar cap.",
   "2ae0b42ad8251297": "Worker time and inference are both billed to LibraOS credits.",
+  "0faf657712a9d10a": "Plan",
+  "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
+  "53150504b20565ec": "Needs a newer AgentD. Run agentd upgrade to use your Claude plan.",
+  "ab81d225fe98229f": "Setting up a subscription from this app isn’t available on Windows yet: AgentD can’t keep the sign-in file private there.",
+  "805d8c5b3e0a75f2": "AgentD can’t use your ChatGPT sign-in. Sign in again in a terminal:",
+  "75191ad4c65ff49d": "Your ChatGPT plan isn’t set up for Cloud Workers. Sign in in a terminal:",
+  "6f96d6861970cb51": "Your Claude token is missing, expired or not valid. Make a new one in a terminal:",
+  "7921f79830f7d147": "Your Claude plan isn’t set up for Cloud Workers. Make a token in a terminal:",
+  "46ff2c979a96422f": "Then enter the absolute path of Codex’s auth.json on that machine below (in the .codex folder of its home folder, or in CODEX_HOME), or set it once with agentd config set cloud.codex_auth_file PATH. Run agentd config set in a terminal, then reopen this dialog.",
+  "da55459cbf687a40": "Save the token alone in a private file (chmod 600), then enter its path below, or set it once with agentd config set cloud.claude_token_file PATH. Come back to this dialog when it’s saved.",
+  "70e1f86eec65c64b": "Using the ChatGPT sign-in AgentD has set up.",
+  "cd454f65356379e5": "Using the Claude token AgentD has set up.",
+  "3a12839a259436f4": [
+    "Using the Claude token AgentD has set up. It runs out about ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "."
+  ],
+  "2df8ba1ffd667a89": "ChatGPT auth.json path (optional)",
+  "2ad77b2747bd90e4": "Claude token file path (optional)",
+  "a059069d84b5141d": "Billed to your ChatGPT plan. Worker time is billed to LibraOS credits.",
+  "a72db40e119ee145": "Billed to your Claude plan. Worker time is billed to LibraOS credits.",
   "b95ea8f56ec99b89": "Enter a goal.",
   "acc4a4621973ddf9": "Enter a goal that does not begin with a dash or contain a NUL character.",
   "3393b275f19c6391": "Enter a check command.",
@@ -3367,10 +3444,14 @@
   "a4aff358558707df": "This session has no project working directory.",
   "cee006e381c89877": "There is not enough LibraOS credit for Cloud Workers.",
   "7e4a9f1615efb801": "Sign in to LibraOS or connect the LibraOS Gateway to use LibraOS models.",
+  "56e4f7ed70b61ddf": "Set up your ChatGPT plan, or choose another model access.",
+  "ae8e59cdd9383873": "Set up your Claude plan, or choose another model access.",
   "00fa5612fcdd4d27": "Choose a worker. The default is set in agentd.",
   "e0fb1011751b53eb": "Cloud Workers aren’t set up. Check the cloud configuration and account key file.",
   "cb6d9d23cb1d9316": "The repository owner must install the Cloud Workers GitHub App on this repository.",
   "a7e5d8daf7e5e3fb": "LibraOS models",
+  "05ecab186bc0b430": "your ChatGPT plan",
+  "ff0afd930952dd55": "your Claude plan",
   "a4dd18bb2cc243d3": "your API key",
   "bf838fdca5910f8f": "Cloud Workers",
   "3f8423de9feb2172": "budget up to {cap}",
