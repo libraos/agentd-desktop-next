@@ -36,7 +36,8 @@ The pages the first pass skipped, for upstream-only services, are now done, and
   `appearance.md`, `devices.md`, `providers-acp.md`: T3 Connect, T3 Chat, app.t3.codes and hosted
   sign-in paragraphs are removed, or replaced by one line saying the service is not part of AgentD
   Next where a reader would look for it. Prompt and thread links show the `agentd-desktop://` and
-  `t3-thread://` forms the code builds without a hosted app. SSH hosts need a release mirror.
+  `t3-thread://` forms the code builds without a hosted app. SSH hosts and the background service
+  need a release mirror, since both download a server runtime.
 - Prose "T3 home", "T3 server", "T3 thread", bare "T3" and similar name AgentD Next (several
   pages). Unchanged: `T3CODE_*` variables, `t3 ...` commands, paths such as `~/.t3`, policy keys
   and labels (`"connect"`, **Allow T3 Connect**) and scopes (`relay:read`).
