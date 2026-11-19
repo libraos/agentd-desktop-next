@@ -1,17 +1,21 @@
 import {
   AgentdCloudBudget,
   AgentdCloudKeyFile,
+  PRIMARY_LOCAL_ENVIRONMENT_ID,
   type AgentdCloudPlan,
   type AgentdCloudTaskInput,
   type AgentdTaskEstimate,
   type EnvironmentId,
+  type ExecutionEnvironmentPlatformOs,
 } from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
 import { T, useGT, useLocale, Var } from "gt-react";
-import { useId, useState } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 
 import { useAgentdCloudSetup } from "~/lib/agentdState";
+import { useEnvironment, usePrimaryEnvironmentId } from "~/state/environments";
 import { CommandBlock } from "../CommandBlock";
+import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -315,58 +319,171 @@ export function StartTaskCloud({
           {modelAccess === "subscription" ? (
             <SubscriptionPlan cloud={cloud} disabled={disabled} />
           ) : modelAccess === "byok" ? (
-            <>
-              <p id={`${id}-keys`} className="text-xs text-muted-foreground">
-                <T>
-                  Enter at least one absolute key file path on this environment’s machine. Do not
-                  paste the API key itself.
-                </T>
-              </p>
-              <div className="space-y-1.5">
-                <Label htmlFor={`${id}-anthropic`}>
-                  <T>Anthropic key file path</T>
-                </Label>
-                <Input
-                  id={`${id}-anthropic`}
-                  defaultValue={cloud.anthropicKey ?? ""}
-                  disabled={disabled}
-                  autoComplete="off"
-                  spellCheck={false}
-                  maxLength={4096}
-                  aria-describedby={`${id}-keys`}
-                  aria-invalid={cloud.anthropicKey === null}
-                  onChange={(event) => cloud.setAnthropicKey(keyPath(event.target.value))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={`${id}-openai`}>
-                  <T>OpenAI key file path</T>
-                </Label>
-                <Input
-                  id={`${id}-openai`}
-                  defaultValue={cloud.openaiKey ?? ""}
-                  disabled={disabled}
-                  autoComplete="off"
-                  spellCheck={false}
-                  maxLength={4096}
-                  aria-describedby={`${id}-keys`}
-                  aria-invalid={cloud.openaiKey === null}
-                  onChange={(event) => cloud.setOpenaiKey(keyPath(event.target.value))}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                <T>
-                  Worker time is billed to LibraOS credits. Your provider bills inference
-                  separately; it isn’t covered by this dollar cap.
-                </T>
-              </p>
-            </>
+            <ByokKeyFiles cloud={cloud} disabled={disabled} />
           ) : (
             <p className="text-xs text-muted-foreground">
               <T>Worker time and inference are both billed to LibraOS credits.</T>
             </p>
           )}
         </div>
+      ) : null}
+    </div>
+  );
+}
+
+const KEY_FILE_HOME = {
+  windows: "C:\\Users\\<you>\\.config\\",
+  darwin: "/Users/<you>/.config/",
+  linux: "/home/<you>/.config/",
+  unknown: "/",
+} satisfies Record<ExecutionEnvironmentPlatformOs, string>;
+
+function ByokKeyFiles({
+  cloud,
+  disabled,
+}: {
+  readonly cloud: ReturnType<typeof useStartTaskCloud>;
+  readonly disabled: boolean;
+}) {
+  const id = useId();
+  const environment = useEnvironment(cloud.environmentId);
+  const primaryId = usePrimaryEnvironmentId();
+  const bridge = typeof window === "undefined" ? undefined : window.desktopBridge;
+  const pickFiles =
+    bridge?.pickFiles &&
+    cloud.environmentId === primaryId &&
+    bridge
+      .getLocalEnvironmentBootstraps()
+      .some(
+        (bootstrap) =>
+          bootstrap.id === PRIMARY_LOCAL_ENVIRONMENT_ID &&
+          bootstrap.runningDistro === null &&
+          bootstrap.httpBaseUrl !== null,
+      )
+      ? bridge.pickFiles
+      : undefined;
+  const home = KEY_FILE_HOME[environment?.serverConfig?.environment.platform.os ?? "unknown"];
+
+  return (
+    <>
+      <div id={id} className="space-y-1 text-xs text-muted-foreground">
+        <p>
+          <T>
+            Enter at least one absolute key file path on this environment’s machine. Do not paste
+            the API key itself.
+          </T>
+        </p>
+        <p>
+          <T>Save the key on its own line in a text file, then choose that file.</T>
+        </p>
+      </div>
+      <ByokKeyFile
+        label={<T>Anthropic key file path</T>}
+        placeholder={home + "anthropic.key"}
+        helpId={id}
+        disabled={disabled}
+        path={cloud.anthropicKey}
+        setPath={cloud.setAnthropicKey}
+        pickFiles={pickFiles}
+      />
+      <ByokKeyFile
+        label={<T>OpenAI key file path</T>}
+        placeholder={home + "openai.key"}
+        helpId={id}
+        disabled={disabled}
+        path={cloud.openaiKey}
+        setPath={cloud.setOpenaiKey}
+        pickFiles={pickFiles}
+      />
+      <p className="text-xs text-muted-foreground">
+        <T>
+          Worker time is billed to LibraOS credits. Your provider bills inference separately; it
+          isn’t covered by this dollar cap.
+        </T>
+      </p>
+    </>
+  );
+}
+
+function ByokKeyFile({
+  label,
+  placeholder,
+  helpId,
+  disabled,
+  path,
+  setPath,
+  pickFiles,
+}: {
+  readonly label: ReactNode;
+  readonly placeholder: string;
+  readonly helpId: string;
+  readonly disabled: boolean;
+  readonly path: KeyPath;
+  readonly setPath: (path: KeyPath) => void;
+  readonly pickFiles: (() => Promise<string | null>) | undefined;
+}) {
+  const id = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [looksLikeKey, setLooksLikeKey] = useState(false);
+  const [picking, setPicking] = useState(false);
+
+  const updatePath = (value: string) => {
+    const trimmed = value.trim();
+    const isKey = trimmed.startsWith("sk-") || (trimmed.length > 30 && !/[/\\]/.test(trimmed));
+    setLooksLikeKey(isKey);
+    setPath(isKey ? null : keyPath(trimmed));
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <Label id={id + "-label"} htmlFor={id}>
+        {label}
+      </Label>
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <Input
+            ref={inputRef}
+            nativeInput
+            id={id}
+            defaultValue={path ?? ""}
+            placeholder={placeholder}
+            disabled={disabled || picking}
+            autoComplete="off"
+            spellCheck={false}
+            maxLength={4096}
+            aria-describedby={looksLikeKey ? helpId + " " + id + "-key-error" : helpId}
+            aria-invalid={path === null}
+            onChange={(event) => updatePath(event.target.value)}
+          />
+        </div>
+        {pickFiles ? (
+          <Button
+            variant="outline"
+            disabled={disabled || picking}
+            aria-labelledby={id + "-browse " + id + "-label"}
+            onClick={async () => {
+              setPicking(true);
+              try {
+                const selected = await pickFiles().catch(() => null);
+                if (selected !== null && inputRef.current) {
+                  inputRef.current.value = selected;
+                  updatePath(selected);
+                }
+              } finally {
+                setPicking(false);
+              }
+            }}
+          >
+            <span id={id + "-browse"}>
+              <T>Browse…</T>
+            </span>
+          </Button>
+        ) : null}
+      </div>
+      {looksLikeKey ? (
+        <p id={id + "-key-error"} role="alert" className="text-xs text-destructive">
+          <T>This looks like the key itself. Save it in a file and choose that file.</T>
+        </p>
       ) : null}
     </div>
   );

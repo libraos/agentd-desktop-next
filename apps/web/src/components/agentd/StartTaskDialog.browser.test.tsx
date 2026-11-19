@@ -8,7 +8,10 @@ import {
   type AgentdStartTaskResult,
   type AgentdTaskDefaults,
   type AgentdTaskOther,
+  EnvironmentId,
+  PRIMARY_LOCAL_ENVIRONMENT_ID,
   ThreadId,
+  type ExecutionEnvironmentPlatformOs,
 } from "@t3tools/contracts";
 import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/reactivity";
@@ -18,7 +21,7 @@ import { page, userEvent } from "vite-plus/test/browser";
 import { hostRightPanel, selectActiveRightPanel, useRightPanelStore } from "~/rightPanelStore";
 import { AppAtomRegistryProvider } from "~/rpc/atomRegistry";
 import { makeThreadFixture } from "~/test-fixtures";
-import { render } from "../../../test/render";
+import { render, stubGlobal } from "../../../test/render";
 import { ToastProvider } from "../ui/toast";
 import { CloudWorkersSetup } from "./CloudWorkersSetup";
 import { openStartTaskDialog, StartTaskDialogHost } from "./StartTaskDialog";
@@ -36,6 +39,8 @@ const state = vi.hoisted(() => ({
   defaults: { estimate: null, check: null } as AgentdTaskDefaults,
   gateway: false,
   worker: "opencode" as string | null,
+  primary: null as EnvironmentId | null,
+  os: "unknown" as ExecutionEnvironmentPlatformOs,
 }));
 
 vi.mock("~/lib/agentdState", async () => {
@@ -58,6 +63,12 @@ vi.mock("~/lib/agentdState", async () => {
 });
 vi.mock("~/lib/libraosGatewayState", () => ({
   useLibraosGatewayConnected: () => state.gateway,
+}));
+vi.mock("~/state/environments", () => ({
+  usePrimaryEnvironmentId: () => state.primary,
+  useEnvironment: () => ({
+    serverConfig: { environment: { platform: { os: state.os } } },
+  }),
 }));
 vi.mock("~/state/entities", () => ({
   useQuietThreadShell: () => thread,
@@ -90,6 +101,8 @@ function setup(branch: string, open: boolean | typeof drafted = true) {
   state.others = [];
   state.defaults = { estimate: null, check: null };
   state.gateway = false;
+  state.primary = null;
+  state.os = "unknown";
   state.worker = "opencode";
   state.start.mockReset();
   state.configure.mockReset();
@@ -222,8 +235,20 @@ it("starts a cloud task with a dollar cap and a provider key path, without the l
   await page.getByRole("combobox", { name: "Model access" }).click();
   await page.getByRole("option", { name: "Your API key" }).click();
   const keyPath = page.getByLabelText("Anthropic key file path");
-  await userEvent.fill(keyPath, "sk-example-not-a-path");
-  await expect.element(start).toBeDisabled();
+  const openai = page.getByLabelText("OpenAI key file path");
+  await userEvent.fill(openai, "/private/openai.key");
+  for (const value of ["sk-example/with-separator", "sk-ant-example", "x".repeat(31)]) {
+    await userEvent.fill(keyPath, value);
+    await expect.element(keyPath).toHaveAttribute("aria-invalid", "true");
+    await expect
+      .element(
+        page.getByText("This looks like the key itself. Save it in a file and choose that file."),
+      )
+      .toBeVisible();
+    await expect.element(start).toBeDisabled();
+    expect(state.start).not.toHaveBeenCalled();
+  }
+  await userEvent.fill(openai, "");
   await userEvent.fill(keyPath, "/private/key file");
   await expect.element(page.getByText(/Your provider bills inference separately/)).toBeVisible();
   await start.click();
@@ -524,6 +549,67 @@ const cloudReady = (fields: Partial<AgentdCloudSetup> = {}): AgentdCloudSetup =>
   problem: null,
   ...fields,
 });
+const keyFileEnvironments = [
+  { os: "windows", mode: "local", prefix: "C:\\Users\\<you>\\.config\\" },
+  { os: "darwin", mode: "remote", prefix: "/Users/<you>/.config/" },
+  { os: "linux", mode: "wsl", prefix: "/home/<you>/.config/" },
+  { os: "linux", mode: "web", prefix: "/home/<you>/.config/" },
+] as const;
+
+it.each(keyFileEnvironments)(
+  "uses the $os key file example and offers Browse only on the native desktop ($mode)",
+  async ({ os, mode, prefix }) => {
+    setup("feature/export");
+    state.cloud = cloudReady({ balanceUsd: null });
+    state.primary = mode === "remote" ? EnvironmentId.make("other") : thread.environmentId;
+    state.os = os;
+    const openaiPath = "C:\\Users\\Developer\\.config\\openai.key";
+    const pickFiles = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(openaiPath);
+    using _bridge = stubGlobal(
+      "desktopBridge",
+      mode === "web"
+        ? undefined
+        : {
+            pickFiles,
+            getLocalEnvironmentBootstraps: () => [
+              {
+                id: PRIMARY_LOCAL_ENVIRONMENT_ID,
+                runningDistro: mode === "wsl" ? "Ubuntu" : null,
+                httpBaseUrl: "http://localhost:3773",
+                wsBaseUrl: "ws://localhost:3773",
+              },
+            ],
+          },
+    );
+    await using _screen = await renderDialog();
+    await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+    const anthropic = page.getByRole("textbox", { name: "Anthropic key file path" });
+    const openai = page.getByRole("textbox", { name: "OpenAI key file path" });
+    await expect.element(anthropic).toHaveAttribute("placeholder", prefix + "anthropic.key");
+    await expect.element(openai).toHaveAttribute("placeholder", prefix + "openai.key");
+    await expect
+      .element(
+        page.getByText("Save the key on its own line in a text file, then choose that file."),
+      )
+      .toBeVisible();
+    await userEvent.fill(anthropic, prefix + "anthropic.key");
+    await expect.element(anthropic).toHaveAttribute("aria-invalid", "false");
+
+    const browse = page.getByRole("button", { name: /^Browse…/ });
+    if (mode !== "local") {
+      await expect.element(browse).not.toBeInTheDocument();
+      return;
+    }
+    expect(browse.all()).toHaveLength(2);
+    await browse.nth(0).click();
+    await expect.element(browse.nth(0)).toBeEnabled();
+    await expect.element(anthropic).toHaveValue(prefix + "anthropic.key");
+    await browse.nth(1).click();
+    await expect.element(openai).toHaveValue(openaiPath);
+    expect(pickFiles.mock.calls).toEqual([[], []]);
+  },
+);
+
 const plan = (fields: Partial<AgentdCloudPlanState> = {}): AgentdCloudPlanState => ({
   supported: true,
   configured: true,

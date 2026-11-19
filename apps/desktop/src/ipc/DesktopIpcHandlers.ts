@@ -51,6 +51,7 @@ import {
   pasteAsText,
   probeRemoteEditors,
   revealWindow,
+  pickFiles,
   pickFolder,
   toLocalBackendPath,
   pickProjectFavicon,
@@ -149,6 +150,7 @@ export const installDesktopIpcHandlers = Effect.fn("desktop.ipc.installHandlers"
   yield* ipc.handle(setWslDistro);
   yield* ipc.handle(setWslOnly);
 
+  yield* ipc.handle(pickFiles);
   yield* ipc.handle(pickFolder);
   yield* ipc.handle(toLocalBackendPath);
   yield* ipc.handle(pickProjectFavicon);
