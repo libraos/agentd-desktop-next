@@ -240,7 +240,15 @@ export function AgentdCloudTaskSummary({
       <span className="font-medium text-foreground">
         <CloudState state={state} />
       </span>
-      {cloud?.modelAccess === "byok" ? (
+      {cloud?.modelAccess === "subscription" ? (
+        <span>
+          {cloud.plan === "codex" ? (
+            <T>Your ChatGPT subscription</T>
+          ) : (
+            <T>Your Claude subscription</T>
+          )}
+        </span>
+      ) : cloud?.modelAccess === "byok" ? (
         <span>
           <T>Your API key</T>
         </span>
@@ -254,7 +262,15 @@ export function AgentdCloudTaskSummary({
           </T>
         </span>
       ) : null}
-      {cloud?.modelAccess === "byok" ? (
+      {cloud?.modelAccess === "subscription" ? (
+        <span>
+          {cloud.plan === "codex" ? (
+            <T>Inference: billed to your ChatGPT plan</T>
+          ) : (
+            <T>Inference: billed to your Claude plan</T>
+          )}
+        </span>
+      ) : cloud?.modelAccess === "byok" ? (
         <span>
           <T>Inference: billed by your provider</T>
         </span>

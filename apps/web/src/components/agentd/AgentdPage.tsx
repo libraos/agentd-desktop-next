@@ -29,6 +29,7 @@ import { getAppModalReturnThreadTarget } from "../sidebar/mainAppLocation";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Button } from "../ui/button";
 import { AgentdNeedsYou, AgentdRead, AgentdSection, AgentdStatusDetails } from "./AgentdPageReads";
+import { AgentdPageCloud } from "./AgentdPageCloud";
 import { AgentdPageWorkers } from "./AgentdPageWorkers";
 import { openAgentdSetupDialog, useCanSetUpAgentd } from "./AgentdSetupDialog";
 import { AgentdTeamNodeSwitch } from "./AgentdTeamNodeSwitch";
@@ -213,6 +214,9 @@ export function AgentdPage() {
                   </AgentdSection>
                   <AgentdSection id="agentd-workers" title={<T>Workers</T>}>
                     <AgentdPageWorkers tasks={tasks} people={people} open={openTask} />
+                  </AgentdSection>
+                  <AgentdSection id="agentd-cloud" title={<T>Cloud Workers</T>}>
+                    <AgentdPageCloud environmentId={activeEnvironmentId} />
                   </AgentdSection>
                 </>
               ) : null}

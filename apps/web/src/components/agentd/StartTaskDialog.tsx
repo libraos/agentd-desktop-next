@@ -30,7 +30,8 @@ import { Label } from "../ui/label";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Textarea } from "../ui/textarea";
 import { toastManager } from "../ui/toast";
-import { CloudWorkersSetupLink, StartTaskCloud, useStartTaskCloud } from "./StartTaskCloud";
+import { CloudWorkersSetup } from "./CloudWorkersSetup";
+import { StartTaskCloud, useStartTaskCloud } from "./StartTaskCloud";
 import { StartTaskOthers } from "./StartTaskOthers";
 import {
   conversationTaskDraft,
@@ -169,7 +170,7 @@ function StartTaskDialog({
       )
     : null;
   const issueReason = validation.issue ? gt("Use the format OWNER/REPO#123.") : null;
-  const keysMissing = cloud.enabled && cloud.modelAccess === "byok" && cloud.input === null;
+  const keysMissing = cloud.enabled && cloud.modelAccess !== "libraos" && cloud.input === null;
   const showInputs =
     editing ||
     goalReason !== null ||
@@ -452,7 +453,11 @@ function StartTaskDialog({
               {cloud.enabled &&
               cloud.setup?.problem !== "setup" &&
               /cloud configuration and account key file/.test(startError) ? (
-                <CloudWorkersSetupLink />
+                <CloudWorkersSetup
+                  environmentId={environmentId}
+                  canConfigure={cloud.setup?.canConfigure === true}
+                  onConfigured={cloud.refresh}
+                />
               ) : null}
             </div>
           )}

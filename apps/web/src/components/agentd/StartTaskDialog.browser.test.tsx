@@ -3,6 +3,7 @@ import "~/index.css";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
 import {
   AgentdCommandError,
+  type AgentdCloudPlanState,
   type AgentdCloudSetup,
   type AgentdStartTaskResult,
   type AgentdTaskDefaults,
@@ -25,6 +26,8 @@ import { TaskDraftCard } from "./TaskDraftCard";
 
 const state = vi.hoisted(() => ({
   start: vi.fn(),
+  configure: vi.fn(),
+  cloudRefresh: vi.fn(),
   refresh: vi.fn(),
   branch: "feature/export",
   cloud: null as AgentdCloudSetup | null,
@@ -38,10 +41,17 @@ vi.mock("~/lib/agentdState", async () => {
   const { Atom } = await import("effect/reactivity");
   const allowed = Atom.make(true);
   return {
-    agentdEnvironment: { startTask: { permissionAtom: () => allowed } },
+    agentdEnvironment: {
+      startTask: { permissionAtom: () => allowed },
+      cloudConfigure: { permissionAtom: () => allowed, label: "cloud-configure" },
+    },
     useAgentdStatus: () => ({ data: { defaultWorker: state.worker } }),
     useAgentdTaskDefaults: () => ({ data: state.defaults }),
-    useAgentdCloudSetup: (cwd: string | null) => ({ data: cwd ? state.cloud : null, error: null }),
+    useAgentdCloudSetup: (cwd: string | null) => ({
+      data: cwd ? state.cloud : null,
+      error: null,
+      refresh: state.cloudRefresh,
+    }),
     useAgentdTaskOthers: () => ({ data: state.others, isPending: false, isSuccess: true }),
   };
 });
@@ -61,7 +71,12 @@ vi.mock("~/state/query", () => ({
   useEnvironmentQuery: () => ({ data: { isRepo: true, refName: state.branch }, error: null }),
 }));
 vi.mock("~/state/use-atom-command", () => ({
-  useAtomCommand: (command: unknown) => (command === state.refresh ? state.refresh : state.start),
+  useAtomCommand: (command: unknown) =>
+    command === state.refresh
+      ? state.refresh
+      : (command as { label?: string }).label === "cloud-configure"
+        ? state.configure
+        : state.start,
 }));
 
 const thread = makeThreadFixture({ worktreePath: "/repo/worktrees/export" });
@@ -76,6 +91,8 @@ function setup(branch: string, open: boolean | typeof drafted = true) {
   state.gateway = false;
   state.worker = "opencode";
   state.start.mockReset();
+  state.configure.mockReset();
+  state.cloudRefresh.mockReset();
   state.refresh
     .mockReset()
     .mockResolvedValue(AsyncResult.success({ isRepo: true, refName: branch }));
@@ -490,6 +507,198 @@ it("renders a drafted task as a card that starts it or opens the dialog with its
       worker: "opencode",
       budget: "60m,$5",
       issue: null,
+    },
+  });
+});
+
+const cloudReady = (fields: Partial<AgentdCloudSetup> = {}): AgentdCloudSetup => ({
+  supported: true,
+  canConfigure: true,
+  subscription: null,
+  project: "acme/app",
+  balanceUsd: 20,
+  balanceText: null,
+  defaultBudget: null,
+  problem: null,
+  ...fields,
+});
+const plan = (fields: Partial<AgentdCloudPlanState> = {}): AgentdCloudPlanState => ({
+  supported: true,
+  configured: true,
+  valid: true,
+  expiresAbout: null,
+  ...fields,
+});
+
+it("sets Cloud Workers up from the Start dialog with a pasted key, showing a refusal or the balance", async () => {
+  setup("feature/export");
+  state.cloud = cloudReady({ balanceUsd: null, problem: "setup" });
+  const key = "lcw_live_0123456789abcdefghij";
+  state.configure
+    .mockResolvedValueOnce(
+      AsyncResult.failure(
+        Cause.fail(
+          new AgentdCommandError({
+            message:
+              "LibraOS refused this account key. Copy the whole key from LibraOS Console and try again.",
+            notSetUp: false,
+          }),
+        ),
+      ),
+    )
+    .mockResolvedValueOnce(AsyncResult.success({ balanceUsd: 12.5 }));
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await expect
+    .element(page.getByRole("link", { name: "Create a key in LibraOS Console" }))
+    .toHaveAttribute("href", "https://console.libraos.com/agentd");
+  const field = page.getByLabelText("Cloud Workers account key");
+  await expect.element(field).toHaveAttribute("type", "password");
+  const setUp = page.getByRole("button", { name: "Set up Cloud Workers" });
+
+  await userEvent.fill(field, key);
+  await setUp.click();
+  await expect
+    .element(page.getByText(/LibraOS refused this account key/))
+    .toHaveAttribute("role", "alert");
+  await expect.element(field).toHaveValue("");
+  expect(state.cloudRefresh).not.toHaveBeenCalled();
+
+  await userEvent.fill(field, `${key}\n`);
+  await setUp.click();
+  await expect
+    .element(page.getByRole("status").filter({ hasText: "Cloud Workers are set up." }))
+    .toHaveTextContent("Cloud Workers are set up. Available LibraOS credit: $12.50");
+  expect(state.configure.mock.calls).toEqual([
+    [{ environmentId: thread.environmentId, input: { key } }],
+    [{ environmentId: thread.environmentId, input: { key } }],
+  ]);
+  expect(state.cloudRefresh).toHaveBeenCalled();
+});
+
+it("keeps the Console link and asks for agentd upgrade when agentd has no cloud setup", async () => {
+  setup("feature/export");
+  state.cloud = cloudReady({ balanceUsd: null, problem: "setup", canConfigure: false });
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await expect
+    .element(page.getByRole("link", { name: "Open Cloud Workers setup in LibraOS Console" }))
+    .toBeVisible();
+  await expect.element(page.getByText(/agentd upgrade$/)).toBeVisible();
+  await expect.element(page.getByLabelText("Cloud Workers account key")).not.toBeInTheDocument();
+});
+
+it("lists Your subscription as disabled while agentd can't run subscription jobs", async () => {
+  setup("feature/export");
+  state.cloud = cloudReady();
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await page.getByRole("combobox", { name: "Model access" }).click();
+  await expect
+    .element(
+      page.getByRole("option", { name: "Your subscription (needs AgentD v0.1.14 or later)" }),
+    )
+    .toHaveAttribute("aria-disabled", "true");
+});
+
+it("starts a cloud task on the Claude plan agentd has set up, never choosing it by default", async () => {
+  setup("feature/export");
+  state.gateway = true;
+  state.cloud = cloudReady({
+    subscription: {
+      claude: plan({ expiresAbout: "2027-11-01" }),
+      codex: plan({ supported: false, configured: false, valid: null }),
+      setupUnavailable: false,
+    },
+  });
+  state.start.mockResolvedValue(
+    AsyncResult.success({ id: "hof-123abc", started: true, note: null }),
+  );
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await userEvent.fill(page.getByLabelText("Goal"), "Fix export");
+  const access = page.getByRole("combobox", { name: "Model access" });
+  await expect.element(access).toHaveTextContent("LibraOS");
+  await access.click();
+  await page.getByRole("option", { name: "Your subscription" }).click();
+  await expect
+    .element(
+      page.getByText("Using the Claude token AgentD has set up. It runs out about Nov 1, 2027."),
+    )
+    .toBeVisible();
+  await expect.element(page.getByText(/^Billed to your Claude plan\./)).toBeVisible();
+  await expect.element(page.getByText(/budget up to \$5\.00 · your Claude plan/)).toBeVisible();
+
+  await page.getByRole("combobox", { name: "Plan" }).click();
+  await expect
+    .element(page.getByRole("option", { name: "ChatGPT (Codex): needs a newer AgentD" }))
+    .toHaveAttribute("aria-disabled", "true");
+  await userEvent.keyboard("{Escape}");
+
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await expect.element(page.getByText("Started task hof-123abc.")).toBeVisible();
+  expect(state.start).toHaveBeenCalledExactlyOnceWith({
+    environmentId: thread.environmentId,
+    input: {
+      cwd: "/repo/worktrees/export",
+      goal: "Fix export",
+      accept: [],
+      check: null,
+      cloud: { budget: "60m,$5", modelAccess: "subscription", plan: "claude" },
+    },
+  });
+});
+
+it("says how to set up a plan with no credential, and starts with a chosen file", async () => {
+  setup("feature/export");
+  state.cloud = cloudReady({
+    subscription: {
+      claude: plan({ configured: false, valid: null }),
+      codex: plan({ configured: false, valid: null }),
+      setupUnavailable: false,
+    },
+  });
+  state.start.mockResolvedValue(
+    AsyncResult.success({ id: "hof-123abc", started: true, note: null }),
+  );
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await userEvent.fill(page.getByLabelText("Goal"), "Fix export");
+  await page.getByRole("combobox", { name: "Model access" }).click();
+  await page.getByRole("option", { name: "Your subscription" }).click();
+  const start = page.getByRole("button", { name: "Start", exact: true });
+  await expect.element(page.getByText(/claude setup-token$/)).toBeVisible();
+  await expect.element(page.getByRole("button", { name: "Copy command" })).toBeVisible();
+  await expect
+    .element(page.getByText("Set up your Claude plan, or choose another model access."))
+    .toBeVisible();
+  await expect.element(start).toBeDisabled();
+
+  await page.getByRole("combobox", { name: "Plan" }).click();
+  await page.getByRole("option", { name: "ChatGPT (Codex)" }).click();
+  await expect.element(page.getByText(/codex login$/)).toBeVisible();
+  await expect.element(page.getByText(/usually ~\/\.codex\/auth\.json/)).toBeVisible();
+  await expect.element(page.getByText(/^Billed to your ChatGPT plan\./)).toBeVisible();
+  await userEvent.fill(
+    page.getByLabelText("ChatGPT auth.json path (optional)"),
+    "/home/me/.codex/auth.json",
+  );
+  await expect.element(start).toBeEnabled();
+  await start.click();
+  await expect.element(page.getByText("Started task hof-123abc.")).toBeVisible();
+  expect(state.start).toHaveBeenCalledExactlyOnceWith({
+    environmentId: thread.environmentId,
+    input: {
+      cwd: "/repo/worktrees/export",
+      goal: "Fix export",
+      accept: [],
+      check: null,
+      cloud: {
+        budget: "60m,$5",
+        modelAccess: "subscription",
+        plan: "codex",
+        codexAuthFile: "/home/me/.codex/auth.json",
+      },
     },
   });
 });
