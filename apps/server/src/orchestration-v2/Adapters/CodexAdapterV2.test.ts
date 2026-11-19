@@ -1292,7 +1292,7 @@ describe("CodexAdapterV2 session initialize", () => {
       assert.instanceOf(failure.cause, ProviderSetupError);
       assert.equal(
         failure.cause.message,
-        "Codex 0.144.3 does not work with this AgentD Desktop release. Update Codex to >=0.159.0, then retry.",
+        "Codex 0.144.3 does not work with this AgentD Next release. Update Codex to >=0.159.0, then retry.",
       );
     }).pipe(
       Effect.scoped,
@@ -2312,13 +2312,13 @@ describe("CodexAdapterV2 post-settle continuation", () => {
             mcp_optional_startup_grace_ms: 10_000,
             "features.concurrent_reasoning_summaries": true,
             "shell_environment_policy.set.T3CODE_THREAD_ID": `thread-${scenario}`,
-            "mcp_servers.agentd-desktop": {
+            "mcp_servers.agentd-next": {
               url: "http://127.0.0.1:43123/mcp",
               tool_timeout_sec: 3_900,
               http_headers: { Authorization: "Bearer secret-codex-token" },
               disabled_tools: ["thread_wait", "delegate_task"],
             },
-            "mcp_servers.agentd-desktop-direct": {
+            "mcp_servers.agentd-next-direct": {
               url: "http://127.0.0.1:43123/mcp",
               tool_timeout_sec: 3_900,
               http_headers: { Authorization: "Bearer secret-codex-token" },
@@ -2403,7 +2403,7 @@ describe("CodexAdapterV2 post-settle continuation", () => {
     ),
   );
 
-  // regression: #15839 launch-arg MCP servers survive the thread's agentd-desktop server
+  // regression: #15839 launch-arg MCP servers survive the thread's agentd-next server
   it.effect("replays historical and dotted MCP config while enforcing other thread config", () =>
     Effect.gen(function* () {
       const recordedServer = {
@@ -2412,15 +2412,15 @@ describe("CodexAdapterV2 post-settle continuation", () => {
       };
       const currentConfig = {
         "tools.update_plan.enabled": true,
-        "mcp_servers.agentd-desktop": {
+        "mcp_servers.agentd-next": {
           url: "http://127.0.0.1:42000/mcp",
           http_headers: { Authorization: "Bearer current-token" },
         },
         "mcp_servers.extra.command": "cat",
       };
       for (const recordedMcp of [
-        { mcp_servers: { "agentd-desktop": recordedServer } },
-        { "mcp_servers.agentd-desktop": recordedServer, "mcp_servers.extra.command": "echo" },
+        { mcp_servers: { "agentd-next": recordedServer } },
+        { "mcp_servers.agentd-next": recordedServer, "mcp_servers.extra.command": "echo" },
       ]) {
         const entries = codexReplayPreamble({
           nativeThreadId: "replayed-mcp-thread",
@@ -8716,7 +8716,7 @@ describe("CodexAdapterV2 post-settle continuation", () => {
             item: {
               type: "mcpToolCall",
               id: COMPLETED_WAIT_ITEM,
-              server: "agentd-desktop",
+              server: "agentd-next",
               tool: "thread_wait",
               status: "inProgress",
               arguments: { threadId: "thread:completed-wait", timeoutMs: 30000 },
@@ -8736,7 +8736,7 @@ describe("CodexAdapterV2 post-settle continuation", () => {
             item: {
               type: "mcpToolCall",
               id: COMPLETED_WAIT_ITEM,
-              server: "agentd-desktop",
+              server: "agentd-next",
               tool: "thread_wait",
               status: "completed",
               arguments: { threadId: "thread:completed-wait", timeoutMs: 30000 },
@@ -8757,7 +8757,7 @@ describe("CodexAdapterV2 post-settle continuation", () => {
             item: {
               type: "mcpToolCall",
               id: ORPHAN_WAIT_ITEM,
-              server: "agentd-desktop",
+              server: "agentd-next",
               tool: "thread_wait",
               status: "inProgress",
               arguments: {

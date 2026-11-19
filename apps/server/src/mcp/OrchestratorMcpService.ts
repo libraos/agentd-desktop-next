@@ -1376,7 +1376,7 @@ const make = Effect.gen(function* () {
   const resolveProjectTarget = (
     parent: Pick<OrchestrationV2ThreadProjection, "thread"> | undefined,
     projectId: ProjectId | undefined,
-    missingMessage = "Pass projectId: this MCP client is not running inside an AgentD Desktop thread.",
+    missingMessage = "Pass projectId: this MCP client is not running inside an AgentD Next thread.",
   ) =>
     projectId !== undefined
       ? Effect.succeed(projectId)
@@ -2266,7 +2266,7 @@ const make = Effect.gen(function* () {
         return yield* failure(
           "invalid_request",
           parent === undefined
-            ? "bindToCurrentThread needs an agent running inside an AgentD Desktop thread."
+            ? "bindToCurrentThread needs an agent running inside an AgentD Next thread."
             : "bindToCurrentThread binds to this thread, which belongs to a different project.",
         );
       }
@@ -2350,7 +2350,7 @@ const make = Effect.gen(function* () {
           return yield* failure(
             "invalid_request",
             parent === undefined
-              ? "bindToCurrentThread needs an agent running inside an AgentD Desktop thread."
+              ? "bindToCurrentThread needs an agent running inside an AgentD Next thread."
               : "bindToCurrentThread binds to this thread, which belongs to a different project.",
           );
         }
@@ -3260,7 +3260,7 @@ const make = Effect.gen(function* () {
         : yield* resolveProjectTarget(
             parent,
             input.projectId,
-            "Pass projectId, or allProjects: true for every project. This MCP client is not running inside an AgentD Desktop thread.",
+            "Pass projectId, or allProjects: true for every project. This MCP client is not running inside an AgentD Next thread.",
           );
       if (!input.allProjects && input.projectId !== undefined) {
         yield* requireProject(input.projectId);

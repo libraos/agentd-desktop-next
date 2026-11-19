@@ -15,12 +15,12 @@ import { SettingsRow } from "./settingsLayout";
 import { useSearchableSetting } from "./settingsSearch";
 
 const FAILURE_TITLES = {
-  install: msg("Could not install agentd-desktop"),
-  uninstall: msg("Could not remove agentd-desktop"),
-  addToPath: msg("Could not add agentd-desktop to PATH"),
+  install: msg("Could not install agentd-next"),
+  uninstall: msg("Could not remove agentd-next"),
+  addToPath: msg("Could not add agentd-next to PATH"),
 } as const;
 
-/** The desktop `agentd-desktop` command's state, and its actions with a toast on failure. */
+/** The desktop `agentd-next` command's state, and its actions with a toast on failure. */
 export function useDesktopCliCommand() {
   const bridge = getDesktopCliCommandBridge();
   const query = useEnvironmentQuery(bridge ? desktopCliCommandStateAtom : null);
@@ -63,7 +63,7 @@ export function CliCommandSettingsRow() {
   const description = state.shadowedBy
     ? resolve(
         msg(
-          "Another agentd-desktop at {path} runs first in a new terminal. Remove it to use AgentD Desktop's.",
+          "Another agentd-next at {path} runs first in a new terminal. Remove it to use AgentD Next's.",
           {
             path: state.shadowedBy,
           },
@@ -72,7 +72,7 @@ export function CliCommandSettingsRow() {
     : !installed
       ? resolve(
           msg(
-            "Run AgentD Desktop's CLI as `agentd-desktop` from any terminal. Also installs `t3` as an alias.",
+            "Run AgentD Next's CLI as `agentd-next` from any terminal. Also installs `t3` as an alias.",
           ),
         )
       : state.onPath
@@ -96,7 +96,7 @@ export function CliCommandSettingsRow() {
               )
             : resolve(
                 msg(
-                  "Installed at {path}, which is not on your PATH yet. Add its folder to your PATH to run `agentd-desktop`.",
+                  "Installed at {path}, which is not on your PATH yet. Add its folder to your PATH to run `agentd-next`.",
                   { path: state.installedPath },
                 ),
               );
@@ -119,8 +119,8 @@ export function CliCommandSettingsRow() {
             onClick={() => run(installed ? "uninstall" : "install")}
           >
             {installed
-              ? resolve(msg("Remove", { $context: "verb, uninstalls the agentd-desktop command" }))
-              : resolve(msg("Install", { $context: "verb, installs the agentd-desktop command" }))}
+              ? resolve(msg("Remove", { $context: "verb, uninstalls the agentd-next command" }))
+              : resolve(msg("Install", { $context: "verb, installs the agentd-next command" }))}
           </Button>
         </div>
       }

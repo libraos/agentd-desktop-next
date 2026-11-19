@@ -1,5 +1,5 @@
 ---
-description: Implements one AgentD Desktop task on its own branch; commits, never pushes or merges
+description: Implements one AgentD Next task on its own branch; commits, never pushes or merges
 tool: claude
 model: claude-opus-5-5
 budget: 2h

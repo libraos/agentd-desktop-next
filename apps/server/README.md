@@ -1,3 +1,3 @@
 # Server
 
-Node.js WebSocket server for the AgentD Desktop app.
+Node.js WebSocket server for the AgentD Next app.

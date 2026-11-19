@@ -8,7 +8,7 @@ export function authClientMetadata(appVersion?: string): AuthClientPresentationM
 
   return {
     // oxlint-disable-next-line t3code/no-untranslated-copy -- product name
-    label: "AgentD Desktop Mobile",
+    label: "AgentD Next Mobile",
     deviceType:
       Device.deviceType === Device.DeviceType.TABLET
         ? "tablet"

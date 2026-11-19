@@ -208,7 +208,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
           ),
           Effect.flip,
         );
-        expect(String(error)).toContain("An AgentD Desktop server is already running");
+        expect(String(error)).toContain("An AgentD Next server is already running");
         expect(String(error)).toContain(`pid ${child.pid}`);
         expect(yield* fs.exists(cwd)).toBe(false);
       }),
@@ -1017,7 +1017,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         privateNetworkOnly: true,
       });
       // Without the launcher's IPC channel the context was inherited, e.g. by
-      // `agentd-desktop serve` started from an agent inside the service.
+      // `agentd-next serve` started from an agent inside the service.
       expect(yield* resolveHost({ connected: false })).toEqual({
         host: undefined,
         privateNetworkOnly: undefined,

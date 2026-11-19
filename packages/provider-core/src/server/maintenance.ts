@@ -17,7 +17,7 @@ export interface ProviderMaintenanceCapabilities {
   readonly compareVersions?: (current: string, latest: string) => number;
   /** Resolved executable path for advisories when no update command is proven. */
   readonly installPath?: string;
-  /** Displayed for manual updates; never executed by AgentD Desktop. */
+  /** Displayed for manual updates; never executed by AgentD Next. */
   readonly manualCommand?: string;
 }
 

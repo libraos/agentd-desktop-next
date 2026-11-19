@@ -1504,7 +1504,7 @@ export const CODEX_THREAD_CONFIG = {
 // request_secret can wait an hour; keep Codex's MCP timeout above that.
 const CODEX_T3_MCP_TOOL_TIMEOUT_SEC = 65 * 60;
 // Holds T3 tools Codex must call directly, never from Code Mode. Calls arrive as
-// `agentd-desktop-direct.<tool>`; t3McpToolPresentation.ts must keep resolving that form.
+// `agentd-next-direct.<tool>`; t3McpToolPresentation.ts must keep resolving that form.
 const CODEX_T3_DIRECT_MCP_SERVER = APP_MCP_DIRECT_SERVER_NAME;
 const CODEX_DIRECT_ONLY_T3_TOOLS = ["thread_wait", "delegate_task"];
 
@@ -2058,7 +2058,7 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
               return yield* new ProviderSetupError({
                 instanceId: adapterOptions.instanceId,
                 operation: "runtime",
-                detail: `Codex ${version} does not work with this AgentD Desktop release. Update Codex to ${target}, then retry.`,
+                detail: `Codex ${version} does not work with this AgentD Next release. Update Codex to ${target}, then retry.`,
               });
             }
             yield* client.notify("initialized", undefined);

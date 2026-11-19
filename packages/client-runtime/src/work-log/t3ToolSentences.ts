@@ -242,50 +242,50 @@ const T3_TOOL_SENTENCES: ReadonlyMap<string, T3ToolSentence> = new Map<string, T
     },
   ],
   [
-    "Create\nCreating\nCreated\nAgentD Desktop threads",
+    "Create\nCreating\nCreated\nAgentD Next threads",
     {
       detail: msg(
-        "{status, select, inProgress {Creating AgentD Desktop threads} completed {Created AgentD Desktop threads} failed {Failed to create AgentD Desktop threads} declined {Declined to create AgentD Desktop threads} stopped {Stopped creating AgentD Desktop threads} other {Creating AgentD Desktop threads}}",
+        "{status, select, inProgress {Creating AgentD Next threads} completed {Created AgentD Next threads} failed {Failed to create AgentD Next threads} declined {Declined to create AgentD Next threads} stopped {Stopped creating AgentD Next threads} other {Creating AgentD Next threads}}",
       ),
     },
   ],
   [
-    "Start\nStarting\nStarted\na AgentD Desktop thread",
+    "Start\nStarting\nStarted\na AgentD Next thread",
     {
       detail: msg(
-        "{status, select, inProgress {Starting an AgentD Desktop thread} completed {Started an AgentD Desktop thread} failed {Failed to start an AgentD Desktop thread} declined {Declined to start an AgentD Desktop thread} stopped {Stopped starting an AgentD Desktop thread} other {Starting an AgentD Desktop thread}}",
+        "{status, select, inProgress {Starting an AgentD Next thread} completed {Started an AgentD Next thread} failed {Failed to start an AgentD Next thread} declined {Declined to start an AgentD Next thread} stopped {Stopped starting an AgentD Next thread} other {Starting an AgentD Next thread}}",
       ),
     },
   ],
   [
-    "List\nListing\nListed\nAgentD Desktop threads",
+    "List\nListing\nListed\nAgentD Next threads",
     {
       detail: msg(
-        "{status, select, inProgress {Listing AgentD Desktop threads} completed {Listed AgentD Desktop threads} failed {Failed to list AgentD Desktop threads} declined {Declined to list AgentD Desktop threads} stopped {Stopped listing AgentD Desktop threads} other {Listing AgentD Desktop threads}}",
+        "{status, select, inProgress {Listing AgentD Next threads} completed {Listed AgentD Next threads} failed {Failed to list AgentD Next threads} declined {Declined to list AgentD Next threads} stopped {Stopped listing AgentD Next threads} other {Listing AgentD Next threads}}",
       ),
     },
   ],
   [
-    "Read\nReading\nRead\na AgentD Desktop thread",
+    "Read\nReading\nRead\na AgentD Next thread",
     {
       detail: msg(
-        "{status, select, inProgress {Reading an AgentD Desktop thread} completed {Read an AgentD Desktop thread} failed {Failed to read an AgentD Desktop thread} declined {Declined to read an AgentD Desktop thread} stopped {Stopped reading an AgentD Desktop thread} other {Reading an AgentD Desktop thread}}",
+        "{status, select, inProgress {Reading an AgentD Next thread} completed {Read an AgentD Next thread} failed {Failed to read an AgentD Next thread} declined {Declined to read an AgentD Next thread} stopped {Stopped reading an AgentD Next thread} other {Reading an AgentD Next thread}}",
       ),
     },
   ],
   [
-    "Send\nSending\nSent\nto an AgentD Desktop thread",
+    "Send\nSending\nSent\nto an AgentD Next thread",
     {
       detail: msg(
-        "{status, select, inProgress {Sending to an AgentD Desktop thread} completed {Sent to an AgentD Desktop thread} failed {Failed to send to an AgentD Desktop thread} declined {Declined to send to an AgentD Desktop thread} stopped {Stopped sending to an AgentD Desktop thread} other {Sending to an AgentD Desktop thread}}",
+        "{status, select, inProgress {Sending to an AgentD Next thread} completed {Sent to an AgentD Next thread} failed {Failed to send to an AgentD Next thread} declined {Declined to send to an AgentD Next thread} stopped {Stopped sending to an AgentD Next thread} other {Sending to an AgentD Next thread}}",
       ),
     },
   ],
   [
-    "Wait\nWaiting\nWaited\nfor an AgentD Desktop thread",
+    "Wait\nWaiting\nWaited\nfor an AgentD Next thread",
     {
       detail: msg(
-        "{status, select, inProgress {Waiting for an AgentD Desktop thread} completed {Waited for an AgentD Desktop thread} failed {Failed to wait for an AgentD Desktop thread} declined {Declined to wait for an AgentD Desktop thread} stopped {Stopped waiting for an AgentD Desktop thread} other {Waiting for an AgentD Desktop thread}}",
+        "{status, select, inProgress {Waiting for an AgentD Next thread} completed {Waited for an AgentD Next thread} failed {Failed to wait for an AgentD Next thread} declined {Declined to wait for an AgentD Next thread} stopped {Stopped waiting for an AgentD Next thread} other {Waiting for an AgentD Next thread}}",
       ),
     },
   ],
@@ -306,10 +306,10 @@ const T3_TOOL_SENTENCES: ReadonlyMap<string, T3ToolSentence> = new Map<string, T
     },
   ],
   [
-    "Interrupt\nInterrupting\nRequested an interrupt of\na AgentD Desktop thread",
+    "Interrupt\nInterrupting\nRequested an interrupt of\na AgentD Next thread",
     {
       detail: msg(
-        "{status, select, inProgress {Interrupting an AgentD Desktop thread} completed {Requested an interrupt of an AgentD Desktop thread} failed {Failed to interrupt an AgentD Desktop thread} declined {Declined to interrupt an AgentD Desktop thread} stopped {Stopped interrupting an AgentD Desktop thread} other {Interrupting an AgentD Desktop thread}}",
+        "{status, select, inProgress {Interrupting an AgentD Next thread} completed {Requested an interrupt of an AgentD Next thread} failed {Failed to interrupt an AgentD Next thread} declined {Declined to interrupt an AgentD Next thread} stopped {Stopped interrupting an AgentD Next thread} other {Interrupting an AgentD Next thread}}",
       ),
     },
   ],
@@ -682,10 +682,10 @@ const T3_TOOL_SENTENCES: ReadonlyMap<string, T3ToolSentence> = new Map<string, T
     },
   ],
   [
-    "Update\nUpdating\nUpdated\nAgentD Desktop thread metadata",
+    "Update\nUpdating\nUpdated\nAgentD Next thread metadata",
     {
       detail: msg(
-        "{status, select, inProgress {Updating AgentD Desktop thread metadata} completed {Updated AgentD Desktop thread metadata} failed {Failed to update AgentD Desktop thread metadata} declined {Declined to update AgentD Desktop thread metadata} stopped {Stopped updating AgentD Desktop thread metadata} other {Updating AgentD Desktop thread metadata}}",
+        "{status, select, inProgress {Updating AgentD Next thread metadata} completed {Updated AgentD Next thread metadata} failed {Failed to update AgentD Next thread metadata} declined {Declined to update AgentD Next thread metadata} stopped {Stopped updating AgentD Next thread metadata} other {Updating AgentD Next thread metadata}}",
       ),
     },
   ],

@@ -141,7 +141,7 @@ export function StopTaskButton(props: {
     }
     const result = await stopTask({
       environmentId,
-      input: { id, reason: "Stopped from AgentD Desktop" },
+      input: { id, reason: "Stopped from AgentD Next" },
     });
     if (result._tag === "Failure") {
       setError(formatEnvironmentQueryError(result.cause, resolve));

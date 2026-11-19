@@ -1724,7 +1724,7 @@ function ThreadAutomationMessageRow(props: {
   );
 }
 
-/** Leads with why AgentD Desktop compacted, when it did so without being asked. */
+/** Leads with why AgentD Next compacted, when it did so without being asked. */
 function compactionLabel(
   label: string,
   title: string | undefined,
@@ -2295,7 +2295,7 @@ function renderFeedEntry(
         >
           {presentation.attribution === "t3code" ? (
             <Text className="mb-1 pr-1 font-t3-medium text-2xs text-foreground-muted opacity-60">
-              {m(msg("Sent by AgentD Desktop"))}
+              {m(msg("Sent by AgentD Next"))}
             </Text>
           ) : null}
           {presentation.guestName !== undefined ? (

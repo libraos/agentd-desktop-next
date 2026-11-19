@@ -71,7 +71,7 @@ function WorkspaceRootTitle(props: {
           ) : (
             <CompactBrandTitle
               accessibilityLabel={gt("{product}, {title}", {
-                product: "AgentD Desktop",
+                product: "AgentD Next",
                 title: tabTitle,
               })}
               fit

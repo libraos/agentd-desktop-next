@@ -84,7 +84,7 @@ const make = Effect.gen(function* () {
       ? Effect.fail(
           failure(
             "thread_credential_required",
-            "Worktree handoff and status act as the calling AgentD Desktop thread, so they need an agent running inside AgentD Desktop.",
+            "Worktree handoff and status act as the calling AgentD Next thread, so they need an agent running inside AgentD Next.",
           ),
         )
       : Effect.succeed(scope as McpThreadInvocationScope);

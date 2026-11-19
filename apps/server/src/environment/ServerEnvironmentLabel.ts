@@ -210,5 +210,5 @@ export const resolveServerEnvironmentLabel = Effect.fn("resolveServerEnvironment
     return hostname;
   }
 
-  return normalizeLabel(input.cwdBaseName) ?? "AgentD Desktop environment";
+  return normalizeLabel(input.cwdBaseName) ?? "AgentD Next environment";
 });

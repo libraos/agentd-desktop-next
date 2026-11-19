@@ -16,7 +16,7 @@ describe("T3 device instructions", () => {
     }
     assert.notInclude(T3_CODE_DEVICE_TOOL_INSTRUCTIONS, "ToolSearch");
     const loadLine =
-      " Load them with ToolSearch `select:mcp__agentd-desktop__device_list,mcp__agentd-desktop__device_open,mcp__agentd-desktop__device_screenshot,mcp__agentd-desktop__device_close`.";
+      " Load them with ToolSearch `select:mcp__agentd-next__device_list,mcp__agentd-next__device_open,mcp__agentd-next__device_screenshot,mcp__agentd-next__device_close`.";
     assert.include(T3_CODE_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH, loadLine);
     assert.equal(
       T3_CODE_DEVICE_TOOL_INSTRUCTIONS_WITH_TOOL_SEARCH.replace(loadLine, ""),
@@ -41,7 +41,7 @@ describe("T3 device instructions", () => {
 
   it("reach OpenCode and Cursor only when the session holds device access", () => {
     assert.include(t3OrchestrationSystemPrompt(true, true), T3_CODE_DEVICE_TOOL_INSTRUCTIONS);
-    assert.notInclude(t3OrchestrationSystemPrompt(true, false), "## AgentD Desktop devices");
+    assert.notInclude(t3OrchestrationSystemPrompt(true, false), "## AgentD Next devices");
     assert.isUndefined(t3OrchestrationSystemPrompt(false, true));
 
     const firstRun = (hasDeviceTools: boolean) =>
@@ -53,7 +53,7 @@ describe("T3 device instructions", () => {
         deviceInstructionsDelivered: false,
       });
     assert.include(firstRun(true), T3_CODE_DEVICE_TOOL_INSTRUCTIONS);
-    assert.notInclude(firstRun(false), "## AgentD Desktop devices");
+    assert.notInclude(firstRun(false), "## AgentD Next devices");
 
     const laterRun = (deviceInstructionsDelivered: boolean) =>
       t3OrchestrationPrompt({
@@ -82,7 +82,7 @@ describe("T3 device instructions", () => {
     );
     assert.notInclude(
       t3AcpPromptWithInstructions({ prompt: "Hi.", state }),
-      "## AgentD Desktop devices",
+      "## AgentD Next devices",
     );
   });
 });

@@ -383,7 +383,7 @@ export function collectChannelSwitchTargets(
       skip(
         resolve(
           msg("run `{command}` there", {
-            command: `agentd-desktop update --channel ${release.channel === "nightly" ? "nightly" : "stable"} --allow-downgrade`,
+            command: `agentd-next update --channel ${release.channel === "nightly" ? "nightly" : "stable"} --allow-downgrade`,
           }),
         ),
       );

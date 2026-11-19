@@ -7,16 +7,16 @@ import { act, render, stubGlobal } from "../../../test/render";
 import { desktopCliCommandStateAtom } from "../../state/desktopCliCommand";
 import { CliCommandSettingsRow } from "./CliCommandSettingsRow";
 
-it("blocks installation behind another agentd-desktop without blocking removal of our installation", async () => {
+it("blocks installation behind another agentd-next without blocking removal of our installation", async () => {
   const state: DesktopCliCommandState = {
     supported: true,
     installedPath: null,
     onPath: false,
-    launcherPath: "/home/test/.t3/bin/agentd-desktop",
+    launcherPath: "/home/test/.t3/bin/agentd-next",
   };
   const getState = vi.fn(async (): Promise<DesktopCliCommandState> => ({
     ...state,
-    shadowedBy: "/usr/local/bin/agentd-desktop",
+    shadowedBy: "/usr/local/bin/agentd-next",
   }));
   const uninstall = vi.fn(async () => state);
   using _bridge = stubGlobal("desktopBridge", {
@@ -40,8 +40,8 @@ it("blocks installation behind another agentd-desktop without blocking removal o
 
   getState.mockResolvedValue({
     ...state,
-    installedPath: "/home/test/.local/bin/agentd-desktop",
-    shadowedBy: "/usr/local/bin/agentd-desktop",
+    installedPath: "/home/test/.local/bin/agentd-next",
+    shadowedBy: "/usr/local/bin/agentd-next",
   });
   await act(() => registry.refresh(desktopCliCommandStateAtom));
   const remove = screen.getByRole("button", { name: "Remove" });

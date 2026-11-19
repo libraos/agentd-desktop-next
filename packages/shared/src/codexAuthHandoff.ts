@@ -121,7 +121,7 @@ export function codexAuthDeliveryUrl(input: CodexAuthHandoff, callbackUrl: strin
   const request = codexAuthorizationRequest(input.authorizationUrl);
   codexCallbackUrl(callbackUrl, request.redirectUri, request.state);
   const destination = providerAuthReturnUrl(input.returnUrl);
-  if (!destination) throw new Error("Invalid AgentD Desktop return address.");
+  if (!destination) throw new Error("Invalid AgentD Next return address.");
   const url = new URL(destination);
   const delivery = {
     environmentId: input.environmentId,

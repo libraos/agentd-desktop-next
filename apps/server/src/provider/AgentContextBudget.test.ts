@@ -101,7 +101,7 @@ const claudeSystemAppend = () => {
     nativeThreadId: "context-budget",
     resume: false,
     cwd: null,
-    mcpServers: { "agentd-desktop": { type: "http", url: "http://127.0.0.1/mcp" } },
+    mcpServers: { "agentd-next": { type: "http", url: "http://127.0.0.1/mcp" } },
   });
   return typeof systemPrompt === "object" && "append" in systemPrompt ? systemPrompt.append : "";
 };

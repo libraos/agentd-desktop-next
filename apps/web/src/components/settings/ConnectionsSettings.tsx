@@ -1098,7 +1098,7 @@ function ConnectionsSettingsContent({
         {desktopWslState.enabled ? (
           <SettingsRow
             title={gt("WSL only")}
-            description={gt("Run only the WSL backend. AgentD Desktop restarts when this changes.")}
+            description={gt("Run only the WSL backend. AgentD Next restarts when this changes.")}
             className="bg-muted/20 pl-7 sm:pl-8"
             control={
               <Switch
@@ -1479,10 +1479,10 @@ function ConnectionsSettingsContent({
                 <AlertDialogDescription>
                   {pendingDesktopServerExposureMode === "network-accessible"
                     ? gt(
-                        "Let your other devices connect to AgentD Desktop over the network. Pair devices to give them access. AgentD Desktop will restart.",
+                        "Let your other devices connect to AgentD Next over the network. Pair devices to give them access. AgentD Next will restart.",
                       )
                     : gt(
-                        "Devices connected over your local network will disconnect. Existing tunnels, such as the hosted relay or Tailscale HTTPS, keep working. AgentD Desktop will restart.",
+                        "Devices connected over your local network will disconnect. Existing tunnels, such as the hosted relay or Tailscale HTTPS, keep working. AgentD Next will restart.",
                       )}
                 </AlertDialogDescription>
               </AlertDialogHeader>
@@ -1542,14 +1542,14 @@ function ConnectionsSettingsContent({
                   {pendingWslChange?.kind === "disable"
                     ? pendingWslChange.wasWslOnly
                       ? gt(
-                          "AgentD Desktop will restart on the Windows backend. Threads and projects opened against WSL stay safe inside the distro and become available again when you re-enable WSL.",
+                          "AgentD Next will restart on the Windows backend. Threads and projects opened against WSL stay safe inside the distro and become available again when you re-enable WSL.",
                         )
                       : gt(
-                          "The WSL backend will stop. Threads and projects opened against WSL stay safe inside the distro, but they'll be unavailable in AgentD Desktop until you re-enable WSL.",
+                          "The WSL backend will stop. Threads and projects opened against WSL stay safe inside the distro, but they'll be unavailable in AgentD Next until you re-enable WSL.",
                         )
                     : pendingWslChange?.kind === "distro"
                       ? gt(
-                          "AgentD Desktop will restart the WSL backend on the new distro. Sessions still running on the current distro will be interrupted.",
+                          "AgentD Next will restart the WSL backend on the new distro. Sessions still running on the current distro will be interrupted.",
                         )
                       : pendingWslChange?.kind === "enable"
                         ? gt(
@@ -1557,10 +1557,10 @@ function ConnectionsSettingsContent({
                           )
                         : pendingWslChange?.nextValue
                           ? gt(
-                              "AgentD Desktop will restart and start only the WSL backend. Your Windows-side projects won't be accessible until you turn this off again.",
+                              "AgentD Next will restart and start only the WSL backend. Your Windows-side projects won't be accessible until you turn this off again.",
                             )
                           : gt(
-                              "AgentD Desktop will restart and bring the Windows backend back up alongside WSL.",
+                              "AgentD Next will restart and bring the Windows backend back up alongside WSL.",
                             )}
                 </AlertDialogDescription>
               </AlertDialogHeader>
@@ -1649,7 +1649,7 @@ function ConnectionsSettingsContent({
                   <T>Disable Tailscale HTTPS?</T>
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  <T>AgentD Desktop will restart the local backend without Tailscale Serve.</T>
+                  <T>AgentD Next will restart the local backend without Tailscale Serve.</T>
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -1690,8 +1690,8 @@ function ConnectionsSettingsContent({
                 </DialogTitle>
                 <DialogDescription>
                   <T>
-                    AgentD Desktop will restart the local backend with Tailscale Serve enabled and
-                    ask Tailscale to proxy HTTPS traffic to this backend.
+                    AgentD Next will restart the local backend with Tailscale Serve enabled and ask
+                    Tailscale to proxy HTTPS traffic to this backend.
                   </T>
                 </DialogDescription>
               </DialogHeader>

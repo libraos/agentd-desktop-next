@@ -21,9 +21,9 @@ const defaultEnvironmentInput = {
   platform: "darwin",
   processArch: "arm64",
   appVersion: "1.2.3",
-  appPath: "/Applications/AgentD Desktop.app/Contents/Resources/app.asar",
+  appPath: "/Applications/AgentD Next.app/Contents/Resources/app.asar",
   isPackaged: true,
-  resourcesPath: "/Applications/AgentD Desktop.app/Contents/Resources",
+  resourcesPath: "/Applications/AgentD Next.app/Contents/Resources",
   runningUnderArm64Translation: false,
 } satisfies DesktopEnvironment.MakeDesktopEnvironmentInput;
 
@@ -40,7 +40,7 @@ interface ElectronAppCalls {
 const layerElectronApp = (calls: ElectronAppCalls) =>
   Layer.succeed(ElectronApp.ElectronApp, {
     metadata: Effect.die("unexpected metadata read"),
-    name: Effect.succeed("AgentD Desktop"),
+    name: Effect.succeed("AgentD Next"),
     systemLocale: Effect.succeed("en-US"),
     preferredSystemLanguages: Effect.succeed(["en-US"]),
     whenReady: Effect.void,
@@ -200,9 +200,9 @@ describe("DesktopAppIdentity", () => {
 
         const runtimeName = calls.setName[0];
         assert.isDefined(runtimeName);
-        assert.equal(runtimeName, `AgentD Desktop ${stage}`);
+        assert.equal(runtimeName, `AgentD Next ${stage}`);
         assert.match(runtimeName.replaceAll(" ", ""), /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/);
-        assert.equal(calls.setAboutPanelOptions[0]?.applicationName, `AgentD Desktop (${stage})`);
+        assert.equal(calls.setAboutPanelOptions[0]?.applicationName, `AgentD Next (${stage})`);
       }),
       { calls, environment },
     );

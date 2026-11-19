@@ -128,7 +128,7 @@ const make = Effect.gen(function* () {
     if (threadId === undefined) {
       return yield* failure(
         "target_required",
-        "Pass threadId: this MCP client is not running inside an AgentD Desktop thread.",
+        "Pass threadId: this MCP client is not running inside an AgentD Next thread.",
       );
     }
     const shell = yield* threadManagement

@@ -698,7 +698,7 @@ export const checkClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(
         version: null,
         status: "warning",
         auth: { status: "unknown" },
-        message: "Claude is disabled in AgentD Desktop settings.",
+        message: "Claude is disabled in AgentD Next settings.",
       },
     });
   }
@@ -934,7 +934,7 @@ export const makePendingClaudeProvider = Effect.fn("ClaudeProvider.makePendingCl
           version: null,
           status: "warning",
           auth: { status: "unknown" },
-          message: "Claude is disabled in AgentD Desktop settings.",
+          message: "Claude is disabled in AgentD Next settings.",
         },
       });
     }

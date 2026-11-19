@@ -25,7 +25,7 @@ const environmentFor = (
     baseDir: input.baseDir,
     stateDir: path.join(input.baseDir, "userdata"),
     desktopSettingsPath: path.join(input.baseDir, "userdata", "desktop-settings.json"),
-    serverRoot: "/opt/AgentD Desktop/resources/app.asar",
+    serverRoot: "/opt/AgentD Next/resources/app.asar",
     appImagePath: Option.none(),
   } as unknown as DesktopEnvironment.DesktopEnvironment["Service"]);
 
@@ -101,7 +101,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       const path = yield* Path.Path;
       const home = yield* fs.makeTempDirectoryScoped();
       const command = yield* commandIn({ home, env });
-      const link = path.join(home, ".local", "bin", "agentd-desktop");
+      const link = path.join(home, ".local", "bin", "agentd-next");
 
       expect(yield* command.state).toEqual({
         supported: true,
@@ -113,18 +113,16 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       expect((yield* command.state).installedPath).toBe(link);
       const installed = yield* command.install;
       expect(installed.installedPath).toBe(link);
-      expect(installed.launcherPath).toBe(
-        path.join(home, ".agentd-desktop", "bin", "agentd-desktop"),
-      );
+      expect(installed.launcherPath).toBe(path.join(home, ".agentd-desktop", "bin", "agentd-next"));
       expect(installed.pathSetup).toEqual({ file: "~/.zshrc", added: false });
       expect(yield* fs.readLink(link)).toBe(
-        path.join(home, ".agentd-desktop", "bin", "agentd-desktop"),
+        path.join(home, ".agentd-desktop", "bin", "agentd-next"),
       );
       expect((yield* command.install).installedPath).toBe(link);
       // The `t3` alias is the same launcher under the old name.
       const alias = path.join(home, ".local", "bin", "t3");
       expect(yield* fs.readLink(alias)).toBe(
-        path.join(home, ".agentd-desktop", "bin", "agentd-desktop"),
+        path.join(home, ".agentd-desktop", "bin", "agentd-next"),
       );
 
       // Add to PATH appends one line, once, and keeps a final line with no newline intact.
@@ -138,15 +136,13 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       yield* Effect.all([command.addToPath, command.addToPath], { concurrency: "unbounded" });
       expect((yield* command.addToPath).pathSetup).toEqual({ file: "~/.zshrc", added: true });
       expect(yield* fs.readFileString(zshrc)).toBe(
-        '# mine\n# Added by AgentD Desktop\nexport PATH="$PATH:$HOME/.local/bin"\n',
+        '# mine\n# Added by AgentD Next\nexport PATH="$PATH:$HOME/.local/bin"\n',
       );
 
       expect((yield* command.uninstall).installedPath).toBeNull();
       expect(yield* fs.exists(link)).toBe(false);
       expect(yield* fs.exists(alias)).toBe(false);
-      expect(yield* fs.exists(path.join(home, ".agentd-desktop", "bin", "agentd-desktop"))).toBe(
-        true,
-      );
+      expect(yield* fs.exists(path.join(home, ".agentd-desktop", "bin", "agentd-next"))).toBe(true);
       // Removed stays removed: first launch never installs again.
       yield* command.installOnFirstLaunch;
       expect(yield* fs.exists(link)).toBe(false);
@@ -157,21 +153,44 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       yield* later.install;
       yield* later.uninstall;
       yield* later.installOnFirstLaunch;
-      expect(yield* fs.exists(path.join(laterHome, ".local", "bin", "agentd-desktop"))).toBe(false);
+      expect(yield* fs.exists(path.join(laterHome, ".local", "bin", "agentd-next"))).toBe(false);
 
       // An app that ran before left its settings or launcher. Its user may have removed t3 or
       // chosen another, so first launch leaves it to Settings, where Install still works.
-      for (const left of ["userdata/desktop-settings.json", "bin/agentd-desktop"]) {
+      for (const left of ["userdata/desktop-settings.json", "bin/agentd-next"]) {
         const upgradedHome = yield* fs.makeTempDirectoryScoped();
         const leftFile = path.join(upgradedHome, ".agentd-desktop", left);
         yield* fs.makeDirectory(path.dirname(leftFile), { recursive: true });
         yield* fs.writeFileString(leftFile, `#!/bin/sh\n# ${DesktopCliShim.MARKER}\n`);
         const upgraded = yield* commandIn({ home: upgradedHome, env });
         yield* upgraded.installOnFirstLaunch;
-        const upgradedLink = path.join(upgradedHome, ".local", "bin", "agentd-desktop");
+        const upgradedLink = path.join(upgradedHome, ".local", "bin", "agentd-next");
         expect(yield* fs.exists(upgradedLink)).toBe(false);
         expect((yield* upgraded.install).installedPath).toBe(upgradedLink);
       }
+    }),
+  );
+
+  it.effect("keeps a legacy agentd-desktop command running this app until Remove", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const home = yield* fs.makeTempDirectoryScoped();
+      const legacyLauncher = path.join(home, ".agentd-desktop", "bin", "agentd-desktop");
+      const legacyLink = path.join(home, ".local", "bin", "agentd-desktop");
+      yield* fs.makeDirectory(path.dirname(legacyLauncher), { recursive: true });
+      yield* fs.makeDirectory(path.dirname(legacyLink), { recursive: true });
+      yield* fs.writeFileString(legacyLauncher, `#!/bin/sh\n# ${DesktopCliShim.LEGACY_MARKER}\n`);
+      yield* fs.symlink(legacyLauncher, legacyLink);
+      const command = yield* commandIn({ home });
+
+      yield* command.install;
+      expect(yield* fs.readFileString(legacyLauncher)).toContain(DesktopCliShim.MARKER);
+      expect(yield* fs.readLink(legacyLink)).toBe(legacyLauncher);
+
+      yield* command.uninstall;
+      expect(yield* fs.exists(path.join(home, ".local", "bin", "agentd-next"))).toBe(false);
+      expect(Option.isNone(yield* fs.readLink(legacyLink).pipe(Effect.option))).toBe(true);
     }),
   );
 
@@ -182,17 +201,17 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       const path = yield* Path.Path;
       const home = yield* fs.makeTempDirectoryScoped();
       const command = yield* commandIn({ home, env });
-      const theirs = path.join(home, ".local", "bin", "agentd-desktop");
+      const theirs = path.join(home, ".local", "bin", "agentd-next");
       yield* fs.makeDirectory(path.dirname(theirs), { recursive: true });
       yield* fs.writeFileString(theirs, "npm's t3\n");
       yield* fs.makeDirectory(path.join(home, "bin"), { recursive: true });
-      yield* fs.symlink(path.join(home, "gone"), path.join(home, "bin", "agentd-desktop"));
+      yield* fs.symlink(path.join(home, "gone"), path.join(home, "bin", "agentd-next"));
 
       const error = yield* Effect.flip(command.install);
-      expect(error.message).toContain("Another agentd-desktop command is already in");
+      expect(error.message).toContain("Another agentd-next command is already in");
       yield* command.uninstall;
       expect(yield* fs.readFileString(theirs)).toBe("npm's t3\n");
-      expect(yield* fs.readLink(path.join(home, "bin", "agentd-desktop"))).toBe(
+      expect(yield* fs.readLink(path.join(home, "bin", "agentd-next"))).toBe(
         path.join(home, "gone"),
       );
 
@@ -200,16 +219,16 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       // t3 in ~/bin.
       for (const dangling of [false, true]) {
         const besideHome = yield* fs.makeTempDirectoryScoped();
-        const other = path.join(besideHome, ".local", "bin", "agentd-desktop");
+        const other = path.join(besideHome, ".local", "bin", "agentd-next");
         yield* fs.makeDirectory(path.dirname(other), { recursive: true });
         yield* dangling
           ? fs.symlink(path.join(besideHome, "gone"), other)
           : fs.writeFileString(other, "npm's t3\n");
         yield* (yield* commandIn({ home: besideHome })).installOnFirstLaunch;
-        expect(yield* fs.exists(path.join(besideHome, "bin", "agentd-desktop"))).toBe(false);
+        expect(yield* fs.exists(path.join(besideHome, "bin", "agentd-next"))).toBe(false);
       }
 
-      const launcher = path.join(home, ".agentd-desktop", "bin", "agentd-desktop");
+      const launcher = path.join(home, ".agentd-desktop", "bin", "agentd-next");
       yield* fs.writeFileString(launcher, "npm's t3\n");
       env.PATH = path.dirname(launcher);
       expect(yield* command.state).toMatchObject({ onPath: false, shadowedBy: launcher });
@@ -248,7 +267,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       const after = yield* commandIn({ home, baseDir: path.join(home, "new-t3"), env });
       // A first launch leaves another home's command alone; only Install takes it over.
       yield* after.installOnFirstLaunch;
-      expect(yield* fs.readLink(link!)).toBe(path.join(home, "old-t3", "bin", "agentd-desktop"));
+      expect(yield* fs.readLink(link!)).toBe(path.join(home, "old-t3", "bin", "agentd-next"));
       // On PATH, it runs the other home's launcher. Settings offers Install (not Remove, and not
       // "another t3 runs first"), which updates that link in place.
       env.PATH = path.dirname(link!);
@@ -262,41 +281,39 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       // Behind another t3 the install fails, and the old link still works.
       const shadow = path.join(home, "shadow");
       yield* fs.makeDirectory(shadow);
-      yield* fs.writeFileString(path.join(shadow, "agentd-desktop"), "#!/bin/sh\n", {
+      yield* fs.writeFileString(path.join(shadow, "agentd-next"), "#!/bin/sh\n", {
         mode: 0o755,
       });
       env.PATH = shadow;
       yield* Effect.flip(after.install);
-      expect(yield* fs.readLink(link!)).toBe(path.join(home, "old-t3", "bin", "agentd-desktop"));
+      expect(yield* fs.readLink(link!)).toBe(path.join(home, "old-t3", "bin", "agentd-next"));
       // Install takes it over, also with its folder first on PATH.
       env.PATH = path.dirname(link!);
       expect((yield* after.install).installedPath).toBe(link);
-      expect(yield* fs.readLink(link!)).toBe(path.join(home, "new-t3", "bin", "agentd-desktop"));
+      expect(yield* fs.readLink(link!)).toBe(path.join(home, "new-t3", "bin", "agentd-next"));
       env.PATH = "";
       yield* after.uninstall;
-      expect(yield* fs.exists(path.join(home, ".local", "bin", "agentd-desktop"))).toBe(false);
-      expect(yield* fs.exists(path.join(home, "bin", "agentd-desktop"))).toBe(false);
+      expect(yield* fs.exists(path.join(home, ".local", "bin", "agentd-next"))).toBe(false);
+      expect(yield* fs.exists(path.join(home, "bin", "agentd-next"))).toBe(false);
 
       // A folder already on PATH wins, even written with a trailing slash.
       env.PATH = `${path.join(home, "bin")}/`;
-      expect((yield* after.install).installedPath).toBe(path.join(home, "bin", "agentd-desktop"));
+      expect((yield* after.install).installedPath).toBe(path.join(home, "bin", "agentd-next"));
 
       // An old link of ours is updated where it is, not moved to a folder that may be off PATH.
-      yield* fs.writeFileString(path.join(home, "bin", "agentd-desktop.staging"), "mine");
-      yield* fs.remove(path.join(home, "bin", "agentd-desktop"));
+      yield* fs.writeFileString(path.join(home, "bin", "agentd-next.staging"), "mine");
+      yield* fs.remove(path.join(home, "bin", "agentd-next"));
       yield* fs.symlink(
-        path.join(home, "old-t3", "bin", "agentd-desktop"),
-        path.join(home, "bin", "agentd-desktop"),
+        path.join(home, "old-t3", "bin", "agentd-next"),
+        path.join(home, "bin", "agentd-next"),
       );
       env.PATH = "";
-      expect((yield* after.install).installedPath).toBe(path.join(home, "bin", "agentd-desktop"));
-      expect(yield* fs.readLink(path.join(home, "bin", "agentd-desktop"))).toBe(
-        path.join(home, "new-t3", "bin", "agentd-desktop"),
+      expect((yield* after.install).installedPath).toBe(path.join(home, "bin", "agentd-next"));
+      expect(yield* fs.readLink(path.join(home, "bin", "agentd-next"))).toBe(
+        path.join(home, "new-t3", "bin", "agentd-next"),
       );
-      expect(yield* fs.exists(path.join(home, ".local", "bin", "agentd-desktop"))).toBe(false);
-      expect(yield* fs.readFileString(path.join(home, "bin", "agentd-desktop.staging"))).toBe(
-        "mine",
-      );
+      expect(yield* fs.exists(path.join(home, ".local", "bin", "agentd-next"))).toBe(false);
+      expect(yield* fs.readFileString(path.join(home, "bin", "agentd-next.staging"))).toBe("mine");
     }),
   );
 
@@ -308,28 +325,28 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       const home = yield* fs.makeTempDirectoryScoped();
       const shadow = path.join(home, "shadow");
       yield* fs.makeDirectory(shadow);
-      yield* fs.writeFileString(path.join(shadow, "agentd-desktop"), "#!/bin/sh\n", {
+      yield* fs.writeFileString(path.join(shadow, "agentd-next"), "#!/bin/sh\n", {
         mode: 0o755,
       });
       env.PATH = [shadow, `${path.join(home, ".local", "bin")}/`].join(":");
 
       const command = yield* commandIn({ home, env });
-      const theirs = path.join(shadow, "agentd-desktop");
+      const theirs = path.join(shadow, "agentd-next");
       expect((yield* command.state).shadowedBy).toBe(theirs);
       const error = yield* Effect.flip(command.install);
       expect(error.message).toContain(theirs);
       yield* command.installOnFirstLaunch;
-      expect(yield* fs.exists(path.join(home, ".local", "bin", "agentd-desktop"))).toBe(false);
+      expect(yield* fs.exists(path.join(home, ".local", "bin", "agentd-next"))).toBe(false);
       expect(yield* fs.readFileString(theirs)).toBe("#!/bin/sh\n");
 
       // Its folder is already on PATH behind theirs; adding it again would change which t3 runs.
       yield* fs.makeDirectory(path.join(home, ".local", "bin"), { recursive: true });
       yield* fs.symlink(
-        path.join(home, ".agentd-desktop", "bin", "agentd-desktop"),
-        path.join(home, ".local", "bin", "agentd-desktop"),
+        path.join(home, ".agentd-desktop", "bin", "agentd-next"),
+        path.join(home, ".local", "bin", "agentd-next"),
       );
       const behind = yield* command.state;
-      expect(behind.installedPath).toBe(path.join(home, ".local", "bin", "agentd-desktop"));
+      expect(behind.installedPath).toBe(path.join(home, ".local", "bin", "agentd-next"));
       expect(behind.pathSetup).toBeUndefined();
       // Off PATH behind theirs, adding the folder would still put ours first.
       env.PATH = shadow;
@@ -337,16 +354,16 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       yield* Effect.flip(command.addToPath);
       expect(yield* fs.exists(path.join(home, ".zshrc"))).toBe(false);
       env.PATH = [shadow, `${path.join(home, ".local", "bin")}/`].join(":");
-      yield* fs.remove(path.join(home, ".local", "bin", "agentd-desktop"));
+      yield* fs.remove(path.join(home, ".local", "bin", "agentd-next"));
 
       // A first-launch install that failed is not retried behind the user's back.
       yield* fs.remove(theirs);
       yield* command.installOnFirstLaunch;
-      expect(yield* fs.exists(path.join(home, ".local", "bin", "agentd-desktop"))).toBe(false);
+      expect(yield* fs.exists(path.join(home, ".local", "bin", "agentd-next"))).toBe(false);
       const installed = yield* command.install;
       expect(installed).toMatchObject({
         onPath: true,
-        installedPath: path.join(home, ".local", "bin", "agentd-desktop"),
+        installedPath: path.join(home, ".local", "bin", "agentd-next"),
       });
       expect(installed.shadowedBy).toBeUndefined();
     }),
@@ -363,30 +380,27 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
         const folder = path.join(home, "folder");
         const plain = path.join(home, "plain");
         const shadow = path.join(home, "shadow");
-        yield* fs.makeDirectory(path.join(folder, "agentd-desktop"), { recursive: true });
+        yield* fs.makeDirectory(path.join(folder, "agentd-next"), { recursive: true });
         yield* fs.makeDirectory(plain);
-        yield* fs.writeFileString(path.join(plain, "agentd-desktop"), "notes\n");
+        yield* fs.writeFileString(path.join(plain, "agentd-next"), "notes\n");
         // Root can execute mode 0o601; other users must honor the owner permissions.
-        yield* fs.chmod(
-          path.join(plain, "agentd-desktop"),
-          process.getuid?.() === 0 ? 0o600 : 0o601,
-        );
+        yield* fs.chmod(path.join(plain, "agentd-next"), process.getuid?.() === 0 ? 0o600 : 0o601);
         yield* fs.makeDirectory(shadow);
-        yield* fs.writeFileString(path.join(shadow, "agentd-desktop"), "#!/bin/sh\n", {
+        yield* fs.writeFileString(path.join(shadow, "agentd-next"), "#!/bin/sh\n", {
           mode: 0o755,
         });
         env.PATH = [folder, plain, shadow, path.join(home, ".local", "bin")].join(":");
 
         const command = yield* commandIn({ home, env });
-        expect((yield* command.state).shadowedBy).toBe(path.join(shadow, "agentd-desktop"));
+        expect((yield* command.state).shadowedBy).toBe(path.join(shadow, "agentd-next"));
 
         const error = yield* Effect.flip(command.install);
-        expect(error.message).toContain(path.join(shadow, "agentd-desktop"));
+        expect(error.message).toContain(path.join(shadow, "agentd-next"));
 
         yield* fs.remove(shadow, { recursive: true });
         expect(yield* command.install).toMatchObject({
           onPath: true,
-          installedPath: path.join(home, ".local", "bin", "agentd-desktop"),
+          installedPath: path.join(home, ".local", "bin", "agentd-next"),
         });
       }),
   );
@@ -397,7 +411,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const home = yield* fs.makeTempDirectoryScoped();
-      const launcher = path.join(home, ".agentd-desktop", "bin", "agentd-desktop");
+      const launcher = path.join(home, ".agentd-desktop", "bin", "agentd-next");
       env.PATH = [path.dirname(launcher), path.join(home, ".local", "bin")].join(":");
 
       const command = yield* commandIn({ home, env });
@@ -406,7 +420,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       expect(yield* fs.exists(launcher)).toBe(true);
       expect(installed).toMatchObject({
         onPath: true,
-        installedPath: path.join(home, ".local", "bin", "agentd-desktop"),
+        installedPath: path.join(home, ".local", "bin", "agentd-next"),
       });
       expect(installed.shadowedBy).toBeUndefined();
       expect(yield* command.state).toEqual(installed);
@@ -440,7 +454,7 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
           baseDir: `${home}/.agentd-desktop`,
           platform: "win32",
         }),
-      ).replace(/[\\/]agentd-desktop\.cmd$/, "");
+      ).replace(/[\\/]agentd-next\.cmd$/, "");
       yield* command.install;
       expect(registry.path).toBe(`${userPath};${launcherDir}`);
       const windowsAlias = `${launcherDir}${launcherDir.includes("\\") ? "\\" : "/"}t3.cmd`;
@@ -488,12 +502,12 @@ it.layer(NodeServices.layer)("DesktopCliCommand", (it) => {
       yield* command.uninstall;
       expect(registry.path).toBe(userPath);
 
-      // A fresh install beside another agentd-desktop.cmd, even off PATH, leaves
+      // A fresh install beside another agentd-next.cmd, even off PATH, leaves
       // PATH alone.
       const besideHome = yield* fs.makeTempDirectoryScoped();
       yield* fs.makeDirectory(path.join(besideHome, ".local", "bin"), { recursive: true });
       yield* fs.writeFileString(
-        path.join(besideHome, ".local", "bin", "agentd-desktop.cmd"),
+        path.join(besideHome, ".local", "bin", "agentd-next.cmd"),
         "@echo off\r\n",
       );
       const beside = fakePowerShell("C:\\Tools");

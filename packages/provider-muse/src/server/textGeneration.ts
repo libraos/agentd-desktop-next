@@ -120,7 +120,7 @@ async function generateMuseText(
       await host.connection.command("userInput/cancel", {
         sessionId,
         userInputId: request.userInputId,
-        reason: "AgentD Desktop text generation cannot request user input.",
+        reason: "AgentD Next text generation cannot request user input.",
       });
     }
   };
@@ -164,7 +164,7 @@ async function generateMuseText(
   });
   host.connection.onProtocolError(rejectCompletion);
   host.connection.onServerRequest(async () => {
-    const error = new Error("AgentD Desktop text generation cannot approve interactive requests.");
+    const error = new Error("AgentD Next text generation cannot approve interactive requests.");
     rejectCompletion(error);
     throw error;
   });
@@ -277,7 +277,7 @@ export const makeMuseTextGeneration = Effect.fn("makeMuseTextGeneration")(functi
           new TextGenerationError({
             operation,
             detail:
-              "Muse Code text generation failed. Check Muse login and availability on this AgentD Desktop server host.",
+              "Muse Code text generation failed. Check Muse login and availability on this AgentD Next server host.",
             cause,
           }),
       ),

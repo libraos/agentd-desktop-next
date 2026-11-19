@@ -33,6 +33,6 @@ export function hostFreezeNotice(
               cpuCount,
             }),
           )
-        : resolve(msg("AgentD Desktop on {host} was too busy to answer.", { host: hostLabel })),
+        : resolve(msg("AgentD Next on {host} was too busy to answer.", { host: hostLabel })),
   };
 }

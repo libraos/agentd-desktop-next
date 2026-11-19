@@ -387,8 +387,7 @@ export function SavedBackendListRow({
           environmentId={environmentId}
           serverLabel={gt("{label} server", {
             label: environment.label,
-            $context:
-              "names an AgentD Desktop server inside sentences such as {serverLabel} updated",
+            $context: "names an AgentD Next server inside sentences such as {serverLabel} updated",
           })}
           fromVersion={lastDescriptor?.serverVersion}
           targetVersion={APP_VERSION}
@@ -400,8 +399,7 @@ export function SavedBackendListRow({
           environmentId={environmentId}
           serverLabel={gt("{label} server", {
             label: environment.label,
-            $context:
-              "names an AgentD Desktop server inside sentences such as {serverLabel} updated",
+            $context: "names an AgentD Next server inside sentences such as {serverLabel} updated",
           })}
           selfUpdate={resolveServerSelfUpdateCapability(environment.serverConfig)}
           installation={environment.serverConfig?.environment.capabilities.serverInstallation}
@@ -765,14 +763,14 @@ function ConfiguredCloudLinkRow({
         <SettingsRow
           title={setting("t3-connect").title}
           description={gt(
-            "This environment was removed from the hosted relay. Run `agentd-desktop connect link` on the host to link it again.",
+            "This environment was removed from the hosted relay. Run `agentd-next connect link` on the host to link it again.",
           )}
         />
       ) : isElectron ? (
         <SettingsRow
           title={setting("t3-connect").title}
           description={gt(
-            "Run `agentd-desktop connect link` on the host, then restart AgentD Desktop there.",
+            "Run `agentd-next connect link` on the host, then restart AgentD Next there.",
           )}
         />
       ) : null}

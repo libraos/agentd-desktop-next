@@ -190,7 +190,7 @@ export class CloudLinkAuthorizationMissingError extends Schema.TaggedError<Cloud
   {},
 ) {
   override get message(): string {
-    return "Run `agentd-desktop connect link` to authorize this environment.";
+    return "Run `agentd-next connect link` to authorize this environment.";
   }
 }
 

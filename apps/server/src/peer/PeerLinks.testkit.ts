@@ -175,7 +175,7 @@ export const servePeer = <E, R>(
         .listSessions()
         .pipe(
           Effect.map((sessions) =>
-            sessions.filter((session) => session.client.label?.startsWith("AgentD Desktop · ")),
+            sessions.filter((session) => session.client.label?.startsWith("AgentD Next · ")),
           ),
         ),
     };

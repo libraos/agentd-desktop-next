@@ -47,8 +47,7 @@ export function SecretsSettingsPanel() {
         <SettingsSection {...setting("secret-providers")}>
           <p className="px-4 py-3 text-sm text-muted-foreground">
             <T>
-              Update AgentD Desktop on <Var>{environment.label}</Var> to manage its secret
-              providers.
+              Update AgentD Next on <Var>{environment.label}</Var> to manage its secret providers.
             </T>
           </p>
         </SettingsSection>

@@ -200,7 +200,7 @@ export const makeAntigravityProvider = Effect.fn("makeAntigravityProvider")(func
         auth: { status: "unknown", ...(options.auth ? { type: options.auth.type } : {}) },
         message: settings.enabled
           ? "Checking Antigravity availability."
-          : "Antigravity is disabled in AgentD Desktop settings.",
+          : "Antigravity is disabled in AgentD Next settings.",
       },
     }),
     setup: { canAuthenticate: true, canInstall: true },

@@ -30,7 +30,7 @@ export function resolveTaggedSourceVersion(repoRoot: string, manifestVersion: st
   return manifestVersion;
 }
 
-/** AgentD Desktop builds are `<upstream x.y.z>-agentd.N`; a version that already has a suffix is kept. */
+/** AgentD Next builds are `<upstream x.y.z>-agentd.N`; a version that already has a suffix is kept. */
 export function resolveAgentdDesktopVersion(upstreamVersion: string, buildNumber = 1): string {
   return /^\d+\.\d+\.\d+$/.test(upstreamVersion)
     ? `${upstreamVersion}-agentd.${buildNumber}`

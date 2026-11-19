@@ -78,7 +78,7 @@ const checkForUpdatesFromMenu = Effect.gen(function* () {
     yield* electronDialog.showMessageBox({
       type: "info",
       title: m(msg("You're up to date!")),
-      message: m(msg("AgentD Desktop {version} is currently the newest version available."), {
+      message: m(msg("AgentD Next {version} is currently the newest version available."), {
         version: updateState.currentVersion,
       }),
       buttons: [m(msg("OK"))],
@@ -89,11 +89,11 @@ const checkForUpdatesFromMenu = Effect.gen(function* () {
       title: m(msg("Update available")),
       message:
         updateState.availableVersion === null
-          ? m(msg("A new version of AgentD Desktop is available."))
-          : m(msg("AgentD Desktop {version} is available."), {
+          ? m(msg("A new version of AgentD Next is available."))
+          : m(msg("AgentD Next {version} is available."), {
               version: updateState.availableVersion,
             }),
-      detail: m(msg("You're running AgentD Desktop {version}."), {
+      detail: m(msg("You're running AgentD Next {version}."), {
         version: updateState.currentVersion,
       }),
       buttons: [
@@ -110,8 +110,8 @@ const checkForUpdatesFromMenu = Effect.gen(function* () {
       title: m(msg("Update downloading")),
       message:
         updateState.availableVersion === null
-          ? m(msg("A new version of AgentD Desktop is already downloading."))
-          : m(msg("AgentD Desktop {version} is already downloading."), {
+          ? m(msg("A new version of AgentD Next is already downloading."))
+          : m(msg("AgentD Next {version} is already downloading."), {
               version: updateState.availableVersion,
             }),
       buttons: [m(msg("OK"))],
@@ -123,10 +123,10 @@ const checkForUpdatesFromMenu = Effect.gen(function* () {
       title: m(msg("Update ready")),
       message:
         version === null
-          ? m(msg("A new version of AgentD Desktop is ready to install."))
-          : m(msg("AgentD Desktop {version} is ready to install."), { version }),
+          ? m(msg("A new version of AgentD Next is ready to install."))
+          : m(msg("AgentD Next {version} is ready to install."), { version }),
       detail: m(
-        msg("AgentD Desktop will restart to install it. Any running tasks will be interrupted."),
+        msg("AgentD Next will restart to install it. Any running tasks will be interrupted."),
       ),
       buttons: [m(msg("Restart", { $context: "button, restarts the app" })), m(msg("Later"))],
       defaultId: 0,

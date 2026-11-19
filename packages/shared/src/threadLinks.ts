@@ -53,7 +53,7 @@ const hostedSegment = (id: string) =>
 
 /**
  * Opens the thread from anywhere: the hosted app offers the desktop app, the mobile app, or itself.
- * Without a hosted app it is the `<t3-thread://…>` autolink, which AgentD Desktop reads back as the thread.
+ * Without a hosted app it is the `<t3-thread://…>` autolink, which AgentD Next reads back as the thread.
  */
 export function hostedThreadLink(
   ref: ScopedThreadRef,
@@ -158,7 +158,7 @@ export function formatThreadLink(ref: ThreadLink, label?: string): string {
   return cleaned ? `[${cleaned}](${destination})` : `<${href}>`;
 }
 
-/** What a person copies out of AgentD Desktop: a Markdown link that opens the thread anywhere. */
+/** What a person copies out of AgentD Next: a Markdown link that opens the thread anywhere. */
 export function formatHostedThreadLink(
   ref: ScopedThreadRef,
   label: string,

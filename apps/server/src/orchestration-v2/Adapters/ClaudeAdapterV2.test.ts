@@ -665,7 +665,7 @@ describe("ClaudeAdapterV2 runtime query policy", () => {
 
 describe("ClaudeAdapterV2 MCP query overrides", () => {
   const T3_MCP_SERVERS = {
-    "agentd-desktop": {
+    "agentd-next": {
       type: "http",
       url: "http://127.0.0.1:43123/mcp",
       headers: {
@@ -688,7 +688,7 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
     browserToolsAvailable: true,
   });
 
-  it("pre-approves only read-only agentd-desktop tools in a read-only sandbox", () => {
+  it("pre-approves only read-only agentd-next tools in a read-only sandbox", () => {
     const threadId = ThreadId.make("thread-claude-mcp-read-only");
     const mcpSession = mcpSessionFor(threadId);
     const overrides = ClaudeAdapterV2.claudeMcpQueryOverrides({
@@ -745,11 +745,11 @@ describe("ClaudeAdapterV2 MCP query overrides", () => {
       ...Object.values(MessageToolkit.tools),
     ]
       .filter((tool) => Context.get(tool.annotations, Tool.Readonly))
-      .map((tool) => `mcp__agentd-desktop__${tool.name}`)
+      .map((tool) => `mcp__agentd-next__${tool.name}`)
       .sort();
 
     // regression: #32022 Claude Plan mode asks before every non-read-only MCP call
-    assert.include(readOnlyToolNames, "mcp__agentd-desktop__background_wait");
+    assert.include(readOnlyToolNames, "mcp__agentd-next__background_wait");
     assert.deepEqual(
       [...ClaudeAdapterV2.CLAUDE_READ_ONLY_T3_MCP_ALLOWED_TOOLS].sort(),
       readOnlyToolNames,
@@ -809,9 +809,9 @@ describe("ClaudeAdapterV2 native protocol logging", () => {
       allowedTools: ["Read"],
     });
     assert.deepEqual(overrides, {
-      allowedTools: ["Read", "mcp__agentd-desktop__*"],
+      allowedTools: ["Read", "mcp__agentd-next__*"],
       mcpServers: {
-        "agentd-desktop": {
+        "agentd-next": {
           type: "http",
           url: "http://127.0.0.1:43123/mcp",
           headers: {
@@ -877,7 +877,7 @@ describe("ClaudeAdapterV2 device instructions", () => {
       ...(input.mcp
         ? {
             mcpServers: {
-              "agentd-desktop": { type: "http" as const, url: "http://127.0.0.1/mcp" },
+              "agentd-next": { type: "http" as const, url: "http://127.0.0.1/mcp" },
             },
           }
         : {}),
@@ -3092,7 +3092,7 @@ describe("ClaudeAdapterV2 MCP credential channel", () => {
             resume: false,
             cwd: null,
             environment: { PATH: "/usr/bin" },
-            mcpServers: { "agentd-desktop": t3McpServer },
+            mcpServers: { "agentd-next": t3McpServer },
           }),
           pathToClaudeCodeExecutable: "/opt/claude/cli.js",
           spawnClaudeCodeProcess: cli.spawn,
@@ -3141,7 +3141,7 @@ describe("ClaudeAdapterV2 MCP credential channel", () => {
 
       assert.deepInclude(cli.controlRequests, {
         subtype: "mcp_set_servers",
-        servers: { "agentd-desktop": t3McpServer },
+        servers: { "agentd-next": t3McpServer },
       });
       assert.deepInclude(
         cli.controlRequests.find((request) => Reflect.get(request, "subtype") === "initialize"),

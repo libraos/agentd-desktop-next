@@ -209,8 +209,8 @@ function formatCloudStatus(
         ? `Run \`${commands.link}\` to enable the hosted relay.`
         : !status.linked
           ? publishOnly
-            ? "Start AgentD Desktop to provision the environment link."
-            : "Start AgentD Desktop to provision the environment link and launch its managed tunnel."
+            ? "Start AgentD Next to provision the environment link."
+            : "Start AgentD Next to provision the environment link and launch its managed tunnel."
           : undefined;
 
   return [
@@ -306,7 +306,7 @@ const withCloudCliSessionToken = <A, E, R>(
     environmentAuth.issueSession({
       scopes: [scope],
       subject: "cloud-cli",
-      label: "agentd-desktop connect cli",
+      label: "agentd-next connect cli",
     }),
     (issued) => run(issued.token),
     (issued) => environmentAuth.revokeSession(issued.sessionId).pipe(Effect.ignore({ log: true })),
@@ -403,7 +403,7 @@ export const waitForReachability = Effect.fn("cloud.cli.wait_for_reachability")(
   yield* Console.error(
     formatAlertBox(
       last === null
-        ? "✕ Could not check the hosted relay\n  The AgentD Desktop server on this machine did not answer.\n  Fix: run `agentd-desktop service status`, then `agentd-desktop connect status`."
+        ? "✕ Could not check the hosted relay\n  The AgentD Next server on this machine did not answer.\n  Fix: run `agentd-next service status`, then `agentd-next connect status`."
         : formatReachabilityFailure(last),
     ),
   );
@@ -496,11 +496,11 @@ const reportCloudDisconnectResults = Effect.fn("cloud.cli.report_disconnect_resu
       yield* Console.warn(
         input.clearAuthorization
           ? "Could not revoke the relay-side environment record before signing out.\nThe stored CLI authorization was still removed locally."
-          : "Could not revoke the relay-side environment record yet.\nRun `agentd-desktop connect unlink` again when the relay is reachable, or deregister it from the hosted relay page of your hosted relay account.",
+          : "Could not revoke the relay-side environment record yet.\nRun `agentd-next connect unlink` again when the relay is reachable, or deregister it from the hosted relay page of your hosted relay account.",
       );
     } else if (input.relayResult.value.status === "not-authenticated") {
       yield* Console.warn(
-        "The relay-side environment record was not revoked.\nDeregister it from the hosted relay page of your hosted relay account, or run `agentd-desktop connect login` and retry.",
+        "The relay-side environment record was not revoked.\nDeregister it from the hosted relay page of your hosted relay account, or run `agentd-next connect login` and retry.",
       );
     } else if (input.relayResult.value.status === "revoked") {
       yield* Console.log("Revoked the relay-side environment record.");
@@ -529,7 +529,7 @@ export const disconnectCloud = Effect.fn("cloud.cli.disconnect")(function* (opti
 
   if (options.clearAuthorization) {
     yield* Console.log(
-      "Signed out of the hosted relay locally.\nThe background service is managed separately with `agentd-desktop service`.",
+      "Signed out of the hosted relay locally.\nThe background service is managed separately with `agentd-next service`.",
     );
   }
   return liveResult;
@@ -674,7 +674,7 @@ const connectLinkCommand = Command.make("link", {
           const serveCommand = yield* resolveHostCliHint("serve", flags.baseDir);
           yield* Console.log(
             flags.publishOnly
-              ? `✓ Authorized${connectedAs(linked.identity)}\n\nNext\n  Start AgentD Desktop to publish agent activity (no managed tunnel).`
+              ? `✓ Authorized${connectedAs(linked.identity)}\n\nNext\n  Start AgentD Next to publish agent activity (no managed tunnel).`
               : `✓ Authorized${connectedAs(linked.identity)}\n\nNext\n  Start the server with \`${serveCommand}\` to make this machine reachable.`,
           );
         }
@@ -799,13 +799,13 @@ const connectPublishCommand = Command.make("publish", {
         // A desired managed link already covers publishing and must not be downgraded.
         if (yield* CliState.readCliDesiredCloudLink) {
           yield* Console.log(
-            "A hosted relay link is already pending. Start AgentD Desktop to finish provisioning it; publishing starts once it links.",
+            "A hosted relay link is already pending. Start AgentD Next to finish provisioning it; publishing starts once it links.",
           );
           return;
         }
         yield* CliState.setCliDesiredCloudLink(true, "publish_only");
         yield* Console.log(
-          "Restart AgentD Desktop to finish authorizing this environment to publish (no managed tunnel is created).",
+          "Restart AgentD Next to finish authorizing this environment to publish (no managed tunnel is created).",
         );
       }),
     ),
