@@ -8,6 +8,7 @@ import {
   type AgentdStartTaskResult,
   type AgentdTaskDefaults,
   type AgentdTaskOther,
+  DEFAULT_CLIENT_SETTINGS,
   EnvironmentId,
   PRIMARY_LOCAL_ENVIRONMENT_ID,
   ThreadId,
@@ -18,6 +19,7 @@ import { AsyncResult } from "effect/reactivity";
 import { expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
+import { __setClientSettingsForTests } from "~/hooks/useSettings";
 import { hostRightPanel, selectActiveRightPanel, useRightPanelStore } from "~/rightPanelStore";
 import { AppAtomRegistryProvider } from "~/rpc/atomRegistry";
 import { makeThreadFixture } from "~/test-fixtures";
@@ -95,7 +97,12 @@ const thread = makeThreadFixture({ worktreePath: "/repo/worktrees/export" });
 const threadRef = scopeThreadRef(thread.environmentId, thread.id);
 const parentRef = scopeThreadRef(thread.environmentId, ThreadId.make("parent-thread"));
 
-function setup(branch: string, open: boolean | typeof drafted = true) {
+function setup(
+  branch: string,
+  open: boolean | typeof drafted = true,
+  settings: Partial<typeof DEFAULT_CLIENT_SETTINGS> = {},
+) {
+  __setClientSettingsForTests({ ...DEFAULT_CLIENT_SETTINGS, ...settings });
   state.branch = branch;
   state.cloud = null;
   state.others = [];
@@ -264,6 +271,32 @@ it("starts a cloud task with a dollar cap and a provider key path, without the l
       cloud: { budget: "60m,$2.50", modelAccess: "byok", anthropicKeyFile: "/private/key file" },
     },
   });
+});
+
+it("fills where and with what budget a task runs from Settings → Workers", async () => {
+  setup("feature/export", true, { agentdDefaultBudget: "45m,$3" });
+  {
+    await using _screen = await renderDialog();
+    await expect.element(page.getByLabelText("Budget")).toHaveValue("45m,$3");
+    await page.getByRole("button", { name: "Cancel" }).click();
+  }
+
+  setup("feature/export", true, { agentdDefaultBudget: "45m,$3", agentdRunTasksOn: "cloud" });
+  state.cloud = {
+    supported: true,
+    project: "acme/app",
+    balanceUsd: 20,
+    balanceText: null,
+    defaultBudget: null,
+    problem: null,
+  };
+  await using _screen = await renderDialog();
+  const option = page.getByRole("checkbox", { name: "Run in the cloud" });
+  await expect.element(option).toBeChecked();
+  await expect.element(page.getByLabelText("Dollar cap (USD)")).toHaveValue("3");
+  await expect.element(page.getByLabelText("Time limit in minutes (optional)")).toHaveValue("45");
+  await option.click();
+  await expect.element(option).not.toBeChecked();
 });
 
 it("checks an unknown cloud outcome before retrying and can replace an earlier submission", async () => {

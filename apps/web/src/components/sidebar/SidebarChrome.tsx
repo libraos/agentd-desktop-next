@@ -22,6 +22,7 @@ import { primaryServerKeybindingsAtom } from "../../state/server";
 import { cn } from "../../lib/utils";
 import { useIssuesSupported, usePullRequestsSupported } from "../../state/environments";
 import { AgentDWordmark } from "../T3Wordmark";
+import { AgentdIndicator } from "../agentd/AgentdIndicator";
 import { APP_BASE_NAME } from "../../branding";
 import {
   resolveEnvironmentIdentificationPillLabel,
@@ -324,6 +325,7 @@ export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
     <SidebarFooter>
       <SidebarProviderUpdatePill />
       <SidebarUpdateArchitectureWarning />
+      <AgentdIndicator />
       <SidebarUtilityMenu />
     </SidebarFooter>
   );

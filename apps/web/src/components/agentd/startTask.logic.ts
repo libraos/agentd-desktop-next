@@ -165,8 +165,7 @@ export function taskDraftReply(
   return asked ? parseTaskDraft(reply.text) : null;
 }
 
-const FALLBACK_MINUTES = 60;
-const FALLBACK_DOLLARS = 5;
+const FALLBACK = { minutes: 60, dollars: 5 } as const;
 
 /** Whole dollars, or cents when the amount has them. */
 export function budgetDollars(amount: number): string {
@@ -175,20 +174,24 @@ export function budgetDollars(amount: number): string {
 
 /**
  * The budget a Start fills in: agentd's high estimate rounded up to a whole dollar (capped by the
- * balance for Cloud Workers), agentd's default minutes or 60; `60m,$5` when there is no estimate.
+ * balance for Cloud Workers), agentd's default minutes or the fallback's; the fallback (Settings →
+ * Workers, else `60m,$5`) when there is no estimate.
  */
 export function autoBudget({
   estimate,
   defaultMinutes,
   balanceUsd,
+  fallback = FALLBACK,
 }: {
   readonly estimate: Pick<AgentdTaskEstimate, "high"> | null;
   readonly defaultMinutes: number | null;
   /** Cloud Workers only: the available credit. */
   readonly balanceUsd: number | null;
+  readonly fallback?: { readonly minutes: number; readonly dollars: number } | null;
 }): { readonly minutes: number; readonly dollars: number } {
-  const minutes = defaultMinutes ?? FALLBACK_MINUTES;
-  const wanted = estimate === null ? FALLBACK_DOLLARS : Math.ceil(estimate.high);
+  const usual = fallback ?? FALLBACK;
+  const minutes = defaultMinutes ?? usual.minutes;
+  const wanted = estimate === null ? usual.dollars : Math.ceil(estimate.high);
   const dollars =
     balanceUsd === null
       ? wanted

@@ -35,6 +35,7 @@ import { useTimelineRewind } from "./chat/useTimelineRewind";
 import { useThreadLifecycle } from "./chat/useThreadLifecycle";
 import { useRightPanelActions } from "./chat/useRightPanelActions";
 import { sidebarTabForProject } from "../sidebarTabStore";
+import { AgentdThreadNudges, noteThreadSend } from "./agentd/AgentdThreadNudges";
 import { type TerminalLaunchContext, useChatTerminalActions } from "./chat/useChatTerminalActions";
 import { useComposerSend } from "./chat/useComposerSend";
 import { useComposerResume } from "./chat/useComposerResume";
@@ -3051,7 +3052,10 @@ export default function ChatView(props: ChatViewProps) {
     });
   };
   const onWorktreeSetupWorkLocallyStable = useStableCallback(onWorktreeSetupWorkLocally);
-  const onComposerSendStable = useStableCallback(onSend);
+  const onComposerSendStable = useStableCallback((...args: Parameters<typeof onSend>) => {
+    noteThreadSend(activeThreadRef, isWorking);
+    return onSend(...args);
+  });
   const sendPreviewAnnotation = (
     annotation: PreviewAnnotationPayload,
     image: ComposerImageAttachment | null,
@@ -3646,6 +3650,14 @@ export default function ChatView(props: ChatViewProps) {
                         : undefined
                     }
                   >
+                    <AgentdThreadNudges
+                      threadRef={isServerThread ? activeThreadRef : null}
+                      codeThread={showCodeSurfaces}
+                      turnRunning={isWorking}
+                      turnStartedAt={activeWorkStartedAt}
+                      workspaceRoot={activeProject?.workspaceRoot ?? null}
+                      gitStatus={gitStatusQuery.data ?? null}
+                    />
                     <ChildThreadApprovals threadRef={activeThreadRef} />
                     <div className="relative">
                       <ComposerSurface.Shell contextRow={showComposerContextStrip}>
