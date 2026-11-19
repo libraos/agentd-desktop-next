@@ -2,13 +2,13 @@
 
 AgentD Next is an IDE for working with coding agents. You chat with an agent, work on a project with it, and hand tasks to workers that [agentd](https://github.com/libraos/agentd) runs, each with a goal, acceptance criteria, a check and a budget.
 
-It is bring your own key: the app is free, includes no model access and sells none. You use the agent accounts and API keys you already have, and it favours no agent. agentd is the authority on tasks, approvals and workers: the app shows them and keeps no copy of its own as the truth.
+It is BYOK (bring your own key): the app is free, includes no model access and sells none. You use the agent accounts and API keys you already have, and it favours no agent. agentd is the authority on tasks, approvals and workers: the app shows them and keeps no copy of its own as the truth.
 
 It runs on macOS, Linux and Windows.
 
 ![A project thread with its branch, changes, background tasks and AgentD workers beside the conversation](agentd/design/shots/session-panel.png)
 
-## Bring your own key
+## BYOK: bring your own key
 
 AgentD Next has no models of its own. Every model call is made by an agent you connect, under an account or key that is yours:
 
@@ -20,7 +20,7 @@ AgentD Next has no models of its own. Every model call is made by an agent you c
 - **Nothing to buy from us to start.** Chat and Code work with one signed-in agent and no LibraOS account.
 - **Your agent talks to its provider itself.** The app starts the agent's own program and shows its work; it does not route your prompts through a service of ours. With LibraOS Gateway, the requests go to the Gateway because you chose it.
 - **Workers use the same accounts.** A worker on this machine runs on your agent account, or on the Gateway if you connected it. Cloud Workers run on LibraOS and spend your LibraOS credit.
-- **Other endpoints are not available yet.** A custom base URL or another gateway cannot be entered in the app today; an agent you configured that way yourself keeps working.
+- **Other endpoints are not available yet.** A custom base URL or another gateway cannot be entered in the app today.
 
 ## What you can do
 
