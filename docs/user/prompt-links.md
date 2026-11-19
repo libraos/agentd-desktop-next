@@ -1,6 +1,6 @@
 # Prompt links
 
-A prompt link opens T3 Code with a prompt ready to send. Use one to share a prompt on social
+A prompt link opens AgentD Next with a prompt ready to send. Use one to share a prompt on social
 media, or to put a one-click fix in a pull request comment.
 
 A link never runs anything. It opens a draft. You read the prompt, then press Send. A link cannot
@@ -15,9 +15,9 @@ and the model you picked. Sent messages have a **Copy prompt link** button too.
 You can also write a link by hand:
 
 ```
-https://app.t3.codes/new?prompt=Rate%20my%20swearing
-https://app.t3.codes/new?prompt=Fix%20the%20build&repo=owner/name&provider=codex&model=gpt-5.5
-https://app.t3.codes/new?pr=owner/name/123&prompt=Fix%20the%20failing%20check
+agentd-desktop://new?prompt=Rate%20my%20swearing
+agentd-desktop://new?prompt=Fix%20the%20build&repo=owner/name&provider=codex&model=gpt-5.5
+agentd-desktop://new?pr=owner/name/123&prompt=Fix%20the%20failing%20check
 ```
 
 | Parameter  | Meaning                                                                       |
@@ -32,33 +32,31 @@ Encode the prompt for a URL. In JavaScript, use `encodeURIComponent`.
 
 ## Open a link
 
-On app.t3.codes, the link first asks where to open it: the desktop or mobile app, this browser
-when it is connected to a machine, or the download page. Select **Remember my choice** to skip
-this step next time.
+Links use the desktop app's `agentd-desktop://` scheme, so they open in the desktop app on a
+computer where it is installed. Upstream's hosted web app at app.t3.codes, which opened links in a
+browser, is not part of AgentD Next.
 
 - **No `repo`**: the draft opens without a project, on the machine you used last.
 - **`repo`**: the draft opens in your most recently used project for that repository. A fork
   counts only for its own owner. When you do not have the repository, choose **Clone** or **Use
   without project**.
 - **`provider` and `model`**: used when you have that provider set up. Otherwise your default
-  model is used, and T3 Code tells you.
+  model is used, and AgentD Next tells you.
 - **`pr`**: opens the thread linked to that pull request on any connected machine, with the prompt
   in its composer. When no thread is linked, the draft goes on the pull request branch in a new
-  worktree. T3 Code checks the code out only after you confirm, because the checkout runs your
+  worktree. AgentD Next checks the code out only after you confirm, because the checkout runs your
   setup script on it.
 
-A thread link with a prompt, such as `https://app.t3.codes/<environment>/<thread>?prompt=…`,
-puts the prompt in that thread's composer. If you already typed a draft there, T3 Code asks
+A thread link with a prompt, such as `agentd-desktop://threads/<environment>/<thread>?prompt=…`,
+puts the prompt in that thread's composer. If you already typed a draft there, AgentD Next asks
 before it replaces it.
 
-T3 Code removes characters you cannot see, such as zero-width and hidden tag characters, because
-they can hide instructions for the agent. When a prompt had them, T3 Code warns you that it may be
+AgentD Next removes characters you cannot see, such as zero-width and hidden tag characters, because
+they can hide instructions for the agent. When a prompt had them, AgentD Next warns you that it may be
 malicious.
 
 ## Share a thread
 
-**Copy thread** copies a link such as `https://app.t3.codes/threads/<environment>/<thread>`. Paste
-it anywhere, such as Slack, a GitHub comment, or your notes. On a phone with T3 Code installed, it
-opens the thread in the app. Elsewhere, opening it asks where to open it, like a prompt link, then
-opens the thread. Only someone connected to the machine that runs the thread can see it. In T3 Code,
-a thread link in a message opens the thread in the app.
+**Copy thread** copies a thread link such as `<t3-thread://<environment>/<thread>>`. Paste it into
+a message in AgentD Next and it opens the thread in the app. Only someone connected to the machine
+that runs the thread can see it. Outside the app the link does not open anything.
