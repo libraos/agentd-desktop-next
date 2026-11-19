@@ -15,7 +15,7 @@ the desktop app, a browser, or the mobile app.
 5. Run `t3 policy show` on the machine to
    [check what the server loaded](#check-what-the-server-loaded).
 
-The desktop app includes the `t3` command; see [The `t3` command](./install.md#the-t3-command).
+The desktop app includes the `agentd-next` command, with `t3` as an alias; see [The `agentd-next` command](./install.md#the-agentd-next-command).
 
 ## Write a policy
 

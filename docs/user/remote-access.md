@@ -8,7 +8,7 @@ Upstream's hosted relay (T3 Connect) and its accounts are not part of AgentD Nex
 ## Set up with `t3 up`
 
 `t3 up` sets up access from your other devices and the
-[background service](./background-service.md). It asks nothing when you name a
+[background service](./background-service.md), which needs a release mirror. It asks nothing when you name a
 choice: `--lan` or `--no-lan`. Choices you do not name keep their settings, and `--yes` takes
 the defaults. Without a terminal:
 

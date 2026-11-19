@@ -5,8 +5,11 @@ do not need to keep a terminal open.
 
 ## Manage the service
 
-Install the `t3` CLI first ([Install AgentD Next](./install.md#command-line)), then
-run these commands on the machine that will host AgentD Next:
+Install the `agentd-next` command first, with its `t3` alias
+([Install AgentD Next](./install.md#the-agentd-next-command)), then run these commands on the
+machine that will host AgentD Next. Installing the service downloads a server runtime, so it needs
+a release mirror: set `T3CODE_RELEASE_BASE_URL` to one, or use the managed policy's
+`updates.feedUrl`. Without one, the install stops at finding a release source for this build.
 
 | Task                                  | Command                |
 | ------------------------------------- | ---------------------- |

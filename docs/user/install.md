@@ -65,13 +65,13 @@ terminal afterwards. If the folder is not on your `PATH`, **Add to PATH** on the
 Welcome page or in **Settings → About** adds one line to your shell's startup
 file. **Remove** takes it off, and the app does not add it again.
 
-| Task                                  | Command                                                                          |
-| ------------------------------------- | -------------------------------------------------------------------------------- |
-| Start the server and open the web app | `agentd-next`                                                                    |
-| Start the server without a browser    | `agentd-next serve`                                                              |
-| Allow access from your other devices  | `agentd-next up --lan` ([details](./remote-access.md))                           |
-| Keep it running in the background     | `agentd-next service install` ([details](./background-service.md))               |
-| Reclaim database space                | `agentd-next doctor` ([details](./background-service.md#reclaim-database-space)) |
+| Task                                  | Command                                                                                   |
+| ------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Start the server and open the web app | `agentd-next`                                                                             |
+| Start the server without a browser    | `agentd-next serve`                                                                       |
+| Allow access from your other devices  | `agentd-next serve --lan` ([details](./remote-access.md))                                 |
+| Keep it running in the background     | `agentd-next service install`, with a release mirror ([details](./background-service.md)) |
+| Reclaim database space                | `agentd-next doctor` ([details](./background-service.md#reclaim-database-space))          |
 
 Run `agentd-next --help` for the full reference. If it reports an already running
 server, run the `pair` command it names and open the pairing URL to connect to that
