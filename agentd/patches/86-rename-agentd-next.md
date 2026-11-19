@@ -591,3 +591,4 @@ The i18n catalogs (`apps/{web,mobile,desktop}/src/i18n/translations/*.json`) wer
 - `scripts/build-desktop-artifact.test.ts` — product name.
 - `scripts/build-desktop-artifact.ts` — artifactName `AgentD-Next-${version}-${arch}.${ext}` (AppImage too), product name and macOS usage strings; appId, package and executable names unchanged.
 - `scripts/lib/tagged-source-version.ts` — product name.
+- `apps/server/src/provider/agentContextBudget.json` — measured context sizes after the shorter name.
