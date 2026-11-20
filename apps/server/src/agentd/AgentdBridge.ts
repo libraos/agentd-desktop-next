@@ -36,6 +36,8 @@ import {
   type AgentdPeopleInput,
   type AgentdStartTaskInput,
   type AgentdStartTaskResult,
+  type AgentdBlockingTask,
+  type AgentdRetryStartInput,
   type AgentdStatus,
   type AgentdStopTaskInput,
   type AgentdTask,
@@ -65,6 +67,7 @@ import { makeAgentdCloud } from "./agentdCloud.ts";
 import { makeCloudReview } from "./agentdCloudReview.ts";
 import { AgentdArgumentError, agentdArgs, agentdTicket } from "./agentdCommands.ts";
 import * as AgentdJson from "./agentdJson.ts";
+import { blockingRefusal } from "./blockedStart.ts";
 import { detectServices, repairServices, serviceAgentd } from "./agentdServices.ts";
 import { makeClaudeTrust, projectFolder } from "./claudeTrust.ts";
 import { makeCloudKeyFile } from "./cloudKeyFile.ts";
@@ -89,6 +92,9 @@ export class AgentdBridge extends Context.Service<
     readonly stopTask: (input: AgentdStopTaskInput) => Effect.Effect<{}, AgentdError>;
     readonly startTask: (
       input: AgentdStartTaskInput | AgentdCloudTaskInput,
+    ) => Effect.Effect<AgentdStartTaskResult, AgentdError>;
+    readonly retryStart: (
+      input: AgentdRetryStartInput,
     ) => Effect.Effect<AgentdStartTaskResult, AgentdError>;
     readonly approvals: Effect.Effect<ReadonlyArray<AgentdApproval>, AgentdError>;
     readonly inbox: Effect.Effect<ReadonlyArray<AgentdInboxItem>, AgentdError>;
@@ -617,6 +623,39 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     yield* claudeTrust.trust(folder);
   });
 
+  const listRow = (id: string) =>
+    run(agentdArgs.list()).pipe(
+      Effect.flatMap(decodeList),
+      Effect.map((rows) => rows.find((row) => row.id === id) ?? null),
+    );
+
+  // agentd names the open task holding the directory in prose; the app shows it as a choice.
+  const refused = Effect.fn("AgentdBridge.refusedDispatch")(function* (id: string, note: string) {
+    const refusal = blockingRefusal(note);
+    if (refusal === null) return { id, started: false, note };
+    // The goal and a fresher running state, when agentd's list still has the task.
+    const row = yield* listRow(refusal.id).pipe(Effect.orElseSucceed(() => null));
+    const blocking: AgentdBlockingTask = {
+      id: refusal.id,
+      state: row?.state ?? refusal.state,
+      goal: row === null ? null : row.goal || row.title || null,
+      running: refusal.running || row?.worker_running === true,
+    };
+    return { id, started: false, note, blocking };
+  });
+
+  // A failed dispatch leaves the task offered in agentd, where Start can run it again.
+  const dispatch = Effect.fn("AgentdBridge.dispatch")(function* (
+    id: string,
+    worker: AgentdWorkerTool,
+    force: boolean,
+  ) {
+    return yield* run(yield* args(() => agentdArgs.dispatch(id, worker, force))).pipe(
+      Effect.as<AgentdStartTaskResult>({ id, started: true, note: null }),
+      Effect.catchTags({ AgentdCommandError: (error) => refused(id, error.message) }),
+    );
+  });
+
   const startTask = Effect.fn("AgentdBridge.startTask")(function* (
     input: AgentdStartTaskInput | AgentdCloudTaskInput,
   ) {
@@ -635,13 +674,30 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     );
     const id = created.handoff ?? created.id;
     if (id === undefined) return yield* commandError("agentd new did not name the task it made.");
-    // A failed dispatch leaves the task offered in agentd, where Start can run it again.
-    return yield* run(yield* args(() => agentdArgs.dispatch(id, input.worker))).pipe(
-      Effect.as({ id, started: true, note: null }),
-      Effect.catchTags({
-        AgentdCommandError: (error) => Effect.succeed({ id, started: false, note: error.message }),
-      }),
-    );
+    return yield* dispatch(id, input.worker, false);
+  });
+
+  const retryStart = Effect.fn("AgentdBridge.retryStart")(function* (input: AgentdRetryStartInput) {
+    if (input.action === "force") return yield* dispatch(input.id, input.worker, true);
+    const row = yield* listRow(input.blocking);
+    if (row === null) {
+      return yield* commandError(
+        `AgentD could not read task ${input.blocking}, so it was not released.`,
+      );
+    }
+    // Releasing a task whose worker still runs would stop live work the person did not see.
+    if (row.worker_running === true) {
+      return yield* commandError(
+        `Task ${input.blocking} still has a worker running, so it was not released.`,
+      );
+    }
+    // agentd's decline is only for the session an offer is addressed to; a cancel by its sender
+    // or an owner releases an offered or claimed task alike.
+    if (row.state === "offered" || row.state === "claimed") {
+      const reason = `Released from AgentD Next to start ${input.id}`;
+      yield* run(yield* args(() => agentdArgs.cancel(input.blocking, reason)));
+    }
+    return yield* dispatch(input.id, input.worker, false);
   });
 
   const people = Effect.fn("AgentdBridge.people")(function* (input: AgentdPeopleInput) {
@@ -771,6 +827,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
       return {};
     }),
     startTask,
+    retryStart,
     approvals: run(agentdArgs.approvals()).pipe(
       Effect.flatMap(decodeApprovals),
       Effect.map(AgentdJson.agentdApprovals),

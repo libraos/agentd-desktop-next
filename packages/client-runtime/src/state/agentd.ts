@@ -68,6 +68,11 @@ export function createAgentdEnvironmentAtoms<R, E>(
       tag: WS_METHODS.agentdStartTask,
       scheduler,
     }),
+    retryStart: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:agentd:retry-start",
+      tag: WS_METHODS.agentdRetryStart,
+      scheduler,
+    }),
     stopTask: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:agentd:stop-task",
       tag: WS_METHODS.agentdStopTask,

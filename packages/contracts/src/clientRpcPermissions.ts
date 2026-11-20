@@ -79,6 +79,7 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   [WS_METHODS.scheduledTasksRotateWebhookToken]: AuthOrchestrationOperateScope,
   // agentd tasks start and stop agent workers on this host, as threads do.
   [WS_METHODS.agentdStartTask]: AuthOrchestrationOperateScope,
+  [WS_METHODS.agentdRetryStart]: AuthOrchestrationOperateScope,
   [WS_METHODS.agentdStopTask]: AuthOrchestrationOperateScope,
   // Connecting an agent edits its config on this host; joining a team links the host to a server.
   [WS_METHODS.agentdConnectAgent]: AuthEnvironmentMaintainScope,
