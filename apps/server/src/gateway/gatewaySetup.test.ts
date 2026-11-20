@@ -25,18 +25,33 @@ describe("gatewaySetup", () => {
     ]);
   });
 
-  it("lists each agent's own model family and keeps the key out of plain values", () => {
+  it("lists every key model on both agents, the agent's own family first, and keeps the key out of plain values", () => {
     const [claude, codex, opencode] = gatewayProviderInstances("lk_test_key_123456", [
       { id: "anthropic/claude-opus-5-5", name: "Claude Opus 5.5" },
       { id: "openai/gpt-5.5" },
       { id: "google/gemini-3" },
+      { id: "gemini/gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+      { id: "Qwen/Qwen3.5-Plus" },
     ]);
+    // The own family drops its prefix to keep its catalog entry; the rest keep the Gateway's id.
     expect(claude?.instance.config).toEqual({
-      customModels: [{ slug: "claude-opus-5-5", name: "Claude Opus 5.5" }],
+      customModels: [
+        { slug: "claude-opus-5-5", name: "Claude Opus 5.5" },
+        { slug: "openai/gpt-5.5" },
+        { slug: "google/gemini-3" },
+        { slug: "gemini/gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+        { slug: "Qwen/Qwen3.5-Plus" },
+      ],
       onlyCustomModels: true,
     });
     expect(codex?.instance.config).toMatchObject({
-      customModels: [{ slug: "gpt-5.5" }],
+      customModels: [
+        { slug: "gpt-5.5" },
+        { slug: "anthropic/claude-opus-5-5", name: "Claude Opus 5.5" },
+        { slug: "google/gemini-3" },
+        { slug: "gemini/gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+        { slug: "Qwen/Qwen3.5-Plus" },
+      ],
       onlyCustomModels: true,
     });
     const opencodeConfig = JSON.parse(
@@ -49,6 +64,8 @@ describe("gatewaySetup", () => {
       "anthropic/claude-opus-5-5",
       "openai/gpt-5.5",
       "google/gemini-3",
+      "gemini/gemini-2.5-pro",
+      "Qwen/Qwen3.5-Plus",
     ]);
     for (const instance of [claude, codex, opencode]) {
       for (const variable of instance?.instance.environment ?? []) {
@@ -60,7 +77,11 @@ describe("gatewaySetup", () => {
 
   it("changes only the model lists of the Gateway agents still present", () => {
     const key = "lk_test_key_123456";
-    const before = [{ id: "anthropic/claude-opus-5-5" }, { id: "openai/gpt-5.5" }];
+    const before = [
+      { id: "anthropic/claude-opus-5-5" },
+      { id: "openai/gpt-5.5" },
+      { id: "gemini/gemini-2.5-pro" },
+    ];
     const current = Object.fromEntries(
       gatewayProviderInstances(key, before)
         .filter(({ instanceId }) => instanceId !== "libraosOpencode")
@@ -80,6 +101,7 @@ describe("gatewaySetup", () => {
         config: { ...(codex.config as object), launchArgs: userArgs },
       },
     };
+    // The key dropped Claude Opus and Gemini: both agents lose them.
     const next = withGatewayModels(edited, [{ id: "openai/gpt-6-luna" }]);
     expect(next[GATEWAY_INSTANCE_IDS.codex]?.config).toEqual({
       setupMode: "existing",
@@ -91,7 +113,7 @@ describe("gatewaySetup", () => {
       edited[GATEWAY_INSTANCE_IDS.codex]?.environment,
     );
     expect(next[GATEWAY_INSTANCE_IDS.claude]?.config).toEqual({
-      customModels: [],
+      customModels: [{ slug: "openai/gpt-6-luna" }],
       onlyCustomModels: true,
     });
     expect(next[GATEWAY_INSTANCE_IDS.claude]?.environment).toBe(

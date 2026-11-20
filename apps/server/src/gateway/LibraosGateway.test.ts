@@ -207,7 +207,7 @@ it.effect("a refresh gives the Gateway agents the key's models as they are now",
       },
     });
 
-    // In Console the key loses its Claude model and gains a Codex one.
+    // In Console the key loses its Claude model and gains a Codex one; both agents follow.
     served.splice(0, served.length, { id: "openai/gpt-5.5" }, { id: "openai/gpt-6-luna" });
     yield* gateway.refreshModels;
 
@@ -219,7 +219,7 @@ it.effect("a refresh gives the Gateway agents the key's models as they are now",
       onlyCustomModels: true,
     });
     assert.deepStrictEqual(instances[GATEWAY_INSTANCE_IDS.claude]?.config, {
-      customModels: [],
+      customModels: [{ slug: "openai/gpt-5.5" }, { slug: "openai/gpt-6-luna" }],
       onlyCustomModels: true,
     });
     assert.strictEqual(instances[GATEWAY_INSTANCE_IDS.claude]?.enabled, false);
@@ -258,7 +258,7 @@ it.effect("a refresh after the key is revoked leaves the agents no models and sa
     assert.deepStrictEqual(
       (instances[GATEWAY_INSTANCE_IDS.codex]?.config as { customModels?: unknown } | undefined)
         ?.customModels,
-      [{ slug: "gpt-5.5" }],
+      [{ slug: "gpt-5.5" }, { slug: "anthropic/claude-opus-5-5" }],
     );
     assert.isNull((yield* gateway.status).refusal);
 
@@ -303,7 +303,7 @@ it.effect(
         onlyCustomModels: true,
       });
       assert.deepStrictEqual(instances[GATEWAY_INSTANCE_IDS.claude]?.config, {
-        customModels: [],
+        customModels: [{ slug: "openai/gpt-5.5" }],
         onlyCustomModels: true,
       });
     }).pipe(Effect.provide(layer));

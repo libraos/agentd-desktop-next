@@ -112,7 +112,7 @@ describe("compileClaudeModelSelection", () => {
     ).not.toHaveProperty("alwaysThinkingEnabled");
   });
 
-  it.each(["gateway-route", "gateway-route[1m]"])(
+  it.each(["gateway-route", "gateway-route[1m]", "gemini/gemini-2.5-pro", "Qwen/Qwen3.5-Plus"])(
     "keeps explicit effort and thinking for %s outside the local catalog",
     (model) => {
       for (const thinking of [true, false]) {

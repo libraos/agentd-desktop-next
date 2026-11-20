@@ -29,7 +29,11 @@ const secretStore = ServerSecretStore.ServerSecretStore.of({
 it.effect("an agent's own Gateway key decides its models", () => {
   const requests: Array<string | undefined> = [];
   let answer: Response = Response.json({
-    data: [{ id: "openai/gpt-6-astra" }, { id: "anthropic/claude-opus-5-5" }],
+    data: [
+      { id: "anthropic/claude-opus-5-5" },
+      { id: "openai/gpt-6-astra" },
+      { id: "gemini/gemini-2.5-pro" },
+    ],
   });
   const http = HttpClient.make((request) =>
     Effect.sync(() => {
@@ -41,7 +45,12 @@ it.effect("an agent's own Gateway key decides its models", () => {
     const keyModels = yield* makeGatewayKeyModels("openai");
     const ask = (endpoint: string) => keyModels({ endpoint, key: KEY });
 
-    assert.deepStrictEqual(yield* ask("https://api.libraos.com"), [{ slug: "gpt-6-astra" }]);
+    const allowed = [
+      { slug: "gpt-6-astra" },
+      { slug: "anthropic/claude-opus-5-5" },
+      { slug: "gemini/gemini-2.5-pro" },
+    ];
+    assert.deepStrictEqual(yield* ask("https://api.libraos.com"), allowed);
     assert.deepStrictEqual(requests, [`Bearer ${KEY}`]);
 
     // Another endpoint is not asked: the key goes only where the agent sends it anyway.
@@ -50,7 +59,7 @@ it.effect("an agent's own Gateway key decides its models", () => {
 
     // An outage keeps what the key allowed, never the agent's whole catalog.
     answer = Response.json({ error: { message: "Upstream unavailable." } }, { status: 503 });
-    assert.deepStrictEqual(yield* ask("https://api.libraos.com"), [{ slug: "gpt-6-astra" }]);
+    assert.deepStrictEqual(yield* ask("https://api.libraos.com"), allowed);
     assert.deepStrictEqual(
       yield* keyModels({ endpoint: "https://api.libraos.com", key: "lk_other_key_9876543210" }),
       [],

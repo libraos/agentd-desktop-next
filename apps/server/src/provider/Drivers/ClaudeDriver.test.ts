@@ -78,11 +78,24 @@ it.layer(layerTest)("ClaudeDriver", (it) => {
           enabled: false,
           environment: [],
           // No `onlyCustomModels`, as an older build saved it.
-          config: { ...ClaudeDriver.defaultConfig(), customModels: [{ slug: "claude-opus-5-5" }] },
+          config: {
+            ...ClaudeDriver.defaultConfig(),
+            customModels: [
+              { slug: "claude-opus-5-5" },
+              { slug: "gemini/gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+            ],
+          },
         }).pipe(Effect.flatMap((instance) => instance.snapshot.getSnapshot));
 
+      // Claude's own model keeps its catalog entry; another family's is labelled with its family.
       const gateway = yield* snapshot("libraosClaude");
-      expect(gateway.models.map((model) => model.slug)).toEqual(["claude-opus-5-5"]);
+      expect(
+        gateway.models.map((model) => [model.slug, model.isCustom, model.subProvider]),
+      ).toEqual([
+        ["claude-opus-5-5", false, undefined],
+        ["gemini/gemini-2.5-pro", true, "gemini"],
+      ]);
+      expect(gateway.models[0]?.capabilities?.optionDescriptors?.length).toBeGreaterThan(0);
       const own = yield* snapshot("claudeAgent");
       expect(own.models.length).toBeGreaterThan(1);
     }).pipe(Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, noSpawn)),

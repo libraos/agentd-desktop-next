@@ -75,14 +75,21 @@ export function gatewayRefusal(status: number, body: unknown): string {
 /** A key the Gateway will not serve at all, as opposed to a Gateway that is down or busy. */
 export const isKeyRefusal = (status: number): boolean => status === 401 || status === 403;
 
-// Claude Code asks for `claude-…` and Codex for `gpt-…`, as agentd's workers do; the Gateway's ids
-// carry the model family in front.
-export function gatewayFamilyModels(models: ReadonlyArray<LibraosGatewayModel>, family: string) {
-  return models.flatMap((model) => {
+// Every model the key allows runs on both agents: the Gateway routes by the id's family. The
+// agent's own family drops its prefix (`claude-…`, `gpt-…`, as agentd's workers ask) so it keeps
+// its catalog entry and options; any other model keeps its full Gateway id.
+export function gatewayAgentModels(models: ReadonlyArray<LibraosGatewayModel>, family: string) {
+  const own: Array<{ slug: string; name?: string }> = [];
+  const other: Array<{ slug: string; name?: string }> = [];
+  for (const model of models) {
     const [owner, name, ...rest] = model.id.split("/");
-    if (owner !== family || !name || rest.length > 0) return [];
-    return [{ slug: name, ...(model.name ? { name: model.name } : {}) }];
-  });
+    const ownModel = owner === family && name !== undefined && name !== "" && rest.length === 0;
+    (ownModel ? own : other).push({
+      slug: ownModel ? name : model.id,
+      ...(model.name ? { name: model.name } : {}),
+    });
+  }
+  return [...own, ...other];
 }
 
 const tomlString = (value: string) => JSON.stringify(value);
@@ -141,7 +148,7 @@ export function gatewayProviderInstances(
           secret("ANTHROPIC_API_KEY", key),
         ],
         // The key's models replace Claude's catalog: any other model would fail on the Gateway.
-        config: { customModels: gatewayFamilyModels(models, "anthropic"), onlyCustomModels: true },
+        config: { customModels: gatewayAgentModels(models, "anthropic"), onlyCustomModels: true },
       },
     },
     {
@@ -154,7 +161,7 @@ export function gatewayProviderInstances(
         config: {
           setupMode: "existing",
           launchArgs: codexGatewayLaunchArgs(),
-          customModels: gatewayFamilyModels(models, "openai"),
+          customModels: gatewayAgentModels(models, "openai"),
           onlyCustomModels: true,
         },
       },
@@ -260,7 +267,7 @@ export function withGatewayModels(
       ...existing,
       config: {
         ...config,
-        ...(models === null ? {} : { customModels: gatewayFamilyModels(models, family) }),
+        ...(models === null ? {} : { customModels: gatewayAgentModels(models, family) }),
         onlyCustomModels: true,
       },
     });

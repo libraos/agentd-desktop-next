@@ -44,7 +44,9 @@ agent later in **Settings → Providers**.
 
 **Use an API key or gateway** lets you choose **LibraOS Gateway** and the agent to
 use it with, then paste a **LibraOS API key** and press **Connect**. The key stays
-on that environment; **Disconnect** removes it. Other gateways show **Not available
+on that environment; **Disconnect** removes it. Claude Code and Codex on the Gateway
+each list every model the key allows, other families too: a Gemini model under
+Claude Code shows with `gemini` beside its name. Other gateways show **Not available
 yet** on that screen; use a provider instance's environment variables for those
 ([Providers](./install.md#providers)).
 

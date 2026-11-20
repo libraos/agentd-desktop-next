@@ -12,7 +12,7 @@ import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import {
   GATEWAY_KEY_SECRET,
-  gatewayFamilyModels,
+  gatewayAgentModels,
   gatewayRefusal,
   isKeyRefusal,
   parseGatewayModels,
@@ -71,8 +71,8 @@ export const askGatewayModels = Effect.fn("LibraosGateway.askModels")(function* 
 });
 
 /**
- * The models of `family` (prefix dropped, else full ids) the key an agent sends to the Gateway
- * allows; another endpoint is not asked. Down Gateway: the key's last answer (a refusal is empty),
+ * Every model the key an agent sends to the Gateway allows (`family`'s own without the prefix, the
+ * rest by full id); another endpoint is not asked. Down Gateway: the key's last answer (a refusal is empty),
  * else `known` only for the connected key it was stored from, else none.
  */
 export const makeGatewayKeyModels = Effect.fn("LibraosGateway.makeGatewayKeyModels")(function* (
@@ -98,7 +98,7 @@ export const makeGatewayKeyModels = Effect.fn("LibraosGateway.makeGatewayKeyMode
       Effect.flatMap((answer): Effect.Effect<ReadonlyArray<CustomModelSetting>> => {
         if (answer.kind === "models") {
           const models = family
-            ? gatewayFamilyModels(answer.models, family)
+            ? gatewayAgentModels(answer.models, family)
             : answer.models.map((model) => ({
                 slug: model.id,
                 ...(model.name ? { name: model.name } : {}),

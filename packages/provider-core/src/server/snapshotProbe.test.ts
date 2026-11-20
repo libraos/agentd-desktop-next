@@ -119,6 +119,7 @@ describe("providerModelsFromSettings", () => {
         { slug: "gpt-6-astra", name: "OpenAI: GPT-6 Astra" },
         "gpt-6.1-sol",
         { slug: "gpt-7-preview", name: "GPT-7 Preview" },
+        { slug: "gemini/gemini-2.5-pro", name: "Gemini 2.5 Pro" },
       ],
       plain,
       { onlyCustomModels: true },
@@ -128,6 +129,14 @@ describe("providerModelsFromSettings", () => {
       catalog[1],
       catalog[2],
       { slug: "gpt-7-preview", name: "GPT-7 Preview", isCustom: true, capabilities: plain },
+      // Another family's model is labelled with the family its id names.
+      {
+        slug: "gemini/gemini-2.5-pro",
+        name: "Gemini 2.5 Pro",
+        subProvider: "gemini",
+        isCustom: true,
+        capabilities: plain,
+      },
     ]);
   });
 
