@@ -1138,7 +1138,6 @@ describe("AgentdBridge", () => {
       const offers: Array<string> = [];
       const secondOffering = yield* Deferred.make<void>();
       const secondMayFinish = yield* Deferred.make<void>();
-      let second: Fiber.Fiber<unknown, unknown> | undefined;
       const platform = yield* HostProcess.Platform;
       const input = {
         cwd: platform === "win32" ? "C:\\work\\app" : "/work/app",
@@ -1181,6 +1180,8 @@ describe("AgentdBridge", () => {
           ),
         ),
       );
+      type Start = ReturnType<typeof other.startTask>;
+      let second: Fiber.Fiber<Effect.Success<Start>, Effect.Error<Start>> | undefined;
       // The first is refused before a task; the second picks up its reservation in that window.
       const first = yield* server(() =>
         Effect.gen(function* () {
