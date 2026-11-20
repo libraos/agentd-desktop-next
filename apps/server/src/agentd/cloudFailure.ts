@@ -3,6 +3,9 @@
 // "byok", "cloud-key" or "[cloud]" is not read as a setup or credential problem.
 
 import { AgentdCommandError, chmodPrivateCommand } from "@t3tools/contracts";
+import * as Schema from "effect/Schema";
+
+const isCommandError = Schema.is(AgentdCommandError);
 
 export type CloudProblem = "setup" | "credit" | "repository";
 
@@ -206,6 +209,6 @@ export function cloudFailureReason(
 
 /** A Start error for a connection that may not read host files: whose key a file holds isn't said. */
 export function startErrorFor<E>(error: E, readsHostFiles: boolean): E | AgentdCommandError {
-  if (readsHostFiles || !(error instanceof AgentdCommandError) || !error.wrongKeyFile) return error;
+  if (readsHostFiles || !isCommandError(error) || !error.wrongKeyFile) return error;
   return new AgentdCommandError({ message: CLOUD_REASONS.keyFile, notSetUp: false });
 }
