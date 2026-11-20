@@ -122,3 +122,21 @@ it("says why there is no Repair for a service it couldn't read", async () => {
   await expect.element(page.getByText(/couldn’t read how one of its background/)).toBeVisible();
   await expect.element(page.getByRole("button", { name: "Repair…" })).not.toBeInTheDocument();
 });
+
+it("says the watchdog's timer is off and that Repair failed to turn it on", async () => {
+  setup();
+  state.repair.mockResolvedValue(AsyncResult.success({ ok: false }));
+  await using _screen = await render(
+    <AgentdInstallStatus
+      status={status({ services: [], agentd: NEXT, moves: ["watchdog"], watchdogOff: true })}
+      environmentId={environmentId}
+      onRepaired={vi.fn()}
+    />,
+  );
+  await expect.element(page.getByText(/systemd hasn’t turned on its timer/)).toBeVisible();
+  await page.getByRole("button", { name: "Repair…" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Repair", exact: true }).click();
+  await expect
+    .element(page.getByText(/Turning on AgentD’s watchdog timer failed\. Try Repair again/))
+    .toBeVisible();
+});

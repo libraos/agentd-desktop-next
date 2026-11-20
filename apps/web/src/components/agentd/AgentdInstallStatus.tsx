@@ -158,6 +158,14 @@ function ServicesNotice({
           )}
         </p>
       ))}
+      {problem.watchdogOff === true ? (
+        <p>
+          <T>
+            AgentD’s watchdog service runs this app’s AgentD, but systemd hasn’t turned on its
+            timer, so AgentD doesn’t follow your tasks while this app is closed. Repair turns it on.
+          </T>
+        </p>
+      ) : null}
       {problem.unread !== undefined && problem.unread.length > 0 ? (
         <p>
           <T>
@@ -210,9 +218,13 @@ function ServicesNotice({
       ) : failure !== null ? (
         <p>
           {failure.message ??
-            gt(
-              "AgentD’s background services run an AgentD that is missing or belongs to the old AgentD Desktop, and moving them to this app’s AgentD failed. Run agentd install in a terminal.",
-            )}
+            (problem.services.length === 0 && problem.watchdogOff === true
+              ? gt(
+                  "Turning on AgentD’s watchdog timer failed. Try Repair again, or run systemctl --user enable --now agentd-watchdog.timer in a terminal.",
+                )
+              : gt(
+                  "AgentD’s background services run an AgentD that is missing or belongs to the old AgentD Desktop, and moving them to this app’s AgentD failed. Run agentd install in a terminal.",
+                ))}
         </p>
       ) : null}
       {agentd !== null && problem.moves.length > 0 && allowed ? (

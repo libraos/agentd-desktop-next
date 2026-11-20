@@ -249,6 +249,10 @@ describe("agentd services", () => {
         unread: ["dash"],
       });
       yield* fs.remove(dashPlist, { recursive: true });
+      // So is one launchd may read but this can't name a program in, such as a binary plist.
+      yield* fs.writeFile(dashPlist, new Uint8Array([...Buffer.from("bplist00"), 0xd1, 0x01]));
+      expect(yield* detectServices(deps)).toMatchObject({ moves: [], unread: ["dash"] });
+      yield* fs.remove(dashPlist);
       // An absent dash is one install registers too: the confirmation names both.
       expect(yield* detectServices(deps)).toMatchObject({ moves: ["watchdog", "dash"] });
       yield* fs.writeFileString(dashPlist, plist(bundled));
@@ -287,6 +291,15 @@ describe("agentd services", () => {
         path.join(units, "agentd-watchdog.service"),
         "[Service]\nExecStart=/gone/agentd watchdog\n",
       );
+      // A dash on the user's own agentd: watchdog install leaves it, so it isn't named as kept.
+      const dashUnit = path.join(units, "agentd-dash.service");
+      yield* fs.writeFileString(dashUnit, `[Service]\nExecStart=${own} dash\n`);
+      expect(yield* detectServices(linux)).toEqual({
+        services: [{ name: "watchdog", program: "/gone/agentd" }],
+        agentd: bundled,
+        moves: ["watchdog"],
+      });
+      yield* fs.writeFileString(dashUnit, `[Service]\nExecStart=${bundled} dash\n`);
       const watchdog = yield* detectServices(linux);
       expect(watchdog).toEqual({
         services: [{ name: "watchdog", program: "/gone/agentd" }],
@@ -355,6 +368,19 @@ describe("agentd services", () => {
         "",
       );
       expect(yield* detectServices(linux)).toBe(null);
+      expect(runs).toEqual([]);
+      // A repair whose reload or enable failed left the timer written but off, legacy units gone:
+      // still reported, and Repair enables it again.
+      yield* fs.remove(path.join(units, "timers.target.wants"), { recursive: true });
+      yield* fs.remove(path.join(units, "agentops-watchdog.timer"));
+      expect(yield* detectServices(linux)).toBe(null);
+      yield* fs.writeFileString(path.join(units, "agentd-watchdog.timer"), "[Timer]\n");
+      expect(yield* detectServices(linux)).toEqual({
+        services: [],
+        agentd: bundled,
+        moves: ["watchdog"],
+        watchdogOff: true,
+      });
       expect(runs).toEqual([]);
 
       // An AppImage with no lasting agentd to register: reported, with no Repair.

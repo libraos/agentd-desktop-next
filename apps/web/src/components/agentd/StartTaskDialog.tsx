@@ -74,7 +74,7 @@ export function openStartTaskDialog(threadRef: ScopedThreadRef, fields: TaskFiel
  * The refusal shown for a cloud task agentd saved but didn't confirm, until the synced task list
  * shows it started. Its subscription runs the server's cloud sync fallback, tasks pane closed or not.
  */
-function OfferedCloudTask(props: {
+export function OfferedCloudTask(props: {
   environmentId: EnvironmentId;
   taskId: string | null;
   children: ReactNode;

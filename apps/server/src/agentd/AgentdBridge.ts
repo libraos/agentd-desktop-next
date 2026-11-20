@@ -369,10 +369,10 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
         "AgentD’s background services changed since you confirmed Repair. Check what it changes now and confirm again.",
       );
     const installed = yield* provideFiles(repairServices(yield* serviceDeps, problem));
-    // A service still on a missing or old agentd after install is no repair.
+    // A service still on a missing or old agentd, or a watchdog systemd hasn't enabled, after
+    // install is no repair.
     const after = yield* checkServices();
-    const result =
-      installed.ok && (after?.services.length ?? 0) > 0 ? { ...installed, ok: false } : installed;
+    const result = installed.ok && after !== null ? { ...installed, ok: false } : installed;
     if (result.ok) yield* Effect.logInfo("agentd services repaired on request");
     else yield* Effect.logWarning("agentd services repair fell short", { result, after });
     return result;

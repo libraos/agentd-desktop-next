@@ -388,7 +388,8 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
       const plist = yield* readService(
         path.join(home, "Library", "LaunchAgents", `com.libraos.agentd.${name}.plist`),
       );
-      return plist === null || plist === undefined ? plist : plistProgram(plist);
+      // A LaunchAgent that is there but names no program this can read (a binary plist) is unread.
+      return plist === null || plist === undefined ? plist : (plistProgram(plist) ?? undefined);
     }
     if (platform === "win32") {
       const names = taskNames(name, root);
@@ -411,7 +412,7 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
           (owner === null || windowsRootKey(owner) !== windowsRootKey(root ?? ""))
         )
           continue;
-        return taskProgram(query.text);
+        return taskProgram(query.text) ?? undefined;
       }
       return null;
     }
@@ -438,9 +439,11 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
     else if (name === "watchdog") watchdogOnTarget = true;
   }
   let command: string | null = null;
-  if (services.length === 0 && platform === "linux" && watchdogOnTarget) {
-    // A repair that stopped at agentd's legacy-unit step left the new unit written but its timer
-    // off: still reported, with that step, until the timer is on.
+  let watchdogOff = false;
+  if (platform === "linux" && watchdogOnTarget) {
+    // A repair that stopped before systemd enabled the timer (agentd's legacy-unit step, or a
+    // failed reload or enable) left the new unit written but nothing running it: still reported,
+    // with that step or with Repair to enable it, until the timer is on.
     const enabled = new Set<string>();
     for (const wants of (yield* names(unitDir)).filter((name) => name.endsWith(".wants")))
       for (const name of yield* names(path.join(unitDir, wants))) enabled.add(name);
@@ -451,10 +454,15 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
         (yield* fs.exists(path.join(unitDir, unit)).pipe(Effect.orElseSucceed(() => false)))
       )
         legacy.push(unit);
-    if (legacy.length > 0 && !enabled.has("agentd-watchdog.timer"))
-      command = `systemctl --user disable --now ${legacy.join(" ")}`;
+    if (!enabled.has("agentd-watchdog.timer")) {
+      if (legacy.length > 0) command = `systemctl --user disable --now ${legacy.join(" ")}`;
+      else
+        watchdogOff = yield* fs
+          .exists(path.join(unitDir, "agentd-watchdog.timer"))
+          .pipe(Effect.orElseSucceed(() => false));
+    }
   }
-  if (services.length === 0 && command === null) return null;
+  if (services.length === 0 && command === null && !watchdogOff) return null;
   // install registers both services on macOS and Windows, absent ones included, so it would move
   // one kept on the user's agentd or one it couldn't read too: no Repair then, and the user
   // confirms both. On Linux each service is re-registered on its own, unless a drop-in sets it.
@@ -468,17 +476,19 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
           (name) =>
             !stuck.includes(name) &&
             (services.some((service) => service.name === name) ||
-              (name === "watchdog" && command !== null)),
+              (name === "watchdog" && (command !== null || watchdogOff))),
         )
       : SERVICES;
   return {
     services,
     agentd: target,
     moves,
-    ...(kept.length > 0 ? { kept } : {}),
+    // On Linux a kept service stops nothing: Repair re-registers only the stale one.
+    ...(!linux && kept.length > 0 ? { kept } : {}),
     ...(!linux && unread.length > 0 ? { unread } : {}),
     ...(stuck.length > 0 ? { overridden: stuck } : {}),
     ...(command === null ? {} : { command }),
+    ...(watchdogOff ? { watchdogOff } : {}),
   } satisfies AgentdServicesProblem;
 });
 

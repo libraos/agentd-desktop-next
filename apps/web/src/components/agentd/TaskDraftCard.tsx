@@ -7,7 +7,7 @@ import { rightPanelHostRef, useRightPanelStore } from "~/rightPanelStore";
 import { Button } from "../ui/button";
 import { toastManager } from "../ui/toast";
 import { useStartTaskCloud } from "./StartTaskCloud";
-import { openStartTaskDialog, replaceQuestion } from "./StartTaskDialog";
+import { OfferedCloudTask, openStartTaskDialog, replaceQuestion } from "./StartTaskDialog";
 import type { TaskFields } from "./startTask.logic";
 import { TaskPlanSummary, useTaskDefaults, useTaskDirectory, useTaskPlan } from "./taskPlan";
 
@@ -30,6 +30,8 @@ export function TaskDraftCard({
   const plan = useTaskPlan({ threadRef, cwd, fields, checkEdited: true, defaults, cloud });
   const [result, setResult] = useState<string | null>(null);
   const [startedId, setStartedId] = useState<string | null>(null);
+  // A cloud task agentd saved but didn't confirm: followed until the synced list shows it started.
+  const [offeredCloudId, setOfferedCloudId] = useState<string | null>(null);
   const [replaceSubmission, setReplaceSubmission] = useState<string | null>(null);
 
   async function start(replacing: string | null = null) {
@@ -49,6 +51,7 @@ export function TaskDraftCard({
         return;
       case "offered":
         setStartedId(outcome.task.id);
+        if (cloud.enabled) setOfferedCloudId(outcome.task.id);
         setResult(
           outcome.task.note ??
             gt("Task {taskId} was offered but did not start.", { taskId: outcome.task.id }),
@@ -77,9 +80,11 @@ export function TaskDraftCard({
       <p className="wrap-anywhere text-sm font-medium">{plan.filled.goal}</p>
       <TaskPlanSummary plan={plan} />
       {result !== null ? (
-        <p role="status" className="wrap-anywhere whitespace-pre-wrap text-xs">
-          {result}
-        </p>
+        <OfferedCloudTask environmentId={threadRef.environmentId} taskId={offeredCloudId}>
+          <p role="status" className="wrap-anywhere whitespace-pre-wrap text-xs">
+            {result}
+          </p>
+        </OfferedCloudTask>
       ) : null}
       {startedId === null && cloud.enabled && replaceSubmission !== null ? (
         <div className="flex gap-2">

@@ -1175,6 +1175,37 @@ it("answers a replacement question on the draft card itself", async () => {
   });
 });
 
+it("follows a cloud task the draft card saved but agentd didn't confirm until it starts", async () => {
+  setup("feature/export", false, { agentdRunTasksOn: "cloud" });
+  state.cloud = cloudReady();
+  state.start.mockResolvedValue(
+    AsyncResult.success({ id: "hof-aabbcc", started: false, note: "Recorded." }),
+  );
+  await using _screen = await render(
+    <AppAtomRegistryProvider>
+      <ToastProvider>
+        <TaskDraftCard threadRef={threadRef} fields={drafted} />
+      </ToastProvider>
+    </AppAtomRegistryProvider>,
+  );
+  const card = page.getByRole("region", { name: "Drafted task" });
+  expect(state.tasks).not.toHaveBeenCalled();
+  await card.getByRole("button", { name: "Start" }).click();
+  await expect.element(card.getByText("Recorded.")).toBeVisible();
+  // Its task list subscription drives the cloud sync fallback with the tasks pane closed.
+  expect(state.tasks).toHaveBeenCalledWith(thread.environmentId);
+  state.rows = [{ id: "hof-aabbcc", cloudState: "running" }];
+  for (const listener of state.rowListeners) listener();
+  await expect
+    .element(
+      card.getByText(
+        "Task hof-aabbcc started in Cloud Workers. Check Background tasks for its progress.",
+      ),
+    )
+    .toBeVisible();
+  await expect.element(card.getByText("Recorded.")).not.toBeInTheDocument();
+});
+
 it("offers Retry on the AgentD page when agentd didn't answer the cloud probe", async () => {
   setup("feature/export", false);
   state.cloud = { ...cloudReady(), unreachable: true };
