@@ -4,7 +4,7 @@
 
 An agent whose own config points at the Gateway (Codex with `model_provider` at api.libraos.com, Claude Code with `ANTHROPIC_BASE_URL` there) lists the models the Gateway allows for the key that agent sends: its status check reads the key from the variable the agent itself reads (Codex's `env_key`; `ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_API_KEY` from Claude's settings or environment), asks `https://api.libraos.com/v1/models` with it and nowhere else, and keeps it only in memory, beside the list it last allowed. A refused or missing key lists none; an unreachable Gateway leaves what the key last allowed, or none before its first answer, never the whole catalog. opencode configured by hand with a provider at the Gateway lists only that provider's models the key it sends allows (opencode 1.x; opencode 2 does not report a provider's endpoint or key). Web and desktop show such an agent's list as the server sends it, without saved custom models.
 
-Ours: `apps/server/src/gateway/gatewayKeyModels.ts` (one Gateway model request under one deadline for headers and body, used by the Gateway service and the hand-configured check) and its test.
+Ours: `apps/server/src/gateway/gatewayKeyModels.ts` (one Gateway model request under one deadline for headers and body, used by the Gateway service and the hand-configured check) and its test. `apps/web/src/lib/libraosGatewayState.logic.ts` and its test: the Gateway card re-reads its status when the Gateway agents are probed again (a provider refresh may have found the key refused), and a refused key does not count as connected for a `$` budget.
 
 ## Upstream files changed
 
