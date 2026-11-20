@@ -211,6 +211,14 @@ function GatewayConnectPanel({
         <p className="font-medium text-foreground">
           <T>LibraOS Gateway connected.</T>
         </p>
+        {status.refusal ? (
+          <p role="alert" className="text-destructive-foreground">
+            <T>
+              LibraOS Gateway refused this key, so its agents list no models:{" "}
+              <Var>{status.refusal}</Var>
+            </T>
+          </p>
+        ) : null}
         {shown.length > 0 ? (
           <p className="text-muted-foreground">
             <T>
@@ -220,10 +228,17 @@ function GatewayConnectPanel({
           </p>
         ) : null}
         <p className="text-muted-foreground">
-          <T>
-            In a chat, choose the agent marked LibraOS Gateway in the model picker. agentd workers
-            use the Gateway too, so tasks accept dollar budgets.
-          </T>
+          {status.refusal ? (
+            <T>
+              Allow the key again in Console and refresh providers, or disconnect and connect
+              another key.
+            </T>
+          ) : (
+            <T>
+              In a chat, choose the agent marked LibraOS Gateway in the model picker. agentd workers
+              use the Gateway too, so tasks accept dollar budgets.
+            </T>
+          )}
         </p>
         {status.agentd === null ? null : (
           <div className="space-y-1">

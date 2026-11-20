@@ -1,4 +1,5 @@
-import { ClaudeSettings, ProviderDriverKind } from "@t3tools/contracts";
+import { makeGatewayKeyModels } from "../../gateway/gatewayKeyModels.ts";
+import { ClaudeSettings, isLibraosGatewayInstanceId, ProviderDriverKind } from "@t3tools/contracts";
 import * as Cache from "effect/Cache";
 import type * as Cause from "effect/Cause";
 import * as Duration from "effect/Duration";
@@ -126,6 +127,8 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
     const effectiveConfig = {
       ...config,
       enabled,
+      // A Gateway agent saved by an older build lacks the flag; limit it from its first snapshot.
+      onlyCustomModels: config.onlyCustomModels ?? isLibraosGatewayInstanceId(instanceId),
       binaryPath: expandHomePath(config.binaryPath, yield* HostProcess.HomeDirectory),
     } satisfies ClaudeSettings;
     const resolveMaintenance = yield* makeClaudeMaintenanceResolution({
@@ -270,6 +273,9 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
       Effect.map((result) => result.capabilities),
     );
 
+    const gatewayKeyModels = yield* makeGatewayKeyModels("anthropic").pipe(
+      Effect.provideService(HttpClient.HttpClient, httpClient),
+    );
     const checkProvider = catalogService.refreshInBackground.pipe(
       Effect.andThen(
         modelCatalog.pipe(
@@ -287,6 +293,8 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
                   Effect.provideService(FileSystem.FileSystem, fileSystem),
                   Effect.provideService(Path.Path, path),
                 ),
+
+              gatewayKeyModels,
             ),
           ),
           Effect.tap((provider) =>

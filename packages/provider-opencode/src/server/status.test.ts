@@ -21,6 +21,10 @@ import { settingsSecretLiteral } from "@t3tools/contracts";
 
 import { OpenCodeSettings } from "../settings.ts";
 import type { ProviderCompatibilityLookup } from "@t3tools/provider-core/server/compatibility";
+import {
+  NO_SERVED_MODELS_MESSAGE,
+  type EndpointKeyModels,
+} from "@t3tools/provider-core/server/snapshotProbe";
 import * as OpenCodeRuntime from "./OpenCodeRuntime.ts";
 import * as OpenCodeServerOwner from "./OpenCodeServerOwner.ts";
 import {
@@ -509,6 +513,7 @@ const checkProvider = Effect.fn("checkProvider")(function* (
     OpenCodeRuntime.OpenCodeRuntimeError
   > = Effect.succeed([]),
   compatibility?: ProviderCompatibilityLookup,
+  endpointKeyModels?: EndpointKeyModels,
 ) {
   return yield* Effect.scoped(
     Effect.gen(function* () {
@@ -529,6 +534,7 @@ const checkProvider = Effect.fn("checkProvider")(function* (
         openCode2Models,
         environment,
         compatibility,
+        endpointKeyModels,
       ).pipe(Effect.provideService(OpenCodeServerOwner.OpenCodeServerOwner, serverOwner));
     }),
   );
@@ -625,6 +631,9 @@ it.layer(layerTest)("checkOpenCodeProviderStatus", (it) => {
       NodeAssert.equal(empty.status, "warning");
       NodeAssert.equal(empty.auth.status, "unknown");
       NodeAssert.deepEqual(empty.models, []);
+      // A key that allows no models lists none for good, so the warning does not promise more.
+      NodeAssert.ok(!empty.message?.includes("yet"));
+      NodeAssert.match(empty.message ?? "", /key or account allows a model/);
 
       upstream.models = {
         "gpt-5.4": { id: "gpt-5.4", name: "GPT-5.4", variants: {} },
@@ -637,6 +646,100 @@ it.layer(layerTest)("checkOpenCodeProviderStatus", (it) => {
         ["openai/gpt-5.4"],
       );
     }),
+  );
+
+  it.effect(
+    "lists only the models the Gateway allows for the key OpenCode's own config sends",
+    () =>
+      Effect.gen(function* () {
+        const model = (id: string) => ({ id, name: id, variants: {} });
+        const inventory = (connected: ReadonlyArray<string>) => ({
+          providerList: {
+            connected,
+            all: [
+              {
+                id: "libraos",
+                name: "LibraOS Gateway",
+                key: "lk_opencode_key_123",
+                options: { baseURL: "https://api.libraos.com/v1" },
+                models: {
+                  "anthropic/claude-opus-5-5": model("anthropic/claude-opus-5-5"),
+                  "openai/gpt-6-astra": model("openai/gpt-6-astra"),
+                },
+              },
+              {
+                id: "openai",
+                name: "OpenAI",
+                options: {},
+                models: { "gpt-5.4": model("gpt-5.4") },
+              },
+            ],
+            default: {},
+          },
+          agents: [],
+          skills: [],
+        });
+        runtimeMock.state.inventory = inventory(["libraos", "openai"]);
+        const asked: Array<{ readonly endpoint: string; readonly key: string | undefined }> = [];
+        const status = yield* checkProvider(
+          makeOpenCodeSettings(),
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          (input) =>
+            Effect.sync(() => asked.push(input)).pipe(
+              Effect.as(
+                input.endpoint === "https://api.libraos.com"
+                  ? [{ slug: "openai/gpt-6-astra" }]
+                  : undefined,
+              ),
+            ),
+        );
+        NodeAssert.deepEqual(status.models.map((entry) => entry.slug).toSorted(), [
+          "libraos/openai/gpt-6-astra",
+          "openai/gpt-5.4",
+        ]);
+        NodeAssert.deepEqual(asked, [
+          { endpoint: "https://api.libraos.com", key: "lk_opencode_key_123" },
+        ]);
+        // A mixed account is not the Gateway's alone, so its list is not marked as the Gateway's;
+        // the Gateway's sub-provider is, so clients and the registry treat its list as final.
+        NodeAssert.equal(status.auth.endpoint, undefined);
+        NodeAssert.deepEqual(status.auth.endpointProviders, ["libraos"]);
+
+        // A saved custom slug on the Gateway provider needs the key too; others are the user's.
+        const withCustom = yield* checkProvider(
+          makeOpenCodeSettings({ customModels: ["libraos/openai/gpt-5.5", "openai/gpt-x"] }),
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          () => Effect.succeed([{ slug: "openai/gpt-6-astra" }]),
+        );
+        NodeAssert.deepEqual(withCustom.models.map((entry) => entry.slug).toSorted(), [
+          "libraos/openai/gpt-6-astra",
+          "openai/gpt-5.4",
+          "openai/gpt-x",
+        ]);
+
+        // Only the Gateway is connected and the key lost its last model: the empty list is final.
+        runtimeMock.state.inventory = inventory(["libraos"]);
+        const revoked = yield* checkProvider(
+          makeOpenCodeSettings({ customModels: ["libraos/openai/gpt-6-astra"] }),
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          () => Effect.succeed([]),
+        );
+        NodeAssert.deepEqual(revoked.models, []);
+        NodeAssert.equal(revoked.auth.endpoint, "https://api.libraos.com");
+        NodeAssert.equal(revoked.message, NO_SERVED_MODELS_MESSAGE);
+      }),
   );
 
   it.effect("emits OpenCode variant defaults so trait picker can resolve a visible selection", () =>

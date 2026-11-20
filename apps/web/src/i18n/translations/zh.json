@@ -6727,6 +6727,15 @@
   "560b12dcbd292d26": "暂不可用",
   "afe41e4541b9846e": "请先连接一个环境。",
   "76b6067a87335bac": "LibraOS Gateway 已连接。",
+  "a8cffafcbdba01d6": [
+    "LibraOS Gateway 拒绝了此密钥，因此其代理不列出任何模型：",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "4f0f4f5c393e4a73": [
     "模型：",
     {
@@ -6735,6 +6744,7 @@
       "v": "v"
     }
   ],
+  "dfe11f51692569f9": "请在 Console 中重新允许该密钥并刷新提供方，或断开连接并连接另一个密钥。",
   "e792e3764fdb4f0e": "在聊天中，从模型选择器里选择标有 LibraOS Gateway 的 agent。agentd 的 worker 也会使用 Gateway，因此任务可以设置美元预算。",
   "0ab50b1db2e5e363": "agentd 已设置为使用 Gateway。",
   "aa6af95ccd8de74d": "agentd 没有接受这个 key。它的提示：",
@@ -9811,6 +9821,8 @@
     "，当前版本不支持。其配置会保留。"
   ],
   "b534d4cd528ede39": "模型偏好和自定义模型保存在所选环境中，并在已连接的设备间共享。",
+  "b732084e8eca4d61": "这些是你的 LibraOS Gateway 密钥允许的模型。在 Console 中添加的模型，会在管理提供方的设备刷新后显示在这里。",
+  "a48023474bd3fb52": "这些是你的 LibraOS Gateway 密钥允许的模型。请在 Console 中更改，然后刷新。",
   "caaef21e8722857d": "快速模式",
   "a860db2b1bb3aa31": "无推理",
   "3b67fce5df949e14": "请输入模型标识。",

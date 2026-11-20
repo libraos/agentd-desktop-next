@@ -6720,6 +6720,15 @@
   "560b12dcbd292d26": "Not available yet",
   "afe41e4541b9846e": "Connect to an environment first.",
   "76b6067a87335bac": "LibraOS Gateway connected.",
+  "a8cffafcbdba01d6": [
+    "LibraOS Gateway rechazó esta clave, así que sus agentes no muestran modelos:",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "4f0f4f5c393e4a73": [
     "Models: ",
     {
@@ -6728,6 +6737,7 @@
       "v": "v"
     }
   ],
+  "dfe11f51692569f9": "Vuelve a permitir la clave en Console y actualiza los proveedores, o desconéctala y conecta otra clave.",
   "e792e3764fdb4f0e": "In a chat, choose the agent marked LibraOS Gateway in the model picker. agentd workers use the Gateway too, so tasks accept dollar budgets.",
   "0ab50b1db2e5e363": "agentd is set up to use the Gateway.",
   "aa6af95ccd8de74d": "agentd did not take the key. What it said:",
@@ -9795,6 +9805,8 @@
     ", que no está disponible en esta compilación. Se conserva su configuración."
   ],
   "b534d4cd528ede39": "Las preferencias de modelos y los modelos personalizados se guardan en el entorno seleccionado y se comparten entre los dispositivos conectados.",
+  "b732084e8eca4d61": "Estos son los modelos que permite tu clave de LibraOS Gateway. Un modelo añadido en Console aparece aquí cuando un dispositivo que gestiona proveedores actualiza.",
+  "a48023474bd3fb52": "Estos son los modelos que permite tu clave de LibraOS Gateway. Cámbialos en Console y luego actualiza.",
   "caaef21e8722857d": "Modo rápido",
   "a860db2b1bb3aa31": "Sin razonamiento",
   "3b67fce5df949e14": "Introduce el slug de un modelo.",

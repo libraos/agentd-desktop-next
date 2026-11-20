@@ -26,6 +26,8 @@ import {
   COMPACT_SLASH_COMMAND,
   nonEmptyTrimmed,
   providerModelsFromSettings,
+  NO_SERVED_MODELS_MESSAGE,
+  type EndpointKeyModels,
   type ServerProviderDraft,
 } from "@t3tools/provider-core/server/snapshotProbe";
 import * as OpenCodeRuntime from "./OpenCodeRuntime.ts";
@@ -369,8 +371,101 @@ function flattenOpenCodeModels(
   return markOpenCodeLegacy(entries).toSorted((left, right) => left.name.localeCompare(right.name));
 }
 
+interface EndpointLimit {
+  readonly endpoint: string;
+  readonly allowed: ReadonlySet<string>;
+}
+
+/**
+ * OpenCode lists every model its config names; an endpoint that serves only some of them for the
+ * key OpenCode sends it (LibraOS Gateway) decides which of them work.
+ */
+const restrictToEndpointModels = Effect.fn("OpencodeProviderStatus.restrictToEndpointModels")(
+  function* (providerList: ProviderListResponse, endpointKeyModels: EndpointKeyModels | undefined) {
+    const limits = new Map<string, EndpointLimit>();
+    if (!endpointKeyModels) return { providerList, limits };
+    const all = yield* Effect.forEach(
+      providerList.all,
+      (provider) => {
+        const baseUrl = provider.options.baseURL;
+        const endpoint = typeof baseUrl === "string" ? URL.parse(baseUrl)?.origin : undefined;
+        if (!endpoint) return Effect.succeed(provider);
+        const apiKey = provider.options.apiKey;
+        const key = (provider.key ?? (typeof apiKey === "string" ? apiKey : undefined))?.trim();
+        return endpointKeyModels({ endpoint, key: key || undefined }).pipe(
+          Effect.map((served) => {
+            if (served === undefined) return provider;
+            const allowed = new Set(
+              served.map((model) => (typeof model === "string" ? model : model.slug)),
+            );
+            limits.set(provider.id, { endpoint, allowed });
+            return {
+              ...provider,
+              models: Object.fromEntries(
+                Object.entries(provider.models).filter(([, model]) => allowed.has(model.id)),
+              ),
+            };
+          }),
+        );
+      },
+      { concurrency: "unbounded" },
+    );
+    return { providerList: { ...providerList, all }, limits };
+  },
+);
+
+/** Drops models, saved custom ones included, of an endpoint-limited provider that its key lacks. */
+function withinEndpointLimits(
+  models: ReadonlyArray<ServerProviderModel>,
+  limits: ReadonlyMap<string, EndpointLimit>,
+): ReadonlyArray<ServerProviderModel> {
+  if (limits.size === 0) return models;
+  return models.filter((model) => {
+    const separator = model.slug.indexOf("/");
+    const limit = separator < 0 ? undefined : limits.get(model.slug.slice(0, separator));
+    return limit === undefined || limit.allowed.has(model.slug.slice(separator + 1));
+  });
+}
+
+/**
+ * The OpenCode list as the endpoints serve it. `endpoint` is set when every connected provider is
+ * limited by the same endpoint, so the list is that endpoint's and an empty one is final.
+ */
+export const openCodeEndpointModels = Effect.fn("OpencodeProviderStatus.openCodeEndpointModels")(
+  function* (
+    settings: Pick<OpenCodeSettings, "customModels">,
+    catalog: Pick<OpenCodeRuntime.OpenCodeInventory, "providerList" | "agents">,
+    endpointKeyModels: EndpointKeyModels | undefined,
+  ) {
+    const { providerList, limits } = yield* restrictToEndpointModels(
+      catalog.providerList,
+      endpointKeyModels,
+    );
+    const listed = openCodeProviderModels(settings, { ...catalog, providerList });
+    const endpoints = new Set(
+      providerList.connected.map((providerId) => limits.get(providerId)?.endpoint),
+    );
+    const [endpoint] = endpoints;
+    return {
+      models: listed && withinEndpointLimits(listed, limits),
+      /** What to list when OpenCode lists no models: the saved custom ones the endpoints allow. */
+      fallbackModels: withinEndpointLimits(
+        providerModelsFromSettings([], settings.customModels, DEFAULT_OPENCODE_MODEL_CAPABILITIES),
+        limits,
+      ),
+      endpoint: endpoints.size === 1 && endpoint !== undefined ? endpoint : undefined,
+      /** Providers whose list an endpoint decided: their models are final, even when none. */
+      endpointProviders: [...limits.keys()],
+    };
+  },
+);
+
+// An empty list may be a cold start or a key that allows no models (a LibraOS Gateway key).
+const NO_MODELS_HINT =
+  "Check that the provider's key or account allows a model, then refresh to ask again.";
+
 /** Undefined when OpenCode lists no models, so callers can keep the catalog they have. */
-export function openCodeProviderModels(
+function openCodeProviderModels(
   settings: Pick<OpenCodeSettings, "customModels">,
   catalog: Pick<OpenCodeRuntime.OpenCodeInventory, "providerList" | "agents">,
 ): ReadonlyArray<ServerProviderModel> | undefined {
@@ -775,7 +870,7 @@ const checkOpenCode2 = Effect.fn("checkOpenCode2")(function* (
             "ready",
             `OpenCode ${version} lists ${result.value.length} model${result.value.length === 1 ? "" : "s"}.`,
           )
-        : probe("warning", "OpenCode 2 is running, but it did not list any models yet."),
+        : probe("warning", `OpenCode 2 is running, but it lists no models. ${NO_MODELS_HINT}`),
   });
 });
 
@@ -789,6 +884,7 @@ export const checkOpenCodeProviderStatus = Effect.fn("checkOpenCodeProviderStatu
   >,
   environment?: NodeJS.ProcessEnv,
   compatibility: ProviderCompatibilityLookup = noCompatibilityPolicy,
+  endpointKeyModels?: EndpointKeyModels,
 ): Effect.fn.Return<
   ServerProviderDraft,
   never,
@@ -945,10 +1041,13 @@ export const checkOpenCodeProviderStatus = Effect.fn("checkOpenCodeProviderStatu
     };
   }
 
-  const catalogModels = openCodeProviderModels(openCodeSettings, inventoryExit.value);
-  const models =
-    catalogModels ??
-    providerModelsFromSettings([], customModels, DEFAULT_OPENCODE_MODEL_CAPABILITIES);
+  const {
+    models: catalogModels,
+    fallbackModels,
+    endpoint,
+    endpointProviders,
+  } = yield* openCodeEndpointModels(openCodeSettings, inventoryExit.value, endpointKeyModels);
+  const models = catalogModels ?? fallbackModels;
   const skills = openCodeSkillsToServerProviderSkills(inventoryExit.value.skills);
   const connectedCount = inventoryExit.value.providerList.connected.length;
   const catalogReady = connectedCount > 0 && catalogModels !== undefined;
@@ -970,15 +1069,19 @@ export const checkOpenCodeProviderStatus = Effect.fn("checkOpenCodeProviderStatu
         auth: {
           status: catalogReady ? "authenticated" : "unknown",
           type: "opencode",
+          ...(endpoint === undefined ? {} : { endpoint }),
+          ...(endpointProviders.length === 0 ? {} : { endpointProviders }),
         },
         message:
-          connectedCount > 0 && !catalogReady
-            ? "OpenCode upstream providers are connected, but it did not list any models yet."
-            : connectedCount > 0
-              ? `${connectedCount} upstream provider${connectedCount === 1 ? "" : "s"} connected through ${isExternalServer ? "the configured OpenCode server" : "OpenCode"}.`
-              : isExternalServer
-                ? "Connected to the configured OpenCode server, but it did not report any connected upstream providers."
-                : "OpenCode is available, but it did not report any connected upstream providers.",
+          endpoint !== undefined && !catalogReady
+            ? NO_SERVED_MODELS_MESSAGE
+            : connectedCount > 0 && !catalogReady
+              ? `OpenCode upstream providers are connected, but they list no models. ${NO_MODELS_HINT}`
+              : connectedCount > 0
+                ? `${connectedCount} upstream provider${connectedCount === 1 ? "" : "s"} connected through ${isExternalServer ? "the configured OpenCode server" : "OpenCode"}.`
+                : isExternalServer
+                  ? "Connected to the configured OpenCode server, but it did not report any connected upstream providers."
+                  : "OpenCode is available, but it did not report any connected upstream providers.",
       },
     }),
     ...installedVersion,

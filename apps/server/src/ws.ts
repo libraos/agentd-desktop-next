@@ -33,6 +33,7 @@ import {
   AuthOrchestrationOperateScope,
   AuthFilesystemReadScope,
   AuthProvidersManageScope,
+  isLibraosGatewayInstanceId,
   type AuthEnvironmentScope,
   type ScheduledTaskListResult,
   AuthSessionId,
@@ -2504,6 +2505,14 @@ export const layerWsRpc = (
             if (input.modelCatalogOnly === true) {
               yield* providerRegistry.refreshModelCatalog;
               return { providers: [] };
+            }
+            // It rewrites the Gateway agents' settings, which only a provider manager may change.
+            if (
+              input.refreshModels &&
+              currentSession.scopes.includes(AuthProvidersManageScope) &&
+              (input.instanceId === undefined || isLibraosGatewayInstanceId(input.instanceId))
+            ) {
+              yield* libraosGateway.refreshModels;
             }
             if (input.refreshModels) {
               yield* providerRegistry.invalidateModelCaches({

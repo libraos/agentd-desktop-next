@@ -1450,6 +1450,7 @@
   "d2b4bc575d7d99d8": "Model turned off for this project",
   "be1bc7fa9d199f70": "Turn it back on from web or desktop, or choose another model.",
   "b994adb6050417c2": "{provider} model unavailable",
+  "1bf8f6045a7bdf0b": "Your LibraOS Gateway key no longer allows this model. Choose another model.",
   "587c7245ff60b79f": "Set up {provider} on web or desktop, or choose another model.",
   "6d84c8851d691303": "The server did not return a PDF. Check the connection and try again.",
   "6ab96e26bda35288": "Thinking",

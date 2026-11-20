@@ -6720,6 +6720,15 @@
   "560b12dcbd292d26": "Not available yet",
   "afe41e4541b9846e": "Connect to an environment first.",
   "76b6067a87335bac": "LibraOS Gateway connected.",
+  "a8cffafcbdba01d6": [
+    "LibraOS Gateway hat diesen Schlüssel abgelehnt, daher listen seine Agenten keine Modelle:",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "4f0f4f5c393e4a73": [
     "Models: ",
     {
@@ -6728,6 +6737,7 @@
       "v": "v"
     }
   ],
+  "dfe11f51692569f9": "Erlauben Sie den Schlüssel in der Console wieder und aktualisieren Sie die Anbieter, oder trennen Sie die Verbindung und verbinden Sie einen anderen Schlüssel.",
   "e792e3764fdb4f0e": "In a chat, choose the agent marked LibraOS Gateway in the model picker. agentd workers use the Gateway too, so tasks accept dollar budgets.",
   "0ab50b1db2e5e363": "agentd is set up to use the Gateway.",
   "aa6af95ccd8de74d": "agentd did not take the key. What it said:",
@@ -9797,6 +9807,8 @@
     ", das in diesem Build nicht verfügbar ist. Die Konfiguration bleibt erhalten."
   ],
   "b534d4cd528ede39": "Modelleinstellungen und benutzerdefinierte Modelle werden in der ausgewählten Umgebung gespeichert und mit verbundenen Geräten geteilt.",
+  "b732084e8eca4d61": "Das sind die Modelle, die Ihr LibraOS-Gateway-Schlüssel erlaubt. Ein in der Console hinzugefügtes Modell erscheint hier, nachdem ein Gerät, das Anbieter verwaltet, aktualisiert hat.",
+  "a48023474bd3fb52": "Das sind die Modelle, die Ihr LibraOS-Gateway-Schlüssel erlaubt. Ändern Sie sie in der Console und aktualisieren Sie dann.",
   "caaef21e8722857d": "Schnellmodus",
   "a860db2b1bb3aa31": "Kein Reasoning",
   "3b67fce5df949e14": "Gib einen Modell-Slug ein.",

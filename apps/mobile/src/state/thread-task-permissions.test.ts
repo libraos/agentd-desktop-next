@@ -267,7 +267,9 @@ beforeEach(() => {
   state.thread.latestRun = null;
   state.projection = null;
   state.serverConfig = {
-    providers: [{ instanceId: "codex", driver: "codex", enabled: true }],
+    providers: [
+      { instanceId: "codex", driver: "codex", enabled: true, auth: { status: "authenticated" } },
+    ],
     environment: { capabilities: {} },
   } as unknown as ServerConfig;
   state.pendingRequests = {
@@ -534,7 +536,9 @@ describe("mobile task permissions", () => {
     vi.clearAllMocks();
     state.serverConfig = {
       ...state.serverConfig,
-      providers: [{ instanceId: "codex", driver: "codex", enabled: false }],
+      providers: [
+        { instanceId: "codex", driver: "codex", enabled: false, auth: { status: "authenticated" } },
+      ],
     } as unknown as ServerConfig;
     state.draft = { ...state.draft, attachments: [] };
     expect(await useThreadComposerState({ startSideChat }).onSendMessage()).toBeNull();

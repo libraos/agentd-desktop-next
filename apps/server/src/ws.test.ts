@@ -11,6 +11,8 @@ import {
   AuthOrchestrationOperateScope,
   AuthOrchestrationReadScope,
   AuthSessionId,
+  AuthProvidersManageScope,
+  type AuthEnvironmentScope,
   AuthSourceControlWriteScope,
   ORCHESTRATION_PROTOCOL_VERSION,
   ORCHESTRATION_PROTOCOL_QUERY_PARAM,
@@ -47,6 +49,7 @@ import type { ProviderInstance } from "@t3tools/provider-core/server/driver";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
+import * as Ref from "effect/Ref";
 import * as Cause from "effect/Cause";
 import * as Fiber from "effect/Fiber";
 import * as FileSystem from "effect/FileSystem";
@@ -857,7 +860,7 @@ const layerUnusedConfigRpcServices = Layer.mergeAll(
   Layer.mock(AgentdTeamNode.AgentdTeamNode)({}),
   Layer.mock(AgentdInit.AgentdInit)({}),
   Layer.mock(AgentdSkills.AgentdSkillsService)({}),
-  Layer.mock(LibraosGateway.LibraosGateway)({}),
+  Layer.mock(LibraosGateway.LibraosGateway)({ refreshModels: Effect.void }),
   Layer.mock(ProcessResourceMonitor.ProcessResourceMonitor)({}),
   Layer.mock(ProjectCloneTracker.ProjectCloneTracker)({}),
   Layer.mock(ProjectService.ProjectService)({}),
@@ -1737,6 +1740,80 @@ it.effect("on-demand clients get provider config without workspace snapshots", (
     });
     assert.lengthOf(loaded.providers[0]?.workspaceSnapshots ?? [], 1);
     yield* server.write(0, { _tag: "Interrupt", requestId: lightRequest, interruptors: [] });
+  }).pipe(
+    Effect.provide(
+      Layer.mergeAll(
+        Layer.fresh(layerConfigSources),
+        Layer.mock(PreviewAutomationBroker.PreviewAutomationBroker)({}),
+        Layer.mock(ServerBrowser.ServerBrowser)({}),
+      ),
+    ),
+  ),
+);
+
+it.effect("only a provider manager's model refresh rewrites the Gateway agents", () =>
+  Effect.gen(function* () {
+    const gatewayRefreshes = yield* Ref.make(0);
+    const responses = yield* Queue.unbounded<unknown>();
+    const services = Layer.mergeAll(
+      layerUnusedConfigRpcServices,
+      Layer.mock(LibraosGateway.LibraosGateway)({
+        refreshModels: Ref.update(gatewayRefreshes, (count) => count + 1),
+      }),
+      Layer.mock(ProviderRegistry.ProviderRegistry)({
+        invalidateModelCaches: () => Effect.void,
+        refresh: () => Effect.succeed([]),
+      }),
+      Layer.mock(ProviderInstanceRegistry.ProviderInstanceRegistry)({
+        listInstances: Effect.succeed([]),
+      }),
+      Layer.mock(UsageLimitSources.UsageLimitSources)({ refresh: Effect.void }),
+      Layer.mock(ExternalLauncher.ExternalLauncher)({}),
+      Layer.mock(RemoteOpenTargets.RemoteOpenTargets)({}),
+      Layer.mock(DirectEndpoints.DirectEndpoints)({}),
+      Layer.mock(ManagedProjectFolders.ManagedProjectFolders)({ namedProjectsRoot: "/unused" }),
+      Layer.mock(ScratchThreadPromotion.ScratchThreadPromotion)({}),
+      Layer.mock(ServerEnvironment.ServerEnvironment)({}),
+      Layer.mock(EnvironmentAuth.EnvironmentAuth)({}),
+    );
+    const refreshAs = Effect.fn(function* (scopes: ReadonlyArray<AuthEnvironmentScope>) {
+      const server = yield* RpcServer.makeNoSerialization(
+        RpcGroup.make(WsServerRefreshProvidersRpc),
+        {
+          ...WS_RPC_SERVER_OPTIONS,
+          onFromServer: (response) =>
+            response._tag === "Exit" ? Queue.offer(responses, response.exit) : Effect.void,
+        },
+      ).pipe(
+        Effect.provide(
+          layerWsRpc(
+            {
+              sessionId: AuthSessionId.make("gateway-refresh-test"),
+              subject: "gateway-refresh-test",
+              method: "browser-session-cookie",
+              scopes,
+            },
+            {},
+            yield* ServerBrowser.ServerBrowser,
+            () => Effect.void,
+            { secretReferences: true },
+          ).pipe(Layer.provide(services)),
+        ),
+      );
+      yield* server.write(0, {
+        _tag: "Request",
+        id: RpcMessage.RequestId("refresh"),
+        tag: WS_METHODS.serverRefreshProviders,
+        payload: { refreshModels: true },
+        headers: Headers.empty,
+      });
+      const exit = (yield* Queue.take(responses)) as Exit.Exit<unknown, unknown>;
+      assert.isTrue(Exit.isSuccess(exit));
+      return yield* Ref.get(gatewayRefreshes);
+    });
+
+    assert.strictEqual(yield* refreshAs([]), 0);
+    assert.strictEqual(yield* refreshAs([AuthProvidersManageScope]), 1);
   }).pipe(
     Effect.provide(
       Layer.mergeAll(

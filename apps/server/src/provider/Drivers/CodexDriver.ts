@@ -1,5 +1,6 @@
 import { resolveProviderProbeTimeoutMs } from "@t3tools/provider-core/server/snapshotProbe";
-import { CodexSettings, ProviderDriverKind } from "@t3tools/contracts";
+import { makeGatewayKeyModels } from "../../gateway/gatewayKeyModels.ts";
+import { CodexSettings, isLibraosGatewayInstanceId, ProviderDriverKind } from "@t3tools/contracts";
 import * as Digest from "effect/crypto/Digest";
 import * as SecureRandom from "effect/crypto/SecureRandom";
 import type * as Signature from "effect/crypto/Signature";
@@ -28,6 +29,7 @@ import { ProviderDriverError } from "../Errors.ts";
 import * as ResetCreditCoordinator from "../resetCreditCoordinator.ts";
 import {
   checkCodexProviderStatus,
+  withRememberedCodexRoute,
   makePendingCodexProvider,
   makeCodexSkillsProbe,
   withCodexAppServerClient,
@@ -218,6 +220,8 @@ export const CodexDriver: ProviderDriver<
     const effectiveConfig = {
       ...config,
       enabled,
+      // A Gateway agent saved by an older build lacks the flag; limit it from its first snapshot.
+      onlyCustomModels: config.onlyCustomModels ?? isLibraosGatewayInstanceId(instanceId),
       binaryPath: expandHomePath(config.binaryPath, yield* HostProcess.HomeDirectory),
       homePath: homeLayout.effectiveHomePath ?? "",
       launchArgs: codexHomeLaunchArgs(pathService, homeLayout, config.launchArgs),
@@ -268,14 +272,25 @@ export const CodexDriver: ProviderDriver<
       ),
     );
 
+    const gatewayKeyModels = yield* makeGatewayKeyModels("openai").pipe(
+      Effect.provideService(HttpClient.HttpClient, httpClient),
+    );
+    const probeCodex = yield* withRememberedCodexRoute();
     // Kick the TTL-gated manifest refresh in the background and classify with the in-memory
     // manifest, so a slow or hung fetch never delays the provider check.
     const checkProvider = modelCatalog.refreshInBackground.pipe(
       Effect.andThen(
         Effect.zipWith(
-          checkCodexProviderStatus(effectiveConfig, undefined, processEnv),
+          checkCodexProviderStatus(
+            effectiveConfig,
+            probeCodex,
+            processEnv,
+            undefined,
+            gatewayKeyModels,
+          ),
           currentCatalog,
-          (draft, catalog) => stampIdentity(applyCodexModelCatalog(draft, catalog)),
+          (draft, catalog) =>
+            stampIdentity(applyCodexModelCatalog(draft, catalog, effectiveConfig)),
           { concurrent: true },
         ),
       ),
@@ -293,7 +308,8 @@ export const CodexDriver: ProviderDriver<
         Effect.zipWith(
           makePendingCodexProvider(settings.provider),
           currentCatalog,
-          (draft, catalog) => stampIdentity(applyCodexModelCatalog(draft, catalog)),
+          (draft, catalog) =>
+            stampIdentity(applyCodexModelCatalog(draft, catalog, effectiveConfig)),
         ),
       checkProvider,
       enrichSnapshot: ({ settings, snapshot, publishSnapshot }) =>

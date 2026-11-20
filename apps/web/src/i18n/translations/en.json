@@ -6722,6 +6722,15 @@
   "560b12dcbd292d26": "Not available yet",
   "afe41e4541b9846e": "Connect to an environment first.",
   "76b6067a87335bac": "LibraOS Gateway connected.",
+  "a8cffafcbdba01d6": [
+    "LibraOS Gateway refused this key, so its agents list no models:",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "4f0f4f5c393e4a73": [
     "Models: ",
     {
@@ -6730,6 +6739,7 @@
       "v": "v"
     }
   ],
+  "dfe11f51692569f9": "Allow the key again in Console and refresh providers, or disconnect and connect another key.",
   "e792e3764fdb4f0e": "In a chat, choose the agent marked LibraOS Gateway in the model picker. agentd workers use the Gateway too, so tasks accept dollar budgets.",
   "0ab50b1db2e5e363": "agentd is set up to use the Gateway.",
   "aa6af95ccd8de74d": "agentd did not take the key. What it said:",
@@ -9804,6 +9814,8 @@
     ", which is not available in this build. Its configuration is preserved."
   ],
   "b534d4cd528ede39": "Model preferences and custom models are saved on the selected environment and shared across connected devices.",
+  "b732084e8eca4d61": "These are the models your LibraOS Gateway key allows. A model added in Console shows here after a device that manages providers refreshes.",
+  "a48023474bd3fb52": "These are the models your LibraOS Gateway key allows. Change them in Console, then refresh.",
   "caaef21e8722857d": "Fast mode",
   "a860db2b1bb3aa31": "No reasoning",
   "3b67fce5df949e14": "Enter a model slug.",

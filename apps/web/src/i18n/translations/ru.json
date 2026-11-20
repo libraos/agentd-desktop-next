@@ -6720,6 +6720,15 @@
   "560b12dcbd292d26": "Not available yet",
   "afe41e4541b9846e": "Connect to an environment first.",
   "76b6067a87335bac": "LibraOS Gateway connected.",
+  "a8cffafcbdba01d6": [
+    "LibraOS Gateway отклонил этот ключ, поэтому его агенты не показывают моделей:",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "4f0f4f5c393e4a73": [
     "Models: ",
     {
@@ -6728,6 +6737,7 @@
       "v": "v"
     }
   ],
+  "dfe11f51692569f9": "Снова разрешите ключ в Console и обновите провайдеров или отключите его и подключите другой ключ.",
   "e792e3764fdb4f0e": "In a chat, choose the agent marked LibraOS Gateway in the model picker. agentd workers use the Gateway too, so tasks accept dollar budgets.",
   "0ab50b1db2e5e363": "agentd is set up to use the Gateway.",
   "aa6af95ccd8de74d": "agentd did not take the key. What it said:",
@@ -9797,6 +9807,8 @@
     ", который недоступен в этой сборке. Его конфигурация сохранена."
   ],
   "b534d4cd528ede39": "Настройки моделей и свои модели сохраняются в выбранном окружении и доступны на всех подключённых устройствах.",
+  "b732084e8eca4d61": "Это модели, которые разрешает ваш ключ LibraOS Gateway. Модель, добавленная в Console, появится здесь после обновления на устройстве, которое управляет провайдерами.",
+  "a48023474bd3fb52": "Это модели, которые разрешает ваш ключ LibraOS Gateway. Измените их в Console, затем обновите.",
   "caaef21e8722857d": "Быстрый режим",
   "a860db2b1bb3aa31": "Без рассуждений",
   "3b67fce5df949e14": "Введите slug модели.",

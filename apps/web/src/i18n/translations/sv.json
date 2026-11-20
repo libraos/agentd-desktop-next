@@ -6721,6 +6721,15 @@
   "560b12dcbd292d26": "Not available yet",
   "afe41e4541b9846e": "Connect to an environment first.",
   "76b6067a87335bac": "LibraOS Gateway connected.",
+  "a8cffafcbdba01d6": [
+    "LibraOS Gateway nekade den här nyckeln, så dess agenter visar inga modeller:",
+    " ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "4f0f4f5c393e4a73": [
     "Models: ",
     {
@@ -6729,6 +6738,7 @@
       "v": "v"
     }
   ],
+  "dfe11f51692569f9": "Tillåt nyckeln igen i Console och uppdatera leverantörerna, eller koppla från och anslut en annan nyckel.",
   "e792e3764fdb4f0e": "In a chat, choose the agent marked LibraOS Gateway in the model picker. agentd workers use the Gateway too, so tasks accept dollar budgets.",
   "0ab50b1db2e5e363": "agentd is set up to use the Gateway.",
   "aa6af95ccd8de74d": "agentd did not take the key. What it said:",
@@ -9802,6 +9812,8 @@
     ", som inte finns i den här versionen. Dess konfiguration bevaras."
   ],
   "b534d4cd528ede39": "Modellinställningar och anpassade modeller sparas i den valda miljön och delas mellan anslutna enheter.",
+  "b732084e8eca4d61": "Det här är modellerna som din LibraOS Gateway-nyckel tillåter. En modell som läggs till i Console visas här när en enhet som hanterar leverantörer har uppdaterat.",
+  "a48023474bd3fb52": "Det här är modellerna som din LibraOS Gateway-nyckel tillåter. Ändra dem i Console och uppdatera sedan.",
   "caaef21e8722857d": "Snabbläge",
   "a860db2b1bb3aa31": "Inget resonerande",
   "3b67fce5df949e14": "Ange en modell-slug.",
