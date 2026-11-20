@@ -58,7 +58,13 @@ import { makeAgentdCloud } from "./agentdCloud.ts";
 import { makeCloudReview } from "./agentdCloudReview.ts";
 import { AgentdArgumentError, agentdArgs, agentdTicket } from "./agentdCommands.ts";
 import * as AgentdJson from "./agentdJson.ts";
-import { estimateType, PROJECT_FILES, readEstimate, suggestCheck } from "./taskDefaults.ts";
+import {
+  estimateType,
+  PROJECT_FILES,
+  readDollarBudgets,
+  readEstimate,
+  suggestCheck,
+} from "./taskDefaults.ts";
 import { joinedPerson, mergeTaskHolders, repositoryTargets } from "./taskOthers.ts";
 
 export class AgentdBridge extends Context.Service<
@@ -307,15 +313,24 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
           )
         : null;
     const status = AgentdJson.agentdStatus(version, doctor, carried);
-    const defaultWorker = status.setUp
-      ? yield* run(agentdArgs.defaultWorker()).pipe(
-          Effect.map((stdout) => {
-            const worker = stdout.trim();
-            return isDefaultWorker(worker) ? worker : null;
-          }),
-          Effect.orElseSucceed(() => null),
+    const [defaultWorker, dollarBudgets] = status.setUp
+      ? yield* Effect.all(
+          [
+            run(agentdArgs.defaultWorker()).pipe(
+              Effect.map((stdout) => {
+                const worker = stdout.trim();
+                return isDefaultWorker(worker) ? worker : null;
+              }),
+              Effect.orElseSucceed(() => null),
+            ),
+            run(agentdArgs.budgetPrices()).pipe(
+              Effect.map(readDollarBudgets),
+              Effect.orElseSucceed(() => null),
+            ),
+          ],
+          { concurrency: 2 },
         )
-      : null;
+      : [null, null];
     // The desktop app's last pass installing agentd for the terminal and agents, when it ran one.
     const recordPath = env.AGENTD_DESKTOP_INSTALL_RECORD?.trim();
     const install = recordPath
@@ -324,7 +339,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
           Effect.orElseSucceed(() => null),
         )
       : null;
-    return { ...status, defaultWorker, binary: yield* binary, install };
+    return { ...status, defaultWorker, dollarBudgets, binary: yield* binary, install };
   }).pipe(Effect.withSpan("AgentdBridge.status"));
 
   // The first read fails the stream; a later failed read keeps the last list until agentd answers.

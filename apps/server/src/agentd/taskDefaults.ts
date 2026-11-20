@@ -44,6 +44,19 @@ export function readEstimate(
   return { type, low, median: median ?? low, high, jobs: n };
 }
 
+const pricesJson = Schema.decodeUnknownOption(
+  Schema.fromJsonString(Schema.Record(Schema.String, Schema.Unknown)),
+);
+
+/**
+ * `agentd config get budget.prices`: whether any model has a price, which agentd needs before it
+ * takes a dollar budget for a local worker. Null when the output is not a price table.
+ */
+export function readDollarBudgets(stdout: string): boolean | null {
+  const parsed = pricesJson(stdout);
+  return parsed._tag === "None" ? null : Object.keys(parsed.value).length > 0;
+}
+
 const packageJson = Schema.decodeUnknownOption(
   Schema.fromJsonString(
     Schema.Struct({

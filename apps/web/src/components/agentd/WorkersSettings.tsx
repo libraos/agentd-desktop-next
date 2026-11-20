@@ -112,13 +112,24 @@ export function WorkersSettings() {
             </Select>
           }
         />
-        <DefaultBudgetRow key={budget} budget={budget} />
+        <DefaultBudgetRow
+          key={budget}
+          budget={budget}
+          dollarBudgets={status?.dollarBudgets ?? null}
+        />
       </SettingsSection>
     </SettingsPageContainer>
   );
 }
 
-function DefaultBudgetRow({ budget }: { readonly budget: string }) {
+function DefaultBudgetRow({
+  budget,
+  dollarBudgets,
+}: {
+  readonly budget: string;
+  /** agentd's answer for this machine; false while it has no model prices. */
+  readonly dollarBudgets: boolean | null;
+}) {
   const gt = useGT();
   const id = useId();
   const saved = parseDefaultBudget(budget) ?? parseDefaultBudget(DEFAULT_AGENTD_BUDGET);
@@ -134,12 +145,17 @@ function DefaultBudgetRow({ budget }: { readonly budget: string }) {
       id="workers-budget"
       title={gt("Default budget")}
       description={
-        valid ? (
-          <T>Used when AgentD has no estimate for the task.</T>
-        ) : (
+        !valid ? (
           <span id={`${id}-hint`}>
             <T>Enter whole minutes and a dollar amount above zero.</T>
           </span>
+        ) : dollarBudgets === false ? (
+          <T>
+            Used when AgentD has no estimate for the task. AgentD on this machine has no model
+            prices, so tasks here get only the minutes; the dollar amount applies to Cloud Workers.
+          </T>
+        ) : (
+          <T>Used when AgentD has no estimate for the task.</T>
         )
       }
       control={

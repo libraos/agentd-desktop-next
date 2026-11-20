@@ -6,6 +6,7 @@ import { makeStreamingTimelineFixture } from "~/test-fixtures";
 import {
   autoBudget,
   budgetMinutes,
+  localBudget,
   cloudPlanProblem,
   conversationTaskDraft,
   defaultCloudPlan,
@@ -57,6 +58,11 @@ it("validates the handoff fields before sending the trimmed CLI inputs", () => {
     accept: true,
     issue: true,
   });
+  const noPrices = { dollarBudgets: false };
+  expect(prepareTaskFields(fields, noPrices).budget).toBe("no-prices");
+  expect(prepareTaskFields({ ...fields, budget: "$2" }, noPrices).budget).toBe("no-prices");
+  expect(prepareTaskFields({ ...fields, budget: "45m" }, noPrices).budget).toBeNull();
+  expect(prepareTaskFields(fields, { dollarBudgets: true }).budget).toBeNull();
 });
 
 it("fills the form only from a completed reply to this draft request", () => {
@@ -154,6 +160,9 @@ it("fills the budget from agentd's estimate, capped by the cloud balance", () =>
     minutes: 60,
     dollars: 5,
   });
+  expect(localBudget({ minutes: 60, dollars: 5 }, true)).toBe("60m,$5");
+  expect(localBudget({ minutes: 60, dollars: 5 }, null)).toBe("60m,$5");
+  expect(localBudget({ minutes: 45, dollars: 2.5 }, false)).toBe("45m");
   expect(budgetMinutes("45m,$5")).toBe(45);
   expect(budgetMinutes("$5")).toBeNull();
 });

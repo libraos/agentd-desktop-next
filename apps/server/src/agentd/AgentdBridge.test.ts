@@ -180,6 +180,8 @@ describe("AgentdBridge", () => {
         if (key === "doctor --json") return Effect.succeed(output(DOCTOR_JSON, 1));
         if (key === "config get dispatch.default_tool")
           return Effect.succeed(output("opencode\r\n"));
+        // agentd prints an empty table while no model has a price.
+        if (key === "config get budget.prices") return Effect.succeed(output("{}\n"));
         if (key === "handoff list --json") return Effect.succeed(output(LIST_JSON));
         if (key === "handoff show hof-a6e5f4e329 --json") return Effect.succeed(output(SHOW_JSON));
         return Effect.die(`unexpected agentd ${key}`);
@@ -190,6 +192,7 @@ describe("AgentdBridge", () => {
         ok: false,
         setUp: true,
         defaultWorker: "opencode",
+        dollarBudgets: false,
         teamServer: "https://team.example:8443/agentd",
         checks: [
           { id: "binary", status: "pass", detail: "agentd v0.1.13 0d0b360a58c0", fix: null },
