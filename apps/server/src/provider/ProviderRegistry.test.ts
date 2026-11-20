@@ -51,6 +51,7 @@ import { applyServerSettingsPatch } from "@t3tools/shared/serverSettings";
 
 import {
   checkCodexProviderStatus,
+  withRememberedCodexRoute,
   mapCodexModelCapabilities,
   type CodexAppServerProviderSnapshot,
 } from "./CodexProvider.ts";
@@ -765,6 +766,38 @@ it.layer(
         gatewayAnswer = () => Response.json({ error: { message: "Down" } }, { status: 503 });
         assert.deepStrictEqual(
           (yield* live()).models.map((model) => model.slug),
+          ["gpt-6-luna"],
+        );
+
+        // A later probe answers the account and models but not its config: the confirmed route
+        // stands, so Codex's whole catalog does not come back.
+        let configRead = true;
+        const probe = yield* withRememberedCodexRoute(() =>
+          Effect.succeed(
+            configRead
+              ? makeCodexProbeSnapshot({
+                  models: catalog,
+                  endpoint: "https://api.libraos.com",
+                  endpointKeyEnv: "LIBRAOS_API_KEY",
+                })
+              : { ...makeCodexProbeSnapshot({ models: catalog }), routeUnknown: true },
+          ),
+        );
+        const partial = () =>
+          checkCodexProviderStatus(
+            decodeCodexSettings({}),
+            probe,
+            { LIBRAOS_API_KEY: "lk_codex_key_123" },
+            undefined,
+            () => Effect.succeed([{ slug: "gpt-6-luna" }]),
+          );
+        assert.deepStrictEqual(
+          (yield* partial()).models.map((model) => model.slug),
+          ["gpt-6-luna"],
+        );
+        configRead = false;
+        assert.deepStrictEqual(
+          (yield* partial()).models.map((model) => model.slug),
           ["gpt-6-luna"],
         );
       }),

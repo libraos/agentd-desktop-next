@@ -29,6 +29,7 @@ import { ProviderDriverError } from "../Errors.ts";
 import * as ResetCreditCoordinator from "../resetCreditCoordinator.ts";
 import {
   checkCodexProviderStatus,
+  withRememberedCodexRoute,
   makePendingCodexProvider,
   makeCodexSkillsProbe,
   withCodexAppServerClient,
@@ -274,6 +275,7 @@ export const CodexDriver: ProviderDriver<
     const gatewayKeyModels = yield* makeGatewayKeyModels("openai").pipe(
       Effect.provideService(HttpClient.HttpClient, httpClient),
     );
+    const probeCodex = yield* withRememberedCodexRoute();
     // Kick the TTL-gated manifest refresh in the background and classify with the in-memory
     // manifest, so a slow or hung fetch never delays the provider check.
     const checkProvider = modelCatalog.refreshInBackground.pipe(
@@ -281,7 +283,7 @@ export const CodexDriver: ProviderDriver<
         Effect.zipWith(
           checkCodexProviderStatus(
             effectiveConfig,
-            undefined,
+            probeCodex,
             processEnv,
             undefined,
             gatewayKeyModels,

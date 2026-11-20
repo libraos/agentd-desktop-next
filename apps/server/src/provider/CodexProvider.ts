@@ -3,6 +3,7 @@ import { pipe } from "effect/Function";
 import * as DateTime from "effect/DateTime";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
+import * as Ref from "effect/Ref";
 import * as Equal from "effect/Equal";
 import * as Exit from "effect/Exit";
 import * as FileSystem from "effect/FileSystem";
@@ -182,6 +183,8 @@ export interface CodexAppServerProviderSnapshot {
   readonly account: CodexSchema.V2GetAccountResponse;
   readonly endpoint?: string | undefined;
   readonly endpointKeyEnv?: string | undefined;
+  /** `config/read` failed, so `endpoint` and `endpointKeyEnv` are unknown, not absent. */
+  readonly routeUnknown?: boolean;
   readonly nativeUsage?: boolean;
   readonly rateLimits?: CodexRateLimitsProbe;
   readonly version: string | undefined;
@@ -840,6 +843,7 @@ const probeCodexAppServerProvider = Effect.fn("probeCodexAppServerProvider")(fun
     account: accountResponse,
     endpoint: config ? codexCustomEndpoint(config) : undefined,
     endpointKeyEnv: config ? codexEndpointKeyEnv(config) : undefined,
+    ...(config === undefined ? { routeUnknown: true } : {}),
     nativeUsage,
     ...(rateLimits ? { rateLimits } : {}),
     version,
@@ -1234,6 +1238,34 @@ const probeCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(function*
     },
   });
   return withNoServedModelsNotice(draft, modelSettings.onlyCustomModels);
+});
+
+type CodexStatusProbe = typeof probeCodexAppServerProvider;
+
+/**
+ * The probe, with the last route Codex's config confirmed standing in when a later config read
+ * fails, so one failed read cannot widen a Gateway agent's list to Codex's whole catalog.
+ */
+export const withRememberedCodexRoute = Effect.fn("withRememberedCodexRoute")(function* (
+  probe: CodexStatusProbe = probeCodexAppServerProvider,
+) {
+  const last = yield* Ref.make<
+    Pick<CodexAppServerProviderSnapshot, "endpoint" | "endpointKeyEnv"> | undefined
+  >(undefined);
+  const remembered: CodexStatusProbe = (input) =>
+    probe(input).pipe(
+      Effect.flatMap((snapshot) =>
+        snapshot.routeUnknown
+          ? Ref.get(last).pipe(
+              Effect.map((route) => (route ? { ...snapshot, ...route } : snapshot)),
+            )
+          : Ref.set(last, {
+              endpoint: snapshot.endpoint,
+              endpointKeyEnv: snapshot.endpointKeyEnv,
+            }).pipe(Effect.as(snapshot)),
+      ),
+    );
+  return remembered;
 });
 
 export const checkCodexProviderStatus = (...args: Parameters<typeof probeCodexProviderStatus>) =>
