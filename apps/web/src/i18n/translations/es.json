@@ -2396,6 +2396,7 @@
   "9578dc3e84f82081": "En curso",
   "a202dad5b0a0aa56": "Pospuestos",
   "b9b34ce02a3a5f8b": "Resueltos",
+  "1655bb3b5774175e": "Idle, finished and imported threads. Open one to continue it.",
   "dfcce8b35ce4fb90": "Cargando",
   "fcaffe60c85338e2": "No se pudieron cargar los hilos anteriores. Reintentar",
   "43acfc82011a8fc2": "{count, plural, one {Mostrar {count} más} other {Mostrar {count} más}}",
