@@ -656,6 +656,53 @@ describe("sidebar Chat and Code tabs", () => {
     ).toHaveLength(0);
   });
 
+  it("Chat counts and pages only chats as Settled, and points to Code for project sessions", async () => {
+    localStorage.setItem("t3code:sidebar:settled-expanded", "true");
+    using _expanded = {
+      [Symbol.dispose]: () => localStorage.removeItem("t3code:sidebar:settled-expanded"),
+    };
+    const settledChat = {
+      ...scratchChat,
+      settledOverride: "settled" as const,
+      settledAt: "2026-01-01T00:00:00.000Z",
+    };
+    // The server holds 37 older settled project sessions this client has not loaded.
+    const originalShelf = vi.mocked(shelfHooks.useOlderSettledShelf).getMockImplementation()!;
+    using _shelf = vi.spyOn(shelfHooks, "useOlderSettledShelf").mockImplementation((input) => ({
+      ...originalShelf(input),
+      unloadedCount: () =>
+        input.scopes.some((scope) => scope.projectIds?.includes(app.id) ?? true) ? 37 : 0,
+    }));
+    using _setup = setup({ threads: [settledChat, appThread], route: null }).stack;
+    await using screen = await renderSidebar();
+    await userEvent.click(screen.getByRole("button", { name: "Chat", exact: true }));
+    const settledHeader = () => screen.getByTestId("sidebar-settled-shelf-toggle");
+
+    await expect.element(screen.getByText("Scratch chat", { exact: true })).toBeVisible();
+    await expect.element(settledHeader().getByText("1", { exact: true })).toBeVisible();
+    expect(screen.getByRole("button", { name: /^Show \d+ more$/ }).elements()).toHaveLength(0);
+
+    await userEvent.click(screen.getByRole("button", { name: "Project sessions are in Code" }));
+    await expect
+      .element(screen.getByRole("button", { name: "Code", exact: true }))
+      .toHaveAttribute("aria-pressed", "true");
+    await expect.element(screen.getByText("Thread 1", { exact: true })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Project sessions are in Code" }).elements(),
+    ).toHaveLength(0);
+  });
+
+  it("Chat has no pointer to Code without project sessions", async () => {
+    using _setup = setup({ threads: [scratchChat], route: null }).stack;
+    await using screen = await renderSidebar();
+    await userEvent.click(screen.getByRole("button", { name: "Chat", exact: true }));
+
+    await expect.element(screen.getByText("Scratch chat", { exact: true })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Project sessions are in Code" }).elements(),
+    ).toHaveLength(0);
+  });
+
   it("follows the route to the tab of the open thread", async () => {
     using _setup = setup({
       threads: [scratchChat, appThread],

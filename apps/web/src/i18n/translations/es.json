@@ -2469,6 +2469,7 @@
   "6392f9e0f61ae70c": "Aún no hay proyectos",
   "19df05d390e2c3ae": "Mostrar todos los proyectos",
   "84fa7d3765db7e84": "Aún no hay hilos",
+  "3f0c8cc7f50abc68": "Las sesiones de proyecto están en Code",
   "e8347ce8761562be": "{count, plural, one {{count} solicitud lleva} other {{count} solicitudes llevan}} esperando más de {thresholdSeconds} s.",
   "16def5c06e932801": "Ocultar solicitudes",
   "4d46e9446c062922": "Mostrar solicitudes",

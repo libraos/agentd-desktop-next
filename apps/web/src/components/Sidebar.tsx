@@ -436,6 +436,8 @@ function routeThreadOnly(
 function useSidebarThreads(input: {
   readonly projectScopeKey: string | null;
   readonly scopedProjectKeys: ReadonlySet<string> | null;
+  /** Projects whose older settled threads the shelf counts and reads; null is every project. */
+  readonly settledProjectKeys: ReadonlySet<string> | null;
   readonly serverConfigs: ReadonlyMap<EnvironmentId, EnvironmentServerConfig>;
   readonly connectedEnvironmentIds: readonly EnvironmentId[];
   readonly optimisticDrop: SidebarOptimisticDrop | null;
@@ -450,6 +452,7 @@ function useSidebarThreads(input: {
   const {
     projectScopeKey,
     scopedProjectKeys,
+    settledProjectKeys,
     serverConfigs,
     connectedEnvironmentIds,
     optimisticDrop,
@@ -523,7 +526,7 @@ function useSidebarThreads(input: {
   const settledExpanded = settledShelfExpanded || settledOpenedForScope;
   // Older settled threads load in pages; the shelf lists them only as far as they are loaded.
   const olderSettledShelf = useOlderSettledShelf({
-    scopes: olderSettledScopes([...serverConfigs.keys()], scopedProjectKeys),
+    scopes: olderSettledScopes([...serverConfigs.keys()], settledProjectKeys),
     expanded: settledExpanded,
     visibleCount: settledVisibleCount,
   });
@@ -1168,6 +1171,16 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     if (rememberedRouteThreadRef) rememberSidebarTabThread(routeTab, rememberedRouteThreadRef);
   }, [rememberedRouteThreadRef, routeTab, routeTabFollowKey]);
   const tabThreads = threads.filter((thread) => tabOfThread(thread) === sidebarTab);
+  const hasCodeThreadsOutsideChat =
+    sidebarTab === "chat" && threads.some((thread) => tabOfThread(thread) === "code");
+  // Chat lists only scratch projects, so its Settled shelf counts and reads only theirs.
+  const chatProjectKeys = new Set(
+    projects.flatMap((project) =>
+      tabOfThread({ environmentId: project.environmentId, projectId: project.id }) === "chat"
+        ? [`${project.environmentId}:${project.id}`]
+        : [],
+    ),
+  );
   const promotingDraftThreadKeys = usePromotingDraftThreadKeys();
   const listedThreads =
     promotingDraftThreadKeys.length === 0
@@ -1409,6 +1422,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   } = useSidebarThreads({
     projectScopeKey,
     scopedProjectKeys,
+    settledProjectKeys: sidebarTab === "chat" ? chatProjectKeys : scopedProjectKeys,
     serverConfigs,
     connectedEnvironmentIds,
     optimisticDrop,
@@ -3840,6 +3854,17 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 </SortableContext>
               </DndContext>
             </TooltipProvider>
+          ) : null}
+          {!isSearchingThreads && hasCodeThreadsOutsideChat ? (
+            <p className="px-2.5 py-2 text-xs text-sidebar-muted-foreground">
+              <button
+                type="button"
+                onClick={() => selectSidebarTab("code")}
+                className="cursor-pointer underline-offset-2 hover:text-sidebar-foreground hover:underline"
+              >
+                <T>Project sessions are in Code</T>
+              </button>
+            </p>
           ) : null}
         </SidebarGroup>
       </SidebarContent>

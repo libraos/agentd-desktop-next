@@ -2469,6 +2469,7 @@
   "6392f9e0f61ae70c": "Noch keine Projekte",
   "19df05d390e2c3ae": "Alle Projekte anzeigen",
   "84fa7d3765db7e84": "Noch keine Threads",
+  "3f0c8cc7f50abc68": "Projektsitzungen sind unter Code",
   "e8347ce8761562be": "{count, plural, one {{count} Anfrage wartet} other {{count} Anfragen warten}} länger als {thresholdSeconds} s.",
   "16def5c06e932801": "Anfragen ausblenden",
   "4d46e9446c062922": "Anfragen anzeigen",

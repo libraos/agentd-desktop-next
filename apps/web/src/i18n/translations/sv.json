@@ -2469,6 +2469,7 @@
   "6392f9e0f61ae70c": "Inga projekt än",
   "19df05d390e2c3ae": "Visa alla projekt",
   "84fa7d3765db7e84": "Inga trådar än",
+  "3f0c8cc7f50abc68": "Projektsessioner finns under Code",
   "e8347ce8761562be": "{count, plural, one {{count} begäran} other {{count} begäranden}} har väntat längre än {thresholdSeconds} s.",
   "16def5c06e932801": "Dölj begäranden",
   "4d46e9446c062922": "Visa begäranden",
