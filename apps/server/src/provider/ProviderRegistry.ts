@@ -2,7 +2,7 @@ import {
   defaultInstanceIdForDriver,
   isProviderWorkspaceSnapshotCurrent,
   isEndpointDecidedModel,
-  isLibraosGatewayInstanceId,
+  isGatewayInstanceId,
   LIBRAOS_GATEWAY_ORIGIN,
   isProviderWorkspaceSnapshotPending,
   ProviderDriverKind,
@@ -199,7 +199,7 @@ export function upsertProviderWorkspaceSnapshot(
 const shouldRetainMissingProviderModels = (provider: ServerProvider): boolean => {
   // A Gateway agent's list is the key's list, so a model missing from it was taken away.
   if (
-    isLibraosGatewayInstanceId(provider.instanceId) ||
+    isGatewayInstanceId(provider.instanceId) ||
     provider.auth.endpoint === LIBRAOS_GATEWAY_ORIGIN
   ) {
     return false;

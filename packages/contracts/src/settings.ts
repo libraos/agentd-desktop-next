@@ -1,4 +1,5 @@
 import { EasDeviceHostConfigs, SimlockDeviceHostConfigs, SshDeviceHostConfigs } from "./device.ts";
+import { CustomGatewaySetting } from "./customGateway.ts";
 import {
   AuthOrchestrationOperateScope,
   AuthAccessWriteScope,
@@ -1635,6 +1636,10 @@ export const ServerSettings = Schema.Struct({
   secretProviders: Schema.Record(SecretProviderId, SecretProviderConfig).pipe(
     Schema.withDecodingDefault(Effect.succeed({})),
   ),
+  /** Gateways added by URL; their keys are in the secret store, their agents in providerInstances. */
+  customGateways: Schema.Array(CustomGatewaySetting).pipe(
+    Schema.withDecodingDefault(Effect.succeed([])),
+  ),
 
   usageHistoryRetentionDays: UsageHistoryRetentionDays.pipe(
     Schema.withDecodingDefault(Effect.succeed(92)),
@@ -2029,6 +2034,7 @@ export const ServerSettingsPatch = Schema.Struct({
   secretProviders: Schema.optionalKey(
     Schema.Record(SecretProviderId, Schema.NullOr(SecretProviderConfigWrite)),
   ),
+  customGateways: Schema.optionalKey(Schema.Array(CustomGatewaySetting)),
 
   usageHistoryRetentionDays: Schema.optionalKey(UsageHistoryRetentionDays),
 
@@ -2042,9 +2048,15 @@ export const ServerSettingsPatch = Schema.Struct({
 });
 export type ServerSettingsPatch = typeof ServerSettingsPatch.Type;
 
-/** The theme service sets theme defaults after it validates them, so clients cannot. */
+/** The theme service sets theme defaults after it validates them, so clients cannot; custom gateways change through their own RPCs, beside their keys and agents. */
 export const ClientServerSettingsPatch = ServerSettingsPatch.mapFields(
-  Struct.omit(["defaultTheme", "defaultThemeSetAt", "defaultAppearance", "defaultAppearanceSetAt"]),
+  Struct.omit([
+    "defaultTheme",
+    "defaultThemeSetAt",
+    "defaultAppearance",
+    "defaultAppearanceSetAt",
+    "customGateways",
+  ]),
 );
 
 export function requiredScopesForServerSettingsPatch(
@@ -2062,7 +2074,8 @@ export function requiredScopesForServerSettingsPatch(
       key === "providerInstances" ||
       key === "usageLimitSources" ||
       key === "textGenerators" ||
-      key === "secretProviders"
+      key === "secretProviders" ||
+      key === "customGateways"
     ) {
       changesProviders = true;
     } else {

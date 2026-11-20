@@ -110,6 +110,7 @@ import * as AgentdTeamNode from "./agentd/AgentdTeamNode.ts";
 import * as AgentdInit from "./agentd/agentdInit.ts";
 import * as AgentdSkills from "./agentd/AgentdSkills.ts";
 import * as LibraosGateway from "./gateway/LibraosGateway.ts";
+import * as CustomGateway from "./gateway/CustomGateway.ts";
 import * as ProcessDiagnostics from "./diagnostics/ProcessDiagnostics.ts";
 import * as ProcessResourceMonitor from "./diagnostics/ProcessResourceMonitor.ts";
 import * as ProjectCloneTracker from "./project/ProjectCloneTracker.ts";
@@ -861,6 +862,7 @@ const layerUnusedConfigRpcServices = Layer.mergeAll(
   Layer.mock(AgentdInit.AgentdInit)({}),
   Layer.mock(AgentdSkills.AgentdSkillsService)({}),
   Layer.mock(LibraosGateway.LibraosGateway)({ refreshModels: Effect.void }),
+  Layer.mock(CustomGateway.CustomGateway)({}),
   Layer.mock(ProcessResourceMonitor.ProcessResourceMonitor)({}),
   Layer.mock(ProjectCloneTracker.ProjectCloneTracker)({}),
   Layer.mock(ProjectService.ProjectService)({}),

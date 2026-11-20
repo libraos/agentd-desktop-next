@@ -100,6 +100,11 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   // The Gateway key goes to this host's agentd and its agents' sessions.
   [WS_METHODS.libraosGatewayConnect]: AuthEnvironmentMaintainScope,
   [WS_METHODS.libraosGatewayDisconnect]: AuthEnvironmentMaintainScope,
+  // A custom gateway's key goes to this host's agents' sessions, as the Gateway key does.
+  [WS_METHODS.customGatewayAdd]: AuthEnvironmentMaintainScope,
+  [WS_METHODS.customGatewayRename]: AuthEnvironmentMaintainScope,
+  [WS_METHODS.customGatewayRemove]: AuthEnvironmentMaintainScope,
+  [WS_METHODS.customGatewayRefreshModels]: AuthEnvironmentMaintainScope,
   [ORCHESTRATION_V2_WS_METHODS.stopWorkflow]: AuthOrchestrationOperateScope,
   // Force stop kills agent processes, as Stop on a terminal does.
   [ORCHESTRATION_V2_WS_METHODS.forceStopThread]: AuthOrchestrationOperateScope,

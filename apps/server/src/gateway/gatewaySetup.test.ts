@@ -1,13 +1,39 @@
 import { tokenizeCliArgs } from "@t3tools/shared/cliArgs";
 import { describe, expect, it } from "@effect/vitest";
+import { ProviderInstanceId } from "@t3tools/contracts";
 
 import {
   codexGatewayLaunchArgs,
+  customGatewayInstances,
   gatewayProviderInstances,
   GATEWAY_INSTANCE_IDS,
   gatewayRefusal,
+  withCustomGateway,
   withGatewayModels,
 } from "./gatewaySetup.ts";
+
+const env = (
+  entry: ReturnType<typeof customGatewayInstances>[number] | undefined,
+  name: string,
+): string | undefined => {
+  const value = entry?.instance.environment?.find((variable) => variable.name === name)?.value;
+  return typeof value === "string" ? value : undefined;
+};
+const opencodeConfigOf = (entries: ReturnType<typeof customGatewayInstances>) =>
+  JSON.parse(
+    env(
+      entries.find(({ instanceId }) => instanceId.endsWith("-opencode")),
+      "OPENCODE_CONFIG_CONTENT",
+    )!,
+  );
+const customGateway = {
+  id: "a1",
+  name: "My GW",
+  url: "https://gw.example.com/v1/",
+  format: "openai" as const,
+  key: "k1" as string | null,
+  models: [{ id: "gpt-x" }],
+};
 
 describe("gatewaySetup", () => {
   it("points a Codex session at the Gateway with one -c per setting", () => {
@@ -174,5 +200,96 @@ describe("gatewaySetup", () => {
     );
     expect(echoed("Bad header: Bearer lk_x.y")).toBe("Bad header: [redacted]");
     expect(echoed("x".repeat(500))).toHaveLength(200);
+  });
+
+  it("openai format builds codex and opencode with one /v1", () => {
+    const entries = customGatewayInstances(customGateway);
+    expect(entries.map(({ instanceId }) => instanceId)).toEqual(["gw-a1-codex", "gw-a1-opencode"]);
+    const [codex] = entries;
+    expect(codex?.instance.displayName).toBe("Codex · My GW");
+    expect(codex?.instance.environment).toEqual([
+      { name: "CUSTOM_GATEWAY_API_KEY", value: "k1", sensitive: true },
+    ]);
+    const config = codex?.instance.config as { launchArgs: string };
+    expect(tokenizeCliArgs(config.launchArgs)).toEqual([
+      "-c",
+      'model_provider="gw_a1"',
+      "-c",
+      'model_providers.gw_a1.name="My GW"',
+      "-c",
+      'model_providers.gw_a1.base_url="https://gw.example.com/v1"',
+      "-c",
+      'model_providers.gw_a1.env_key="CUSTOM_GATEWAY_API_KEY"',
+      "-c",
+      'model_providers.gw_a1.wire_api="responses"',
+    ]);
+    expect(codex?.instance.config).toMatchObject({
+      customModels: [{ slug: "gpt-x" }],
+      onlyCustomModels: true,
+    });
+    const opencode = opencodeConfigOf(entries).provider.gw_a1;
+    expect(opencode.npm).toBe("@ai-sdk/openai-compatible");
+    expect(opencode.options).toEqual({
+      baseURL: "https://gw.example.com/v1",
+      apiKey: "{env:CUSTOM_GATEWAY_API_KEY}",
+    });
+  });
+
+  it("anthropic format builds claude and opencode without /v1 for claude", () => {
+    for (const url of [
+      "https://gw.example.com",
+      "https://gw.example.com/",
+      "https://gw.example.com/v1",
+    ]) {
+      const entries = customGatewayInstances({ ...customGateway, url, format: "anthropic" });
+      expect(entries.map(({ instanceId }) => instanceId)).toEqual([
+        "gw-a1-claude",
+        "gw-a1-opencode",
+      ]);
+      expect(env(entries[0], "ANTHROPIC_BASE_URL")).toBe("https://gw.example.com");
+      expect(entries[0]?.instance.config).toEqual({
+        customModels: [{ slug: "gpt-x" }],
+        onlyCustomModels: true,
+      });
+      const opencode = opencodeConfigOf(entries).provider.gw_a1;
+      expect(opencode.npm).toBe("@ai-sdk/anthropic");
+      expect(opencode.options.baseURL).toBe("https://gw.example.com/v1");
+    }
+  });
+
+  it("no key writes no key", () => {
+    for (const format of ["openai", "anthropic"] as const) {
+      const entries = customGatewayInstances({ ...customGateway, format, key: null });
+      for (const { instance } of entries) {
+        expect(instance.environment?.filter((variable) => variable.sensitive)).toEqual([]);
+        expect(JSON.stringify(instance.config)).not.toContain("env_key");
+      }
+      expect(opencodeConfigOf(entries).provider.gw_a1.options).not.toHaveProperty("apiKey");
+    }
+  });
+
+  it("a renamed custom gateway renames its agents and keeps its key and models", () => {
+    const current = Object.fromEntries(
+      customGatewayInstances(customGateway).map(({ instanceId, instance }) => [
+        instanceId,
+        instance,
+      ]),
+    );
+    const renamed = { ...customGateway, name: "Work" };
+    const next = withCustomGateway(current, renamed, null);
+    expect(next[ProviderInstanceId.make("gw-a1-codex")]?.displayName).toBe("Codex · Work");
+    expect(next[ProviderInstanceId.make("gw-a1-codex")]?.environment).toEqual(
+      current[ProviderInstanceId.make("gw-a1-codex")]?.environment,
+    );
+    expect(next[ProviderInstanceId.make("gw-a1-codex")]?.config).toEqual(
+      customGatewayInstances({ ...renamed, key: "k1" })[0]?.instance.config,
+    );
+    expect(next[ProviderInstanceId.make("gw-a1-opencode")]?.displayName).toBe("opencode · Work");
+    const opencode = JSON.parse(
+      String(next[ProviderInstanceId.make("gw-a1-opencode")]?.environment?.[1]?.value),
+    );
+    expect(opencode.provider.gw_a1.name).toBe("Work");
+    expect(Object.keys(opencode.provider.gw_a1.models)).toEqual(["gpt-x"]);
+    expect(withCustomGateway(next, renamed, null)).toBe(next);
   });
 });

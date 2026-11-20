@@ -71,6 +71,7 @@ export * from "./resourceTelemetry.ts";
 export * from "./agentd.ts";
 export * from "./agentdSkills.ts";
 export * from "./libraosGateway.ts";
+export * from "./customGateway.ts";
 export * from "./rpc.ts";
 export * from "./worktreeSetup.ts";
 export * from "./secretRequest.ts";

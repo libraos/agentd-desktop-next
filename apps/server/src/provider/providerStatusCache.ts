@@ -1,5 +1,5 @@
 import {
-  isLibraosGatewayInstanceId,
+  isGatewayInstanceId,
   type ProviderInstanceId,
   type ServerProvider,
   ServerProvider as ServerProviderSchema,
@@ -91,7 +91,7 @@ export const hydrateCachedProvider = (input: {
     models: mergeProviderModels(
       input.fallbackProvider.models,
       input.cachedProvider.models,
-      isLibraosGatewayInstanceId(input.fallbackProvider.instanceId),
+      isGatewayInstanceId(input.fallbackProvider.instanceId),
     ),
     installed: input.cachedProvider.installed,
     version: input.cachedProvider.version,
