@@ -120,6 +120,12 @@ const policies = (): ReadonlyArray<Policy> => [
     toggle: "BrowserCookieImport",
   },
   {
+    id: "SkillCatalog",
+    title: "Allow the Skills catalogue",
+    help: "Disabled stops AgentD Next from fetching the Skills catalogue and installing Skills from it. Skills already installed stay.",
+    toggle: "SkillCatalog",
+  },
+  {
     id: "Telemetry",
     title: "Allow usage data",
     help: "Disabled stops AgentD Next from sending product usage data and relay connection traces. Enabled cannot turn them on for a user who turned them off.",
