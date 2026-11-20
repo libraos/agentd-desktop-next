@@ -3120,6 +3120,8 @@
   "7f4fd9697b70d2ad": "Link account",
   "2c73362a57a1dff5": "AgentD page",
   "19ccb9ca234d58ce": "Worker settings",
+  "443d5674cf7e0c99": "AgentD의 watchdog 타이머를 켜지 못했습니다. 복구를 다시 시도하거나 터미널에서 systemctl --user enable --now agentd-watchdog.timer를 실행하세요.",
+  "f456f04a3de8783d": "AgentD 백그라운드 서비스가 없거나 이전 AgentD Desktop에 속한 AgentD로 실행되고 있으며, 이 앱의 AgentD로 옮기지 못했습니다. 터미널에서 agentd install을 실행하세요.",
   "8b9fa521cecb4f8d": "Uses",
   "803dbf99343f4441": "Installed for the terminal",
   "b21f66984690c19a": [
@@ -3140,6 +3142,62 @@
   ],
   "c86e02018b5fd3b3": "To run agentd in a terminal, add this line to your shell profile:",
   "a28dff6e4d10f8e1": "Got it",
+  "39ec3f59be4e055c": [
+    "AgentD의 watchdog 서비스가 ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "을(를) 실행하고 있는데, 이는 없거나 이전 AgentD Desktop의 것입니다."
+  ],
+  "e32b73bb21bcacb0": [
+    "AgentD의 대시보드 서비스가 ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "을(를) 실행하고 있는데, 이는 없거나 이전 AgentD Desktop의 것입니다."
+  ],
+  "5328410a6f60d4c2": "AgentD의 watchdog 서비스는 이 앱의 AgentD를 실행하지만 systemd가 타이머를 켜지 않아, 이 앱이 닫혀 있는 동안 AgentD가 작업을 추적하지 않습니다. 복구하면 켜집니다.",
+  "be9690d4ecd1205c": "AgentD의 워치독 서비스는 이 앱의 AgentD를 실행하지만 systemd가 타이머를 켜지 않아, 이 앱이 닫혀 있는 동안 AgentD가 작업을 추적하지 않습니다. 해당 컴퓨터의 터미널에서 agentd install을 실행한 다음 systemctl --user daemon-reload와 systemctl --user enable --now agentd-watchdog.timer를 실행하세요.",
+  "6a59746b82dd08fb": "AgentD가 백그라운드 서비스 중 하나의 등록 내용을 읽지 못했고, agentd install이 그것도 다시 쓰기 때문에 복구를 제공하지 않습니다. 나중에 다시 시도하거나, 사용하는 AgentD로 터미널에서 agentd install을 실행하세요.",
+  "3d3633596c70ff27": "systemd 드롭인이 이 서비스가 실행하는 프로그램을 설정하고 있고 agentd install은 드롭인을 바꾸지 않으므로, 이 서비스에는 복구가 제공되지 않습니다. ~/.config/systemd/user의 드롭인에서 ExecStart 줄을 지우고 systemctl --user daemon-reload를 실행하세요. 그런 다음 사용하는 AgentD가 있는 터미널에서 watchdog은 agentd install, 대시보드는 agentd dash install을 실행하세요.",
+  "74d5bd28e284fa57": "AgentD 백그라운드 서비스 중 하나가 없거나 이전 AgentD Desktop의 AgentD를 실행하고 있고, 다른 하나는 사용자의 AgentD를 실행하고 있습니다. 이 앱은 둘 다 그대로 두었습니다. 사용하는 AgentD로 agentd install을 실행하세요. 실행하는 곳에 설정된 AGENTD_ROOT와 AGENTD_DB로 두 서비스를 모두 다시 씁니다. 대시보드가 자체 값을 사용한다면 그 후에 해당 값으로 agentd dash install을 실행하세요.",
+  "feed1033187aadc9": "AgentD의 백그라운드 서비스가 없거나 이전 AgentD Desktop에 속한 AgentD를 실행하고 있습니다. 이 앱의 AgentD는 앱을 닫으면 사라지므로 그대로 두었습니다. 터미널용 agentd를 설치한 다음 agentd install을 실행하세요.",
+  "e5409921bb75522c": "AgentD의 백그라운드 서비스가 아직 이 앱의 AgentD를 실행하지 않습니다. 이전 AgentD 서비스가 켜져 있는 동안 AgentD는 이를 시작하지 않습니다. 터미널에서 이 명령을 실행한 다음 agentd install을 실행하세요.",
+  "ef7c30f129576625": "복구 중…",
+  "afb4c74d1cc655a7": "복구…",
+  "dc26fcb837031237": "AgentD 백그라운드 서비스를 복구할까요?",
+  "f24024c34b0e9c61": [
+    "이 앱의 AgentD(",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ")로 agentd install을 실행하고, Linux에서는 agentd dash install도 실행합니다. 대시보드와 watchdog을 이 앱의 AgentD와 이 앱이 사용하는 루트로 다시 등록하며, 지금 설정된 AGENTD_ROOT 또는 AGENTD_DB는 유지되지 않습니다."
+  ],
+  "0e47cafe3b9470e4": [
+    "이 앱의 AgentD(",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ")로 agentd dash install을 실행합니다. 대시보드를 이 앱의 AgentD와 이 앱이 사용하는 루트로 다시 등록합니다. 지금 설정된 AGENTD_ROOT 또는 AGENTD_DB는 유지되지 않습니다."
+  ],
+  "0c8c50c77ace3fcf": [
+    "이 앱의 AgentD(",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ")로 agentd install을 실행합니다. 워치독을 이 앱의 AgentD와 이 앱이 사용하는 루트로 다시 등록합니다. 지금 설정된 AGENTD_ROOT 또는 AGENTD_DB는 유지되지 않습니다."
+  ],
+  "97848e9a3bfa3bf6": "복구",
   "001d17590be2a445": "AgentD",
   "893bb44a7b9c9094": "새로 고침",
   "57af791aca31d90a": "Background task",
@@ -3169,6 +3227,8 @@
   "1b7c524fccf06537": "Needs you",
   "db2fec7c6c08a6b4": "Workers",
   "8921053c4410665e": "Cloud Workers",
+  "f7eb4a8dece08115": "AgentD에 연결할 수 없습니다.",
+  "9bbecec926c3b695": "다시 시도",
   "84bc880c5d7799c4": "This version of AgentD has no Cloud Workers.",
   "1df964aa41b32b25": "Cloud Workers aren’t set up on this machine.",
   "e959699c0a2955e1": [
@@ -3449,6 +3509,9 @@
   "bb58748e4b230007": "ChatGPT (Codex)",
   "4283cbba1d675ef8": "ChatGPT (Codex): needs a newer AgentD",
   "0606bddb2fb895bd": "Run in the cloud",
+  "497643a79f9c7456": "이 체크아웃의 origin을 읽을 수 없습니다. 다시 시도하거나 “Run in the cloud”를 끄고 이 작업을 여기에서 실행하세요.",
+  "6726fb80ed5fc0dd": "이 체크아웃의 origin을 읽을 수 없습니다.",
+  "758710d9f0cdd0f6": "AgentD에 연결할 수 없습니다. 다시 시도하거나 “Run in the cloud”를 끄고 이 작업을 여기에서 실행하세요.",
   "e2f5cc2eeccfc92b": "Cloud Workers require a GitHub repository as the checkout’s origin.",
   "16c7fc3b7eaea196": [
     "Cloud repository: ",
@@ -3476,6 +3539,37 @@
   "7d7bb753c7e99807": "Worker time is billed to LibraOS credits. Your provider bills inference separately; it isn’t covered by this dollar cap.",
   "e17f9689603be8f4": "찾아보기…",
   "256f4ab9a895674d": "키 자체를 입력한 것 같습니다. 파일에 저장한 다음 해당 파일을 선택하세요.",
+  "564377ac68a9dbc8": "Anthropic 키입니다. Anthropic 키 파일에서 선택하세요.",
+  "3190c4c819611d04": "OpenAI 키입니다. OpenAI 키 파일에서 선택하세요.",
+  "6e09aa0bc2f5903e": [
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "은(는) 다른 사용자가 읽을 수 있습니다.",
+    " ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    },
+    "을(를) 실행한 다음 다시 시도하세요."
+  ],
+  "5e8c89ed36b770b3": "권한 수정",
+  "9ec433045537acfc": "다시 확인",
+  "26870059a55a8693": [
+    "이 환경의 컴퓨터에서 ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "을(를) 읽을 수 없습니다. 경로와 계정이 파일을 읽을 수 있는지 확인하세요."
+  ],
+  "cbc2d86edf351bfc": "이 키 파일을 확인할 수 없습니다.",
+  "3f9a96df2f740140": "이 연결은 이 환경의 컴퓨터에 있는 파일을 읽을 수 없으므로 시작할 때 AgentD가 키 파일을 확인합니다.",
+  "8590981f396d633b": "이 키 파일을 확인하는 중…",
   "0faf657712a9d10a": "Plan",
   "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
   "53150504b20565ec": "Needs a newer AgentD. Run agentd upgrade to use your Claude plan.",
@@ -3497,10 +3591,13 @@
     },
     "."
   ],
+  "dfb9a5114c1f0681": "다른 auth.json 사용",
+  "2643d467d5aae326": "다른 토큰 파일 사용",
   "2df8ba1ffd667a89": "ChatGPT auth.json path (optional)",
   "2ad77b2747bd90e4": "Claude token file path (optional)",
   "a059069d84b5141d": "Billed to your ChatGPT plan. Worker time is billed to LibraOS credits.",
   "a72db40e119ee145": "Billed to your Claude plan. Worker time is billed to LibraOS credits.",
+  "b43c2d7958cebd86": "작업 {taskId}이(가) Cloud Workers에서 시작되었습니다. 진행 상황은 Background tasks에서 확인하세요.",
   "b95ea8f56ec99b89": "Enter a goal.",
   "acc4a4621973ddf9": "Enter a goal that does not begin with a dash or contain a NUL character.",
   "3393b275f19c6391": "Enter a check command.",
@@ -3509,6 +3606,7 @@
   "4eeedde4705d4875": "No dollar limit: AgentD on this machine has no model prices.",
   "de894e40af577557": "Use at most {limit} acceptance criteria, one per line, with no leading dashes or NUL characters.",
   "de780c2046b3f051": "Use the format OWNER/REPO#123.",
+  "11a534f7a660a029": "AgentD가 이 프로젝트의 마지막 클라우드 제출을 확인하지 않았으며, 아직 시작될 수 있습니다. 이것으로 바꿀까요? 이전 제출이 시작되었다면 이것은 전송되지 않습니다.",
   "a8a5851eea99dbdb": "AgentD could not start the task.",
   "32aa561425215b73": "AgentD did not dispatch the task.",
   "06077698ed64f5df": "Started task {taskId}.",
@@ -3525,13 +3623,15 @@
   "72985eae43f9def3": "Issue (optional)",
   "096a8482c9b1451a": "AgentD saved task {taskId}, but it didn’t start in Cloud Workers. Check Background tasks for updates before trying again.",
   "4d4ec2226fc46ee3": "Task {taskId} was offered but did not start.",
+  "6a06a09e3a1f8f65": "파일 권한을 변경할 수 없습니다.",
   "b2d4a97a97c93f80": "Review the task and its budget before starting a worker on your account.",
   "00ee0820465e85c7": "Waiting for the session’s agent…",
   "99ea3181ff9ebe91": "Draft from this conversation",
   "b98c20b1d8015a9d": "Hide details",
   "f5b66c481aa3e4df": "편집",
   "e91857c891498df2": "This connection cannot start AgentD tasks.",
-  "1e13c026073ae979": "Submit this task in its place",
+  "b7088cd1c566d9c9": "바꾸기",
+  "28eb5c34fe18cd54": "교체하지 않음",
   "cddd25f1fe0c5855": "Checking the earlier submission…",
   "81c18cf032b057e9": "Check and retry",
   "bba1e3a22505b87f": "Starting…",
@@ -3557,11 +3657,15 @@
   "066644fe3ef88185": "Workers",
   "08a6807fe489a75f": "Suggest workers",
   "7b19eee7c41fed42": "Run tasks on",
+  "cf518d77ed751670": "LibraOS 계정",
   "d12a5aa2ed967dea": "Default budget",
   "30e829a1a8a28216": "Dollars",
   "95b341922c1fa227": "Offer to hand a Code thread's task to a worker when a turn runs long or you send a message while it runs.",
   "7af00a32ca27332c": "Where Hand to a worker starts a task. You can change it for each task.",
   "066142017d5f22b9": "Cloud Workers need AgentD set up and your LibraOS account linked on the AgentD page.",
+  "97567e841a7d32aa": "LibraOS 계정이 연결되어 있습니다. 크레딧과 키는 AgentD 페이지에 있습니다.",
+  "3fe0466eb86553f8": "이 기기 대신 LibraOS 머신에서 작업을 실행합니다. AgentD 페이지에서 설정하세요.",
+  "1001952bd82ee967": "Cloud Workers 관리",
   "232e5a93f6fd9568": "Enter whole minutes and a dollar amount above zero.",
   "a074cd7f34d3e73f": "Used when AgentD has no estimate for the task. AgentD on this machine has no model prices, so tasks here get only the minutes; the dollar amount applies to Cloud Workers.",
   "7661d98010296c92": "Used when AgentD has no estimate for the task.",
@@ -3583,6 +3687,8 @@
   "423f5560c920e52f": "Check out a named branch in this working directory first.",
   "a542a9e7e7d46218": "The working directory is on {branch}. Switch to a different branch first.",
   "bd2c6c29bee82864": "AgentD on this machine has no model prices, so it cannot hold a dollar limit. Use minutes, such as 60m.",
+  "ae8470f8ec58cfa1": "Cloud Workers용 이 체크아웃의 origin을 읽을 수 없습니다. 다시 시도하거나 “편집”을 선택해 “Run in the cloud”를 끄고 이 작업을 여기에서 실행하세요.",
+  "76f77c14c6d662e7": "Cloud Workers를 확인하기 위해 AgentD에 연결할 수 없습니다. 다시 시도하거나 “편집”을 선택해 “Run in the cloud”를 끄고 이 작업을 여기에서 실행하세요.",
   "a4aff358558707df": "This session has no project working directory.",
   "cee006e381c89877": "There is not enough LibraOS credit for Cloud Workers.",
   "7e4a9f1615efb801": "Sign in to LibraOS or connect the LibraOS Gateway to use LibraOS models.",
@@ -3603,6 +3709,9 @@
   "ab91ee697b514f96": "Budget up to {cap} (agentd has no estimate for similar tasks yet).",
   "b77cf4ce030a03fd": "Budget up to {cap} (similar tasks cost {low}–{high}).",
   "1105b01379db64cd": "The estimate comes from local runs of similar tasks.",
+  "23d1644e8161e56b": "Cloud Workers를 확인하기 위해 AgentD에 연결할 수 없습니다.",
+  "2595e7b187340f8a": "OpenAI 키 칸의 파일에 Anthropic 키가 들어 있어 아무것도 제출되지 않았습니다. 각 키 파일을 해당 제공자의 칸에 넣으세요.",
+  "c6053d841d41d8bc": "Anthropic 키 칸의 파일에 OpenAI 키가 들어 있어 아무것도 제출되지 않았습니다. 각 키 파일을 해당 제공자의 칸에 넣으세요.",
   "87e3e1be8d076ca6": "이 환경에 연결할 수 없습니다. 다시 시도하세요.",
   "74a8fc3d3e10acaf": "이 로그인 링크가 불완전합니다",
   "820397d04d4ea2df": "이 페이지를 닫고 에이전트에서 로그인을 다시 시작하세요.",
@@ -4246,7 +4355,6 @@
       "v": "v"
     }
   ],
-  "9bbecec926c3b695": "다시 시도",
   "4fd8927b7afc2a92": "메시지 복사",
   "6f8651e48261911a": "생각",
   "ac511f991a3c1fab": "웹 검색",
@@ -6477,7 +6585,6 @@
   "718a33a11c0e63a6": "{time}에 만료 · 1회용",
   "800f3d6ba89ed228": "{label} 복사",
   "402ad504ab1fe6a4": "연결됨: {environments}",
-  "9ec433045537acfc": "다시 확인",
   "2fa65dc5d5e30e21": "Checking the hosted relay…",
   "e9aeca4977a84a3d": "Your hosted relay account is out of tunnels.",
   "aa5e468e4f0772e1": [

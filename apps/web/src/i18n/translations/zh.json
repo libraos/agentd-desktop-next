@@ -3125,6 +3125,8 @@
   "7f4fd9697b70d2ad": "关联账户",
   "2c73362a57a1dff5": "AgentD 页面",
   "19ccb9ca234d58ce": "Worker 设置",
+  "443d5674cf7e0c99": "无法开启 AgentD 的 watchdog 定时器。请再次尝试修复，或在终端中运行 systemctl --user enable --now agentd-watchdog.timer。",
+  "f456f04a3de8783d": "AgentD 的后台服务运行的是已缺失或属于旧版 AgentD Desktop 的 AgentD，且未能改用此应用的 AgentD。请在终端中运行 agentd install。",
   "8b9fa521cecb4f8d": "使用",
   "803dbf99343f4441": "已为终端安装",
   "b21f66984690c19a": [
@@ -3145,6 +3147,62 @@
   ],
   "c86e02018b5fd3b3": "要在终端里运行 agentd，请把这一行加到你的 shell 配置文件：",
   "a28dff6e4d10f8e1": "知道了",
+  "39ec3f59be4e055c": [
+    "AgentD 的 watchdog 服务运行的是 ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "，它已缺失或属于旧版 AgentD Desktop。"
+  ],
+  "e32b73bb21bcacb0": [
+    "AgentD 的仪表板服务运行的是 ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "，它已缺失或属于旧版 AgentD Desktop。"
+  ],
+  "5328410a6f60d4c2": "AgentD 的 watchdog 服务运行的是此应用的 AgentD，但 systemd 尚未开启它的定时器，因此此应用关闭时 AgentD 不会跟进你的任务。修复会将其开启。",
+  "be9690d4ecd1205c": "AgentD 的 watchdog 服务运行的是此应用的 AgentD，但 systemd 尚未开启它的定时器，因此此应用关闭时 AgentD 不会跟进你的任务。请在那台机器的终端中运行 agentd install，然后运行 systemctl --user daemon-reload 和 systemctl --user enable --now agentd-watchdog.timer。",
+  "6a59746b82dd08fb": "AgentD 无法读取其某个后台服务的注册信息，而 agentd install 也会重写它，因此不提供修复。请稍后重试，或在终端中用你使用的 AgentD 运行 agentd install。",
+  "3d3633596c70ff27": "systemd drop-in 设置了此服务运行的程序，而 agentd install 不会修改 drop-in，因此不为它提供修复。请从 ~/.config/systemd/user 中的 drop-in 删除 ExecStart 行，并运行 systemctl --user daemon-reload。然后在使用你的 AgentD 的终端中，为 watchdog 运行 agentd install，为仪表板运行 agentd dash install。",
+  "74d5bd28e284fa57": "AgentD 的一个后台服务运行的 AgentD 已缺失或属于旧版 AgentD Desktop，另一个运行的是你自己的 AgentD。此应用未改动两者：请用你使用的 AgentD 运行 agentd install。它会用运行处设置的 AGENTD_ROOT 和 AGENTD_DB 重写两个服务；如果仪表板使用自己的设置，之后请用这些设置运行 agentd dash install。",
+  "feed1033187aadc9": "AgentD 的后台服务运行的 AgentD 已不存在或属于旧版 AgentD Desktop。此应用的 AgentD 会在应用关闭后消失，因此未做更改：请为终端安装 agentd，然后运行 agentd install。",
+  "e5409921bb75522c": "AgentD 的后台服务尚未运行此应用的 AgentD：在旧的 AgentD 服务开启期间，AgentD 不会启动它们。请在终端中运行此命令，然后运行 agentd install。",
+  "ef7c30f129576625": "正在修复…",
+  "afb4c74d1cc655a7": "修复…",
+  "dc26fcb837031237": "修复 AgentD 的后台服务？",
+  "f24024c34b0e9c61": [
+    "这会用此应用的 AgentD（",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "）运行 agentd install，在 Linux 上还会运行 agentd dash install。它会用此应用的 AgentD 和此应用使用的根目录重新注册仪表板和 watchdog；它们当前设置的 AGENTD_ROOT 或 AGENTD_DB 不会保留。"
+  ],
+  "0e47cafe3b9470e4": [
+    "这会从此应用的 AgentD（",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "）运行 agentd dash install。它会用此应用的 AgentD 和此应用使用的根目录重新注册仪表盘；它当前设置的 AGENTD_ROOT 或 AGENTD_DB 不会保留。"
+  ],
+  "0c8c50c77ace3fcf": [
+    "这会从此应用的 AgentD（",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "）运行 agentd install。它会用此应用的 AgentD 和此应用使用的根目录重新注册 watchdog；它当前设置的 AGENTD_ROOT 或 AGENTD_DB 不会保留。"
+  ],
+  "97848e9a3bfa3bf6": "修复",
   "001d17590be2a445": "AgentD",
   "893bb44a7b9c9094": "刷新",
   "57af791aca31d90a": "后台任务",
@@ -3174,6 +3232,8 @@
   "1b7c524fccf06537": "需要你处理",
   "db2fec7c6c08a6b4": "Worker",
   "8921053c4410665e": "云端 Worker",
+  "f7eb4a8dece08115": "无法连接 AgentD。",
+  "9bbecec926c3b695": "重试",
   "84bc880c5d7799c4": "这个版本的 AgentD 没有 Cloud Workers。",
   "1df964aa41b32b25": "这台机器上还没有设置 Cloud Workers。",
   "e959699c0a2955e1": [
@@ -3453,6 +3513,9 @@
   "bb58748e4b230007": "ChatGPT（Codex）",
   "4283cbba1d675ef8": "ChatGPT（Codex）：需要更新版本的 AgentD",
   "0606bddb2fb895bd": "在云端运行",
+  "497643a79f9c7456": "无法读取此检出的 origin。请重试，或关闭“在云端运行”以在此处运行此任务。",
+  "6726fb80ed5fc0dd": "无法读取此检出的 origin。",
+  "758710d9f0cdd0f6": "无法连接 AgentD。请重试，或关闭“在云端运行”以在此处运行此任务。",
   "e2f5cc2eeccfc92b": "Cloud Workers 要求 checkout 的 origin 是 GitHub 仓库。",
   "16c7fc3b7eaea196": [
     "云端仓库：",
@@ -3480,6 +3543,37 @@
   "7d7bb753c7e99807": "Worker 时间计入 LibraOS 额度。推理费用由你的服务商单独计费，不受这个金额上限约束。",
   "e17f9689603be8f4": "浏览…",
   "256f4ab9a895674d": "这看起来是密钥本身。请将它保存到文件中，然后选择该文件。",
+  "564377ac68a9dbc8": "这是 Anthropic 密钥，请在 Anthropic 密钥文件中选择它。",
+  "3190c4c819611d04": "这是 OpenAI 密钥，请在 OpenAI 密钥文件中选择它。",
+  "6e09aa0bc2f5903e": [
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " 可被其他用户读取。请运行",
+    " ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    },
+    "，然后重试。"
+  ],
+  "5e8c89ed36b770b3": "修复权限",
+  "9ec433045537acfc": "重新检查",
+  "26870059a55a8693": [
+    "无法在此环境的机器上读取 ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "。请检查路径，并确认你的账户可以读取该文件。"
+  ],
+  "cbc2d86edf351bfc": "无法检查此密钥文件。",
+  "3f9a96df2f740140": "此连接无法读取此环境所在机器上的文件，因此 AgentD 会在启动时检查密钥文件。",
+  "8590981f396d633b": "正在检查此密钥文件…",
   "0faf657712a9d10a": "套餐",
   "35f3400f1d3dee9f": "需要更新版本的 AgentD。运行 agentd upgrade 后即可使用你的 ChatGPT 套餐。",
   "53150504b20565ec": "需要更新版本的 AgentD。运行 agentd upgrade 后即可使用你的 Claude 套餐。",
@@ -3501,10 +3595,13 @@
     },
     " 到期。"
   ],
+  "dfb9a5114c1f0681": "使用其他 auth.json",
+  "2643d467d5aae326": "使用其他令牌文件",
   "2df8ba1ffd667a89": "ChatGPT auth.json 路径（可选）",
   "2ad77b2747bd90e4": "Claude token 文件路径（可选）",
   "a059069d84b5141d": "计入你的 ChatGPT 套餐。Worker 时间计入 LibraOS 额度。",
   "a72db40e119ee145": "计入你的 Claude 套餐。Worker 时间计入 LibraOS 额度。",
+  "b43c2d7958cebd86": "任务 {taskId} 已在 Cloud Workers 中启动。请在后台任务中查看进度。",
   "b95ea8f56ec99b89": "请输入目标。",
   "acc4a4621973ddf9": "请输入不以短横线开头且不含 NUL 字符的目标。",
   "3393b275f19c6391": "请输入检查命令。",
@@ -3513,6 +3610,7 @@
   "4eeedde4705d4875": "无美元上限：此机器上的 AgentD 没有模型价格。",
   "de894e40af577557": "最多使用 {limit} 条验收标准，每行一条，不要带前导短横线或 NUL 字符。",
   "de780c2046b3f051": "请使用 OWNER/REPO#123 格式。",
+  "11a534f7a660a029": "AgentD 尚未确认你在此项目上的上一次云端提交，它可能仍会启动。要用这次替换吗？如果上一次已启动，这次不会发送。",
   "a8a5851eea99dbdb": "AgentD 无法启动该任务。",
   "32aa561425215b73": "AgentD 未派发该任务。",
   "06077698ed64f5df": "已启动任务 {taskId}。",
@@ -3529,13 +3627,15 @@
   "72985eae43f9def3": "Issue（可选）",
   "096a8482c9b1451a": "AgentD 已保存任务 {taskId}，但它没有在 Cloud Workers 中启动。请先在 Background tasks 中查看进展，再重试。",
   "4d4ec2226fc46ee3": "任务 {taskId} 已提交，但未能启动。",
+  "6a06a09e3a1f8f65": "无法更改该文件的权限。",
   "b2d4a97a97c93f80": "请在使用你的账户启动 Worker 之前，先审阅任务及其预算。",
   "00ee0820465e85c7": "正在等待此会话的 Agent…",
   "99ea3181ff9ebe91": "根据此对话起草",
   "b98c20b1d8015a9d": "隐藏详情",
   "f5b66c481aa3e4df": "编辑",
   "e91857c891498df2": "此连接无法启动 AgentD 任务。",
-  "1e13c026073ae979": "改为提交这个任务",
+  "b7088cd1c566d9c9": "替换",
+  "28eb5c34fe18cd54": "不替换",
   "cddd25f1fe0c5855": "正在检查之前的提交…",
   "81c18cf032b057e9": "检查并重试",
   "bba1e3a22505b87f": "正在启动…",
@@ -3561,11 +3661,15 @@
   "066644fe3ef88185": "Workers",
   "08a6807fe489a75f": "建议使用 worker",
   "7b19eee7c41fed42": "任务运行位置",
+  "cf518d77ed751670": "LibraOS 账户",
   "d12a5aa2ed967dea": "默认预算",
   "30e829a1a8a28216": "美元",
   "95b341922c1fa227": "当一轮运行很久，或在运行时你又发送消息，建议把 Code 会话的任务交给 worker。",
   "7af00a32ca27332c": "“交给 worker”启动任务的位置。每个任务都可以单独更改。",
   "066142017d5f22b9": "Cloud Workers 需要先设置 AgentD，并在 AgentD 页面关联你的 LibraOS 账户。",
+  "97567e841a7d32aa": "你的 LibraOS 账户已关联。其额度和密钥在 AgentD 页面上。",
+  "3fe0466eb86553f8": "在 LibraOS 的机器而非本机上运行任务。请在 AgentD 页面上设置。",
+  "1001952bd82ee967": "管理 Cloud Workers",
   "232e5a93f6fd9568": "请输入整数分钟数和大于零的美元金额。",
   "a074cd7f34d3e73f": "在 AgentD 无法估算任务时使用。此机器上的 AgentD 没有模型价格，因此这里的任务只使用分钟数；美元金额用于 Cloud Workers。",
   "7661d98010296c92": "在 AgentD 无法估算任务时使用。",
@@ -3587,6 +3691,8 @@
   "423f5560c920e52f": "请先在此工作目录中检出一个具名分支。",
   "a542a9e7e7d46218": "工作目录当前在 {branch} 分支上。请先切换到其他分支。",
   "bd2c6c29bee82864": "此机器上的 AgentD 没有模型价格，无法执行美元上限。请使用分钟数，例如 60m。",
+  "ae8470f8ec58cfa1": "无法为 Cloud Workers 读取此检出的 origin。请重试，或选择“编辑”并关闭“在云端运行”，以在此处运行此任务。",
+  "76f77c14c6d662e7": "无法连接 AgentD 以检查 Cloud Workers。请重试，或选择“编辑”并关闭“在云端运行”，以在此处运行此任务。",
   "a4aff358558707df": "此会话没有项目工作目录。",
   "cee006e381c89877": "LibraOS 余额不足，无法使用 Cloud Workers。",
   "7e4a9f1615efb801": "登录 LibraOS 或连接 LibraOS Gateway 后才能使用 LibraOS 模型。",
@@ -3607,6 +3713,9 @@
   "ab91ee697b514f96": "预算最多 {cap}（agentd 还没有同类任务的估算）。",
   "b77cf4ce030a03fd": "预算最多 {cap}（同类任务通常 {low}–{high}）。",
   "1105b01379db64cd": "估算来自本机同类任务的运行记录。",
+  "23d1644e8161e56b": "无法连接 AgentD 以检查 Cloud Workers。",
+  "2595e7b187340f8a": "OpenAI 密钥栏中的文件包含 Anthropic 密钥，因此没有提交任何内容。请将每个密钥文件放在其对应提供方的栏中。",
+  "c6053d841d41d8bc": "Anthropic 密钥栏中的文件包含 OpenAI 密钥，因此没有提交任何内容。请将每个密钥文件放在其对应提供方的栏中。",
   "87e3e1be8d076ca6": "无法访问此环境。请重试。",
   "74a8fc3d3e10acaf": "此登录链接不完整",
   "820397d04d4ea2df": "请关闭此页面，然后从你的智能体重新发起登录。",
@@ -4256,7 +4365,6 @@
       "v": "v"
     }
   ],
-  "9bbecec926c3b695": "重试",
   "4fd8927b7afc2a92": "复制消息",
   "6f8651e48261911a": "已思考",
   "ac511f991a3c1fab": "网络搜索",
@@ -6499,7 +6607,6 @@
   "718a33a11c0e63a6": "{time} 后过期 · 仅限一次",
   "800f3d6ba89ed228": "复制 {label}",
   "402ad504ab1fe6a4": "已关联：{environments}",
-  "9ec433045537acfc": "重新检查",
   "2fa65dc5d5e30e21": "正在检查 托管中继…",
   "e9aeca4977a84a3d": "你的 托管中继 账号已没有可用隧道。",
   "aa5e468e4f0772e1": [

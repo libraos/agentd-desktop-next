@@ -25,6 +25,10 @@ export class AgentdCommandError extends Schema.TaggedError<AgentdCommandError>()
     outcomeUnknown: Schema.optionalKey(Schema.Boolean),
     /** An earlier cloud submission agentd has no task for, which Start may replace with this draft. */
     replaceSubmission: Schema.optionalKey(Schema.String),
+    /** A credential file of the user's that others can read; the app can make it private. */
+    privateFile: Schema.optionalKey(Schema.String),
+    /** The BYOK key field whose file holds the other provider's key; only to a host-file reader. */
+    wrongKeyFile: Schema.optionalKey(Schema.Literals(["anthropic", "openai"])),
   },
 ) {}
 
@@ -228,6 +232,40 @@ export const AgentdInstallRecord = Schema.Struct({
 });
 export type AgentdInstallRecord = typeof AgentdInstallRecord.Type;
 
+export const AgentdServiceName = Schema.Literals(["watchdog", "dash"]);
+export type AgentdServiceName = typeof AgentdServiceName.Type;
+
+/** agentd services that run a missing agentd or the old AgentD Desktop's: reported, never moved. */
+export const AgentdServicesProblem = Schema.Struct({
+  services: Schema.Array(Schema.Struct({ name: AgentdServiceName, program: Schema.String })),
+  /** The agentd Repair registers; null when this app's is gone once it quits (an AppImage). */
+  agentd: Schema.NullOr(Schema.String),
+  /** The services Repair re-registers; empty when it isn't offered. */
+  moves: Schema.Array(AgentdServiceName),
+  /** Services on another working agentd that install would also move, so Repair isn't offered. */
+  kept: Schema.optionalKey(Schema.Array(AgentdServiceName)),
+  /** Services whose registration couldn't be read (macOS, Windows): install would rewrite them too. */
+  unread: Schema.optionalKey(Schema.Array(AgentdServiceName)),
+  /** Stale services whose program a systemd drop-in sets, which install doesn't rewrite. */
+  overridden: Schema.optionalKey(Schema.Array(AgentdServiceName)),
+  /** What agentd install asked the user to run first, before it would enable the services. */
+  command: Schema.optionalKey(Schema.String),
+  /** Linux: the watchdog runs this app's agentd, but systemd hasn't enabled or started its timer. */
+  watchdogOff: Schema.optionalKey(Schema.Boolean),
+});
+export type AgentdServicesProblem = typeof AgentdServicesProblem.Type;
+
+/** What the user confirmed Repair re-registers: refused when a fresh check would move others. */
+export const AgentdServicesRepairInput = Schema.Struct({ moves: Schema.Array(AgentdServiceName) });
+export type AgentdServicesRepairInput = typeof AgentdServicesRepairInput.Type;
+
+export const AgentdServicesRepairResult = Schema.Struct({
+  ok: Schema.Boolean,
+  /** What agentd install asked the user to run first, before it would enable the services. */
+  command: Schema.optionalKey(Schema.String),
+});
+export type AgentdServicesRepairResult = typeof AgentdServicesRepairResult.Type;
+
 export const AgentdStatus = Schema.Struct({
   /** `agentd version` as it printed it, such as "agentd v0.1.13 0d0b360a58c0". */
   version: Schema.String,
@@ -244,6 +282,8 @@ export const AgentdStatus = Schema.Struct({
   /** The agentd binary the app runs. */
   binary: Schema.optionalKey(Schema.String),
   install: Schema.optionalKey(Schema.NullOr(AgentdInstallRecord)),
+  /** agentd's services on a missing or old agentd, as last checked; null when none. */
+  servicesProblem: Schema.optionalKey(Schema.NullOr(AgentdServicesProblem)),
 });
 export type AgentdStatus = typeof AgentdStatus.Type;
 
@@ -414,6 +454,8 @@ export const AgentdStartTaskResult = Schema.Struct({
   started: Schema.Boolean,
   /** Why dispatch failed; the task stays offered in agentd. */
   note: Schema.NullOr(Schema.String),
+  /** The task is an earlier cloud submission agentd found; nothing from this Start was sent. */
+  earlier: Schema.optionalKey(Schema.Boolean),
 });
 export type AgentdStartTaskResult = typeof AgentdStartTaskResult.Type;
 
@@ -494,6 +536,10 @@ export const AgentdCloudSubscription = Schema.Struct({
 export type AgentdCloudSubscription = typeof AgentdCloudSubscription.Type;
 export const AgentdCloudSetup = Schema.Struct({
   supported: Schema.Boolean,
+  /** agentd did not answer the cloud probe; whether it has Cloud Workers is unknown. */
+  unreachable: Schema.optionalKey(Schema.Boolean),
+  /** git didn't answer for the checkout's origin (timeout, spawn error): retry, don't run here. */
+  checkoutUnknown: Schema.optionalKey(Schema.Boolean),
   /** agentd has `cloud setup`, so the app can install the account key. */
   canConfigure: Schema.optionalKey(Schema.Boolean),
   /** The Job API `cloud setup` sends the account key to; null when agentd didn't say. */
@@ -519,6 +565,61 @@ export const AgentdCloudConfigured = Schema.Struct({
   balanceUsd: Schema.NullOr(Schema.Number),
 });
 export type AgentdCloudConfigured = typeof AgentdCloudConfigured.Type;
+
+/** A key file the user chose for Cloud Workers, checked on the environment's host. */
+export const AgentdCloudKeyFileInput = Schema.Struct({ path: AgentdCloudKeyFile });
+export type AgentdCloudKeyFileInput = typeof AgentdCloudKeyFileInput.Type;
+export const AgentdCloudKeyFileCheck = Schema.Struct({
+  /** Whose key the file holds, by its first bytes only; null when unreadable or unrecognised. */
+  provider: Schema.NullOr(Schema.Literals(["anthropic", "openai"])),
+  readable: Schema.Boolean,
+  /** Other users can read or write it (never on Windows, where agentd checks no mode). */
+  openToOthers: Schema.Boolean,
+});
+export type AgentdCloudKeyFileCheck = typeof AgentdCloudKeyFileCheck.Type;
+
+interface CloudKeyFileEntry {
+  readonly anthropic?: string;
+  readonly openai?: string;
+  readonly anthropicSavedAt?: number;
+  readonly openaiSavedAt?: number;
+}
+type CloudKeyFiles = Readonly<Record<string, CloudKeyFileEntry>>;
+
+/**
+ * Settings to store with each provider's BYOK path the newer of stored and incoming, by when it
+ * was remembered, so a window saving from an old snapshot (a budget edit, say) can't restore a
+ * path another window replaced, nor erase one it added. A tie keeps the stored path.
+ */
+export function withStoredCloudKeyFiles<S extends { readonly agentdCloudKeyFiles: CloudKeyFiles }>(
+  stored: { readonly agentdCloudKeyFiles: CloudKeyFiles } | null,
+  incoming: S,
+): S {
+  if (stored === null) return incoming;
+  const merged: Record<string, CloudKeyFileEntry> = { ...stored.agentdCloudKeyFiles };
+  for (const [environment, files] of Object.entries(incoming.agentdCloudKeyFiles)) {
+    const entry: { -readonly [K in keyof CloudKeyFileEntry]: CloudKeyFileEntry[K] } = {
+      ...merged[environment],
+    };
+    for (const provider of ["anthropic", "openai"] as const) {
+      const at = `${provider}SavedAt` as const;
+      const path = files[provider];
+      if (path === undefined) continue;
+      if (entry[provider] !== undefined && (files[at] ?? 0) <= (entry[at] ?? 0)) continue;
+      entry[provider] = path;
+      if (files[at] === undefined) delete entry[at];
+      else entry[at] = files[at];
+    }
+    merged[environment] = entry;
+  }
+  return { ...incoming, agentdCloudKeyFiles: merged };
+}
+
+/** The terminal command that makes a key file private, its path quoted for a POSIX shell. */
+export function chmodPrivateCommand(path: string): string {
+  const word = /^[\w@%+=:,./-]+$/.test(path) ? path : `'${path.replaceAll("'", `'\\''`)}'`;
+  return `chmod 600 ${word}`;
+}
 
 /** A finished cloud task's pushed branch, compared in a checkout whose origin is its repository. */
 export const AgentdCloudReviewInput = Schema.Struct({ id: AgentdHandoffId, cwd: AbsolutePath });

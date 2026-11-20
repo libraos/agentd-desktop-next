@@ -31,6 +31,7 @@ import {
   AuthAccessStreamError,
   type AuthAccessStreamEvent,
   AuthOrchestrationOperateScope,
+  AuthFilesystemReadScope,
   AuthProvidersManageScope,
   type AuthEnvironmentScope,
   type ScheduledTaskListResult,
@@ -244,6 +245,7 @@ import * as AgentdBridge from "./agentd/AgentdBridge.ts";
 import * as AgentdTeamNode from "./agentd/AgentdTeamNode.ts";
 import * as AgentdInit from "./agentd/agentdInit.ts";
 import * as AgentdSkills from "./agentd/AgentdSkills.ts";
+import { enteredKeyFiles, startErrorFor } from "./agentd/cloudFailure.ts";
 import * as LibraosGateway from "./gateway/LibraosGateway.ts";
 import * as ProcessDiagnostics from "./diagnostics/ProcessDiagnostics.ts";
 import * as ProcessResourceMonitor from "./diagnostics/ProcessResourceMonitor.ts";
@@ -3611,7 +3613,18 @@ export const layerWsRpc = (
         [WS_METHODS.agentdTask]: (input) => agentd.task(input),
         [WS_METHODS.agentdSubscribeTaskOutput]: (input) => agentd.subscribeTaskOutput(input),
         [WS_METHODS.agentdStopTask]: (input) => agentd.stopTask(input),
-        [WS_METHODS.agentdStartTask]: (input) => agentd.startTask(input),
+        [WS_METHODS.agentdStartTask]: (input) =>
+          agentd
+            .startTask(input)
+            .pipe(
+              Effect.mapError((error) =>
+                startErrorFor(
+                  error,
+                  currentSession.scopes.includes(AuthFilesystemReadScope),
+                  enteredKeyFiles(input),
+                ),
+              ),
+            ),
         [WS_METHODS.agentdApprovals]: (_input) => agentd.approvals,
         [WS_METHODS.agentdInbox]: (_input) => agentd.inbox,
         [WS_METHODS.agentdPeople]: (input) => agentd.people(input),
@@ -3620,6 +3633,9 @@ export const layerWsRpc = (
         [WS_METHODS.agentdCloudSetup]: (input) => agentd.cloudSetup(input),
         [WS_METHODS.agentdCloudReview]: (input) => agentd.cloudReview(input),
         [WS_METHODS.agentdCloudConfigure]: (input) => agentd.cloudConfigure(input),
+        [WS_METHODS.agentdCloudKeyFile]: (input) => agentd.cloudKeyFile(input, false),
+        [WS_METHODS.agentdCloudKeyFileFix]: (input) => agentd.cloudKeyFile(input, true),
+        [WS_METHODS.agentdRepairServices]: (input) => agentd.repairServices(input),
         [WS_METHODS.agentdTaskDefaults]: (input) => agentd.taskDefaults(input),
         [WS_METHODS.agentdTaskOthers]: (input) => agentd.taskOthers(input),
         [WS_METHODS.agentdSubscribeTeamNode]: (_input) => teamNode.subscribe,

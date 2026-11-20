@@ -141,6 +141,50 @@ describe("DesktopClientSettings", () => {
     ),
   );
 
+  it.effect("keeps the key path each window saved from the same old settings", () =>
+    withClientSettings(
+      Effect.gen(function* () {
+        const settings = yield* DesktopClientSettings.DesktopClientSettings;
+        const old = { ...clientSettings, agentdCloudKeyFiles: { here: { openai: "/o.key" } } };
+        yield* settings.set(old);
+        yield* Effect.all(
+          [
+            settings.set({
+              ...old,
+              agentdCloudKeyFiles: { here: { openai: "/o.key", anthropic: "/a.key" } },
+            }),
+            settings.set({
+              ...old,
+              agentdCloudKeyFiles: { ...old.agentdCloudKeyFiles, other: { openai: "/b.key" } },
+            }),
+          ],
+          { concurrency: "unbounded" },
+        );
+        const stored = Option.getOrThrow(yield* settings.get);
+        assert.deepEqual(stored.agentdCloudKeyFiles, {
+          here: { openai: "/o.key", anthropic: "/a.key" },
+          other: { openai: "/b.key" },
+        });
+        // A path replaced in one window survives another's save from its old snapshot.
+        yield* settings.set({
+          ...stored,
+          agentdCloudKeyFiles: {
+            ...stored.agentdCloudKeyFiles,
+            here: { ...stored.agentdCloudKeyFiles.here, openai: "/new.key", openaiSavedAt: 2 },
+          },
+        });
+        yield* settings.set({ ...stored, agentdDefaultBudget: "40m,$3" });
+        const after = Option.getOrThrow(yield* settings.get);
+        assert.equal(after.agentdDefaultBudget, "40m,$3");
+        assert.deepEqual(after.agentdCloudKeyFiles.here, {
+          openai: "/new.key",
+          openaiSavedAt: 2,
+          anthropic: "/a.key",
+        });
+      }),
+    ),
+  );
+
   it.effect("removes its temporary file when replacing the settings file fails", () =>
     withClientSettings(
       Effect.gen(function* () {

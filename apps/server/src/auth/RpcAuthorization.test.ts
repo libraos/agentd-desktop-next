@@ -81,6 +81,18 @@ describe("RPC authorization scopes", () => {
     }
   });
 
+  it("keeps Cloud Workers key file checks behind the filesystem read and host permissions", () => {
+    expect(requiredScopeForRpcMethod(WS_METHODS.agentdCloudKeyFile)).toBe(AuthFilesystemReadScope);
+    // Workspace write grants don't reach host files outside the workspaces.
+    expect(requiredScopeForRpcMethod(WS_METHODS.agentdCloudKeyFileFix)).toBe(
+      AuthEnvironmentMaintainScope,
+    );
+    // Repair rewrites agentd's services on the host.
+    expect(requiredScopeForRpcMethod(WS_METHODS.agentdRepairServices)).toBe(
+      AuthEnvironmentMaintainScope,
+    );
+  });
+
   it("still lets readers load settings the way installed Swift clients ask", () => {
     expect(requiredScopeForRpcMethod("server.getSettings")).toBe(AuthOrchestrationReadScope);
   });

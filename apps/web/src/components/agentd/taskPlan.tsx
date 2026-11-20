@@ -18,6 +18,7 @@ import { useProject, useQuietThreadShell } from "~/state/entities";
 import { useEnvironmentQuery } from "~/state/query";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { vcsEnvironment } from "~/state/vcs";
+import { followCloudKeyFiles } from "./PendingCloudKeyFiles";
 import type { useStartTaskCloud } from "./StartTaskCloud";
 import {
   autoBudget,
@@ -59,6 +60,8 @@ export type TaskStartOutcome =
       readonly error: unknown;
       readonly outcomeUnknown: boolean;
       readonly replaceSubmission: string | null;
+      /** A key file of the user's that agentd refused because others can read it. */
+      readonly privateFile?: string;
     }
   | { readonly kind: "refused"; readonly reason: string };
 
@@ -149,6 +152,15 @@ export function useTaskPlan({
     branch,
   });
   const problem = (() => {
+    // Cloud was asked for: local checks such as the branch gate say nothing about it.
+    if (cloud.waiting && cloud.unreachable)
+      return cloud.checkoutUnknown
+        ? gt(
+            "Couldn’t read this checkout’s origin for Cloud Workers. Retry, or choose Edit and turn off Run in the cloud to run this task here.",
+          )
+        : gt(
+            "Couldn’t reach AgentD to check Cloud Workers. Retry, or choose Edit and turn off Run in the cloud to run this task here.",
+          );
     switch (problemKind) {
       case "no-directory":
         return gt("This session has no project working directory.");
@@ -179,16 +191,20 @@ export function useTaskPlan({
     if (!cloud.enabled && cwd !== null && git.error) return git.error;
     return null;
   })();
-  const checking = cloud.enabled ? cloud.checkingBalance : cwd !== null && git.data === null;
+  const checking = cloud.enabled
+    ? cloud.checkingBalance
+    : cloud.waiting || (cwd !== null && git.data === null);
 
   // A local dollar limit is promised only when agentd can hold it.
   const localDollars = validation.budget === null ? budgetDollarCap(validation.input.budget) : null;
   const localMinutes = budgetMinutes(validation.input.budget);
-  const capText = cloud.enabled
-    ? money(Number(cloud.dollars) || 0)
-    : localDollars === null
-      ? null
-      : money(localDollars);
+  // Still asked for the cloud while its probe is unanswered: the cap is the cloud's, not the local one.
+  const capText =
+    cloud.enabled || cloud.waiting
+      ? money(Number(cloud.dollars) || 0)
+      : localDollars === null
+        ? null
+        : money(localDollars);
   const budgetPart =
     capText !== null
       ? gt("budget up to {cap}", { cap: capText })
@@ -207,7 +223,11 @@ export function useTaskPlan({
       ? gt("LibraOS models")
       : null;
   const summary = [
-    cloud.enabled ? gt("Cloud Workers") : worker === null ? null : TASK_WORKERS[worker],
+    cloud.enabled || cloud.waiting
+      ? gt("Cloud Workers")
+      : worker === null
+        ? null
+        : TASK_WORKERS[worker],
     budgetPart,
     models,
     validation.input.check
@@ -237,11 +257,14 @@ export function useTaskPlan({
     validation.goal === null &&
     (validation.check === null || (cloud.enabled && validation.check === "required")) &&
     !validation.accept &&
+    !cloud.waiting &&
     (cloud.enabled ? cloud.input !== null : validation.budget === null && !validation.issue);
 
   async function run(replacing: string | null): Promise<TaskStartOutcome> {
     if (cwd === null)
       return { kind: "refused", reason: gt("This session has no project working directory.") };
+    if (cloud.waiting)
+      return { kind: "refused", reason: gt("Couldn’t reach AgentD to check Cloud Workers.") };
     if (!cloud.enabled) {
       const current = await refreshBranch({ environmentId, input: { cwd, localOnly: true } });
       if (current._tag === "Failure") {
@@ -270,16 +293,35 @@ export function useTaskPlan({
     const result = await startTask({ environmentId, input });
     if (result._tag === "Failure") {
       const failure = squashAtomCommandFailure(result);
+      if (isCommandError(failure) && failure.wrongKeyFile !== undefined)
+        return {
+          kind: "refused",
+          reason:
+            failure.wrongKeyFile === "openai"
+              ? gt(
+                  "The file in the OpenAI key field holds an Anthropic key, so nothing was submitted. Put each key file in its own provider’s field.",
+                )
+              : gt(
+                  "The file in the Anthropic key field holds an OpenAI key, so nothing was submitted. Put each key file in its own provider’s field.",
+                ),
+        };
       return {
         kind: "failed",
         error: failure,
         outcomeUnknown: isCommandError(failure) && failure.outcomeUnknown === true,
         replaceSubmission: isCommandError(failure) ? (failure.replaceSubmission ?? null) : null,
+        ...(isCommandError(failure) && failure.privateFile !== undefined
+          ? { privateFile: failure.privateFile }
+          : {}),
       };
     }
-    return result.value.started
-      ? { kind: "started", task: result.value }
-      : { kind: "offered", task: result.value };
+    // A recorded task the cloud refused keeps the last paths that worked.
+    if (cloud.enabled && cloud.input !== null && result.value.started) cloud.remember(cloud.input);
+    if (result.value.started) return { kind: "started", task: result.value };
+    // An earlier submission's task carries none of this Start's paths.
+    if (cloud.enabled && cloud.input !== null && result.value.earlier !== true)
+      followCloudKeyFiles(environmentId, result.value.id, cloud.input);
+    return { kind: "offered", task: result.value };
   }
 
   /** One Start at a time; null while one is running. */

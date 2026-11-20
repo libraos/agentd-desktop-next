@@ -3121,6 +3121,8 @@
   "7f4fd9697b70d2ad": "Link account",
   "2c73362a57a1dff5": "AgentD page",
   "19ccb9ca234d58ce": "Worker settings",
+  "443d5674cf7e0c99": "Não foi possível ativar o timer do watchdog do AgentD. Tente Reparar de novo ou execute systemctl --user enable --now agentd-watchdog.timer em um terminal.",
+  "f456f04a3de8783d": "Os serviços em segundo plano do AgentD usam um AgentD ausente ou do antigo AgentD Desktop, e não foi possível passá-los para o AgentD deste app. Execute agentd install em um terminal.",
   "8b9fa521cecb4f8d": "Uses",
   "803dbf99343f4441": "Installed for the terminal",
   "b21f66984690c19a": [
@@ -3141,6 +3143,62 @@
   ],
   "c86e02018b5fd3b3": "To run agentd in a terminal, add this line to your shell profile:",
   "a28dff6e4d10f8e1": "Got it",
+  "39ec3f59be4e055c": [
+    "O serviço watchdog do AgentD executa ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ", que está ausente ou pertence ao antigo AgentD Desktop."
+  ],
+  "e32b73bb21bcacb0": [
+    "O serviço do painel do AgentD executa ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ", que está ausente ou pertence ao antigo AgentD Desktop."
+  ],
+  "5328410a6f60d4c2": "O serviço watchdog do AgentD executa o AgentD deste app, mas o systemd não ativou o timer dele, então o AgentD não acompanha suas tarefas enquanto este app está fechado. Reparar o ativa.",
+  "be9690d4ecd1205c": "O serviço watchdog do AgentD executa o AgentD deste app, mas o systemd não ativou o timer dele, então o AgentD não acompanha suas tarefas enquanto este app está fechado. Nessa máquina, execute agentd install e depois systemctl --user daemon-reload e systemctl --user enable --now agentd-watchdog.timer em um terminal.",
+  "6a59746b82dd08fb": "O AgentD não conseguiu ler como um de seus serviços em segundo plano está registrado, e o agentd install também o reescreveria, então Reparar não é oferecido. Tente novamente mais tarde ou execute agentd install em um terminal com o AgentD que você usa.",
+  "3d3633596c70ff27": "Um drop-in do systemd define o programa que este serviço executa, e o agentd install não altera drop-ins, então Reparar não é oferecido para ele. Remova as linhas ExecStart do drop-in em ~/.config/systemd/user e execute systemctl --user daemon-reload. Depois, em um terminal com o AgentD que você usa, execute agentd install para o watchdog ou agentd dash install para o painel.",
+  "74d5bd28e284fa57": "Um dos serviços em segundo plano do AgentD executa um AgentD que está ausente ou pertence ao antigo AgentD Desktop, e outro executa o seu próprio AgentD. Este app não mexeu em nenhum dos dois: execute agentd install com o AgentD que você usa. Ele reescreve os dois serviços com o AGENTD_ROOT e o AGENTD_DB definidos onde você o executar; se o painel usa os próprios, execute depois agentd dash install com eles.",
+  "feed1033187aadc9": "Os serviços em segundo plano do AgentD executam um AgentD ausente ou do antigo AgentD Desktop. O AgentD deste app some quando o app é fechado, então eles foram deixados como estavam: instale o agentd para o terminal e depois execute agentd install.",
+  "e5409921bb75522c": "Os serviços em segundo plano do AgentD ainda não executam o AgentD deste app: o AgentD não os inicia enquanto serviços antigos do AgentD estiverem ativos. Execute isto e depois agentd install em um terminal.",
+  "ef7c30f129576625": "Reparando…",
+  "afb4c74d1cc655a7": "Reparar…",
+  "dc26fcb837031237": "Reparar os serviços em segundo plano do AgentD?",
+  "f24024c34b0e9c61": [
+    "Isso executa agentd install a partir do AgentD deste app (",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "), e no Linux também agentd dash install. Ele registra novamente o painel e o watchdog com o AgentD deste app e a raiz que este app usa; um AGENTD_ROOT ou AGENTD_DB que eles definam agora não é mantido."
+  ],
+  "0e47cafe3b9470e4": [
+    "Isso executa agentd dash install a partir do AgentD deste app (",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "). Ele registra novamente o painel com o AgentD deste app e a raiz que este app usa; um AGENTD_ROOT ou AGENTD_DB que ele define agora não é mantido."
+  ],
+  "0c8c50c77ace3fcf": [
+    "Isso executa agentd install a partir do AgentD deste app (",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "). Ele registra novamente o watchdog com o AgentD deste app e a raiz que este app usa; um AGENTD_ROOT ou AGENTD_DB que ele define agora não é mantido."
+  ],
+  "97848e9a3bfa3bf6": "Reparar",
   "001d17590be2a445": "AgentD",
   "893bb44a7b9c9094": "Atualizar",
   "57af791aca31d90a": "Background task",
@@ -3170,6 +3228,8 @@
   "1b7c524fccf06537": "Needs you",
   "db2fec7c6c08a6b4": "Workers",
   "8921053c4410665e": "Cloud Workers",
+  "f7eb4a8dece08115": "Não foi possível acessar o AgentD.",
+  "9bbecec926c3b695": "Tentar novamente",
   "84bc880c5d7799c4": "This version of AgentD has no Cloud Workers.",
   "1df964aa41b32b25": "Cloud Workers aren’t set up on this machine.",
   "e959699c0a2955e1": [
@@ -3450,6 +3510,9 @@
   "bb58748e4b230007": "ChatGPT (Codex)",
   "4283cbba1d675ef8": "ChatGPT (Codex): needs a newer AgentD",
   "0606bddb2fb895bd": "Run in the cloud",
+  "497643a79f9c7456": "Não foi possível ler o origin deste checkout. Tente novamente ou desative “Run in the cloud” para executar esta tarefa aqui.",
+  "6726fb80ed5fc0dd": "Não foi possível ler o origin deste checkout.",
+  "758710d9f0cdd0f6": "Não foi possível acessar o AgentD. Tente novamente ou desative “Run in the cloud” para executar esta tarefa aqui.",
   "e2f5cc2eeccfc92b": "Cloud Workers require a GitHub repository as the checkout’s origin.",
   "16c7fc3b7eaea196": [
     "Cloud repository: ",
@@ -3477,6 +3540,37 @@
   "7d7bb753c7e99807": "Worker time is billed to LibraOS credits. Your provider bills inference separately; it isn’t covered by this dollar cap.",
   "e17f9689603be8f4": "Procurar…",
   "256f4ab9a895674d": "Isso parece ser a própria chave. Salve-a em um arquivo e selecione esse arquivo.",
+  "564377ac68a9dbc8": "Esta é uma chave da Anthropic; escolha-a em Arquivo de chave da Anthropic.",
+  "3190c4c819611d04": "Esta é uma chave da OpenAI; escolha-a em Arquivo de chave da OpenAI.",
+  "6e09aa0bc2f5903e": [
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " pode ser lido por outros usuários. Execute",
+    " ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    },
+    " e tente novamente."
+  ],
+  "5e8c89ed36b770b3": "Corrigir permissões",
+  "9ec433045537acfc": "Verificar novamente",
+  "26870059a55a8693": [
+    "Não foi possível ler ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " na máquina deste ambiente. Verifique o caminho e se sua conta pode ler o arquivo."
+  ],
+  "cbc2d86edf351bfc": "Não foi possível verificar este arquivo de chave.",
+  "3f9a96df2f740140": "Esta conexão não pode ler arquivos na máquina deste ambiente, então o AgentD verifica o arquivo de chave quando você inicia.",
+  "8590981f396d633b": "Verificando este arquivo de chave…",
   "0faf657712a9d10a": "Plan",
   "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
   "53150504b20565ec": "Needs a newer AgentD. Run agentd upgrade to use your Claude plan.",
@@ -3498,10 +3592,13 @@
     },
     "."
   ],
+  "dfb9a5114c1f0681": "Usar outro auth.json",
+  "2643d467d5aae326": "Usar outro arquivo de token",
   "2df8ba1ffd667a89": "ChatGPT auth.json path (optional)",
   "2ad77b2747bd90e4": "Claude token file path (optional)",
   "a059069d84b5141d": "Billed to your ChatGPT plan. Worker time is billed to LibraOS credits.",
   "a72db40e119ee145": "Billed to your Claude plan. Worker time is billed to LibraOS credits.",
+  "b43c2d7958cebd86": "A tarefa {taskId} foi iniciada no Cloud Workers. Acompanhe o progresso em Background tasks.",
   "b95ea8f56ec99b89": "Enter a goal.",
   "acc4a4621973ddf9": "Enter a goal that does not begin with a dash or contain a NUL character.",
   "3393b275f19c6391": "Enter a check command.",
@@ -3510,6 +3607,7 @@
   "4eeedde4705d4875": "No dollar limit: AgentD on this machine has no model prices.",
   "de894e40af577557": "Use at most {limit} acceptance criteria, one per line, with no leading dashes or NUL characters.",
   "de780c2046b3f051": "Use the format OWNER/REPO#123.",
+  "11a534f7a660a029": "O AgentD não confirmou seu último envio para a nuvem neste projeto, e ele ainda pode iniciar. Substituí-lo por este? Se ele tiver iniciado, este não será enviado.",
   "a8a5851eea99dbdb": "AgentD could not start the task.",
   "32aa561425215b73": "AgentD did not dispatch the task.",
   "06077698ed64f5df": "Started task {taskId}.",
@@ -3526,13 +3624,15 @@
   "72985eae43f9def3": "Issue (optional)",
   "096a8482c9b1451a": "AgentD saved task {taskId}, but it didn’t start in Cloud Workers. Check Background tasks for updates before trying again.",
   "4d4ec2226fc46ee3": "Task {taskId} was offered but did not start.",
+  "6a06a09e3a1f8f65": "Não foi possível alterar as permissões do arquivo.",
   "b2d4a97a97c93f80": "Review the task and its budget before starting a worker on your account.",
   "00ee0820465e85c7": "Waiting for the session’s agent…",
   "99ea3181ff9ebe91": "Draft from this conversation",
   "b98c20b1d8015a9d": "Hide details",
   "f5b66c481aa3e4df": "Editar",
   "e91857c891498df2": "This connection cannot start AgentD tasks.",
-  "1e13c026073ae979": "Submit this task in its place",
+  "b7088cd1c566d9c9": "Substituir",
+  "28eb5c34fe18cd54": "Não substituir",
   "cddd25f1fe0c5855": "Checking the earlier submission…",
   "81c18cf032b057e9": "Check and retry",
   "bba1e3a22505b87f": "Starting…",
@@ -3558,11 +3658,15 @@
   "066644fe3ef88185": "Workers",
   "08a6807fe489a75f": "Suggest workers",
   "7b19eee7c41fed42": "Run tasks on",
+  "cf518d77ed751670": "Conta LibraOS",
   "d12a5aa2ed967dea": "Default budget",
   "30e829a1a8a28216": "Dollars",
   "95b341922c1fa227": "Offer to hand a Code thread's task to a worker when a turn runs long or you send a message while it runs.",
   "7af00a32ca27332c": "Where Hand to a worker starts a task. You can change it for each task.",
   "066142017d5f22b9": "Cloud Workers need AgentD set up and your LibraOS account linked on the AgentD page.",
+  "97567e841a7d32aa": "Sua conta LibraOS está vinculada. O crédito e a chave estão na página do AgentD.",
+  "3fe0466eb86553f8": "Execute tarefas em máquinas da LibraOS em vez desta. Configure-as na página do AgentD.",
+  "1001952bd82ee967": "Gerenciar Cloud Workers",
   "232e5a93f6fd9568": "Enter whole minutes and a dollar amount above zero.",
   "a074cd7f34d3e73f": "Used when AgentD has no estimate for the task. AgentD on this machine has no model prices, so tasks here get only the minutes; the dollar amount applies to Cloud Workers.",
   "7661d98010296c92": "Used when AgentD has no estimate for the task.",
@@ -3584,6 +3688,8 @@
   "423f5560c920e52f": "Check out a named branch in this working directory first.",
   "a542a9e7e7d46218": "The working directory is on {branch}. Switch to a different branch first.",
   "bd2c6c29bee82864": "AgentD on this machine has no model prices, so it cannot hold a dollar limit. Use minutes, such as 60m.",
+  "ae8470f8ec58cfa1": "Não foi possível ler o origin deste checkout para o Cloud Workers. Tente novamente ou escolha “Editar” e desative “Run in the cloud” para executar esta tarefa aqui.",
+  "76f77c14c6d662e7": "Não foi possível acessar o AgentD para verificar o Cloud Workers. Tente novamente ou escolha “Editar” e desative “Run in the cloud” para executar esta tarefa aqui.",
   "a4aff358558707df": "This session has no project working directory.",
   "cee006e381c89877": "There is not enough LibraOS credit for Cloud Workers.",
   "7e4a9f1615efb801": "Sign in to LibraOS or connect the LibraOS Gateway to use LibraOS models.",
@@ -3604,6 +3710,9 @@
   "ab91ee697b514f96": "Budget up to {cap} (agentd has no estimate for similar tasks yet).",
   "b77cf4ce030a03fd": "Budget up to {cap} (similar tasks cost {low}–{high}).",
   "1105b01379db64cd": "The estimate comes from local runs of similar tasks.",
+  "23d1644e8161e56b": "Não foi possível acessar o AgentD para verificar o Cloud Workers.",
+  "2595e7b187340f8a": "O arquivo no campo da chave da OpenAI contém uma chave da Anthropic, então nada foi enviado. Coloque cada arquivo de chave no campo do seu próprio provedor.",
+  "c6053d841d41d8bc": "O arquivo no campo da chave da Anthropic contém uma chave da OpenAI, então nada foi enviado. Coloque cada arquivo de chave no campo do seu próprio provedor.",
   "87e3e1be8d076ca6": "Não foi possível acessar este ambiente. Tente novamente.",
   "74a8fc3d3e10acaf": "Este link de login está incompleto",
   "820397d04d4ea2df": "Feche esta página e inicie o login novamente pelo seu agente.",
@@ -4253,7 +4362,6 @@
       "v": "v"
     }
   ],
-  "9bbecec926c3b695": "Tentar novamente",
   "4fd8927b7afc2a92": "Copiar mensagem",
   "6f8651e48261911a": "Raciocínio",
   "ac511f991a3c1fab": "Pesquisa na web",
@@ -6492,7 +6600,6 @@
   "718a33a11c0e63a6": "Expira {time} · uso único",
   "800f3d6ba89ed228": "Copiar {label}",
   "402ad504ab1fe6a4": "Vinculado: {environments}",
-  "9ec433045537acfc": "Verificar novamente",
   "2fa65dc5d5e30e21": "Checking the hosted relay…",
   "e9aeca4977a84a3d": "Your hosted relay account is out of tunnels.",
   "aa5e468e4f0772e1": [

@@ -3121,6 +3121,8 @@
   "7f4fd9697b70d2ad": "Link account",
   "2c73362a57a1dff5": "AgentD page",
   "19ccb9ca234d58ce": "Worker settings",
+  "443d5674cf7e0c99": "Det gick inte att slå på AgentD:s watchdog-timer. Försök reparera igen, eller kör systemctl --user enable --now agentd-watchdog.timer i en terminal.",
+  "f456f04a3de8783d": "AgentD:s bakgrundstjänster kör en AgentD som saknas eller hör till gamla AgentD Desktop, och det gick inte att flytta dem till den här appens AgentD. Kör agentd install i en terminal.",
   "8b9fa521cecb4f8d": "Uses",
   "803dbf99343f4441": "Installed for the terminal",
   "b21f66984690c19a": [
@@ -3141,6 +3143,62 @@
   ],
   "c86e02018b5fd3b3": "To run agentd in a terminal, add this line to your shell profile:",
   "a28dff6e4d10f8e1": "Got it",
+  "39ec3f59be4e055c": [
+    "AgentD:s watchdog-tjänst kör ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ", som saknas eller hör till gamla AgentD Desktop."
+  ],
+  "e32b73bb21bcacb0": [
+    "AgentD:s instrumentpaneltjänst kör ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ", som saknas eller hör till gamla AgentD Desktop."
+  ],
+  "5328410a6f60d4c2": "AgentD:s watchdog-tjänst kör den här appens AgentD, men systemd har inte slagit på dess timer, så AgentD följer inte dina uppgifter medan appen är stängd. Reparera slår på den.",
+  "be9690d4ecd1205c": "AgentD:s watchdog-tjänst kör den här appens AgentD, men systemd har inte slagit på dess timer, så AgentD följer inte dina uppgifter medan appen är stängd. Kör agentd install på den datorn och sedan systemctl --user daemon-reload och systemctl --user enable --now agentd-watchdog.timer i en terminal.",
+  "6a59746b82dd08fb": "AgentD kunde inte läsa hur en av dess bakgrundstjänster är registrerad, och agentd install skulle skriva om den också, så Reparera erbjuds inte. Försök igen senare, eller kör agentd install i en terminal med den AgentD du använder.",
+  "3d3633596c70ff27": "En systemd-drop-in anger programmet som tjänsten kör, och agentd install ändrar inte drop-ins, så Reparera erbjuds inte för den. Ta bort ExecStart-raderna från drop-in-filen i ~/.config/systemd/user och kör systemctl --user daemon-reload. Kör sedan, i en terminal med den AgentD du använder, agentd install för watchdog eller agentd dash install för instrumentpanelen.",
+  "74d5bd28e284fa57": "En av AgentD:s bakgrundstjänster kör ett AgentD som saknas eller hör till gamla AgentD Desktop, och en annan kör ditt eget AgentD. Appen lät båda vara: kör agentd install med det AgentD du använder. Det skriver om båda tjänsterna med de AGENTD_ROOT och AGENTD_DB som är satta där du kör det; om instrumentpanelen använder egna, kör sedan agentd dash install med dem.",
+  "feed1033187aadc9": "AgentD:s bakgrundstjänster kör en AgentD som saknas eller tillhör gamla AgentD Desktop. Appens AgentD försvinner när appen stängs, så de lämnades orörda: installera agentd för terminalen och kör sedan agentd install.",
+  "e5409921bb75522c": "AgentD:s bakgrundstjänster kör inte den här appens AgentD än: AgentD startar dem inte medan äldre AgentD-tjänster är på. Kör det här och sedan agentd install i en terminal.",
+  "ef7c30f129576625": "Reparerar…",
+  "afb4c74d1cc655a7": "Reparera…",
+  "dc26fcb837031237": "Reparera AgentD:s bakgrundstjänster?",
+  "f24024c34b0e9c61": [
+    "Detta kör agentd install från appens AgentD (",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "), och på Linux även agentd dash install. Instrumentpanelen och watchdog registreras om med appens AgentD och den rot appen använder; en AGENTD_ROOT eller AGENTD_DB som de har nu behålls inte."
+  ],
+  "0e47cafe3b9470e4": [
+    "Detta kör agentd dash install från den här appens AgentD (",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "). Instrumentpanelen registreras om med den här appens AgentD och den rot som appen använder; en AGENTD_ROOT eller AGENTD_DB som den anger nu behålls inte."
+  ],
+  "0c8c50c77ace3fcf": [
+    "Detta kör agentd install från den här appens AgentD (",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "). Watchdog registreras om med den här appens AgentD och den rot som appen använder; en AGENTD_ROOT eller AGENTD_DB som den anger nu behålls inte."
+  ],
+  "97848e9a3bfa3bf6": "Reparera",
   "001d17590be2a445": "AgentD",
   "893bb44a7b9c9094": "Uppdatera",
   "57af791aca31d90a": "Background task",
@@ -3170,6 +3228,8 @@
   "1b7c524fccf06537": "Needs you",
   "db2fec7c6c08a6b4": "Workers",
   "8921053c4410665e": "Cloud Workers",
+  "f7eb4a8dece08115": "Kunde inte nå AgentD.",
+  "9bbecec926c3b695": "Försök igen",
   "84bc880c5d7799c4": "This version of AgentD has no Cloud Workers.",
   "1df964aa41b32b25": "Cloud Workers aren’t set up on this machine.",
   "e959699c0a2955e1": [
@@ -3450,6 +3510,9 @@
   "bb58748e4b230007": "ChatGPT (Codex)",
   "4283cbba1d675ef8": "ChatGPT (Codex): needs a newer AgentD",
   "0606bddb2fb895bd": "Run in the cloud",
+  "497643a79f9c7456": "Det gick inte att läsa den här utcheckningens origin. Försök igen, eller stäng av ”Run in the cloud” för att köra uppgiften här.",
+  "6726fb80ed5fc0dd": "Det gick inte att läsa den här utcheckningens origin.",
+  "758710d9f0cdd0f6": "Det gick inte att nå AgentD. Försök igen, eller stäng av ”Run in the cloud” för att köra uppgiften här.",
   "e2f5cc2eeccfc92b": "Cloud Workers require a GitHub repository as the checkout’s origin.",
   "16c7fc3b7eaea196": [
     "Cloud repository: ",
@@ -3477,6 +3540,37 @@
   "7d7bb753c7e99807": "Worker time is billed to LibraOS credits. Your provider bills inference separately; it isn’t covered by this dollar cap.",
   "e17f9689603be8f4": "Bläddra…",
   "256f4ab9a895674d": "Det här ser ut att vara själva nyckeln. Spara den i en fil och välj den filen.",
+  "564377ac68a9dbc8": "Det här är en Anthropic-nyckel; välj den under Anthropic-nyckelfil.",
+  "3190c4c819611d04": "Det här är en OpenAI-nyckel; välj den under OpenAI-nyckelfil.",
+  "6e09aa0bc2f5903e": [
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " kan läsas av andra användare. Kör",
+    " ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    },
+    " och försök sedan igen."
+  ],
+  "5e8c89ed36b770b3": "Åtgärda behörigheter",
+  "9ec433045537acfc": "Kontrollera igen",
+  "26870059a55a8693": [
+    "Det gick inte att läsa ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " på den här miljöns dator. Kontrollera sökvägen och att ditt konto kan läsa filen."
+  ],
+  "cbc2d86edf351bfc": "Det gick inte att kontrollera nyckelfilen.",
+  "3f9a96df2f740140": "Den här anslutningen kan inte läsa filer på den här miljöns dator, så AgentD kontrollerar nyckelfilen när du startar.",
+  "8590981f396d633b": "Kontrollerar nyckelfilen…",
   "0faf657712a9d10a": "Plan",
   "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
   "53150504b20565ec": "Needs a newer AgentD. Run agentd upgrade to use your Claude plan.",
@@ -3498,10 +3592,13 @@
     },
     "."
   ],
+  "dfb9a5114c1f0681": "Använd en annan auth.json",
+  "2643d467d5aae326": "Använd en annan tokenfil",
   "2df8ba1ffd667a89": "ChatGPT auth.json path (optional)",
   "2ad77b2747bd90e4": "Claude token file path (optional)",
   "a059069d84b5141d": "Billed to your ChatGPT plan. Worker time is billed to LibraOS credits.",
   "a72db40e119ee145": "Billed to your Claude plan. Worker time is billed to LibraOS credits.",
+  "b43c2d7958cebd86": "Uppgiften {taskId} startade i Cloud Workers. Följ förloppet under Background tasks.",
   "b95ea8f56ec99b89": "Enter a goal.",
   "acc4a4621973ddf9": "Enter a goal that does not begin with a dash or contain a NUL character.",
   "3393b275f19c6391": "Enter a check command.",
@@ -3510,6 +3607,7 @@
   "4eeedde4705d4875": "No dollar limit: AgentD on this machine has no model prices.",
   "de894e40af577557": "Use at most {limit} acceptance criteria, one per line, with no leading dashes or NUL characters.",
   "de780c2046b3f051": "Use the format OWNER/REPO#123.",
+  "11a534f7a660a029": "AgentD har inte bekräftat din senaste molninlämning för det här projektet, och den kan fortfarande starta. Ersätta den med den här? Om den startade skickas inte den här.",
   "a8a5851eea99dbdb": "AgentD could not start the task.",
   "32aa561425215b73": "AgentD did not dispatch the task.",
   "06077698ed64f5df": "Started task {taskId}.",
@@ -3526,13 +3624,15 @@
   "72985eae43f9def3": "Issue (optional)",
   "096a8482c9b1451a": "AgentD saved task {taskId}, but it didn’t start in Cloud Workers. Check Background tasks for updates before trying again.",
   "4d4ec2226fc46ee3": "Task {taskId} was offered but did not start.",
+  "6a06a09e3a1f8f65": "Det gick inte att ändra filens behörigheter.",
   "b2d4a97a97c93f80": "Review the task and its budget before starting a worker on your account.",
   "00ee0820465e85c7": "Waiting for the session’s agent…",
   "99ea3181ff9ebe91": "Draft from this conversation",
   "b98c20b1d8015a9d": "Hide details",
   "f5b66c481aa3e4df": "Redigera",
   "e91857c891498df2": "This connection cannot start AgentD tasks.",
-  "1e13c026073ae979": "Submit this task in its place",
+  "b7088cd1c566d9c9": "Ersätt",
+  "28eb5c34fe18cd54": "Ersätt inte",
   "cddd25f1fe0c5855": "Checking the earlier submission…",
   "81c18cf032b057e9": "Check and retry",
   "bba1e3a22505b87f": "Starting…",
@@ -3558,11 +3658,15 @@
   "066644fe3ef88185": "Workers",
   "08a6807fe489a75f": "Suggest workers",
   "7b19eee7c41fed42": "Run tasks on",
+  "cf518d77ed751670": "LibraOS-konto",
   "d12a5aa2ed967dea": "Default budget",
   "30e829a1a8a28216": "Dollars",
   "95b341922c1fa227": "Offer to hand a Code thread's task to a worker when a turn runs long or you send a message while it runs.",
   "7af00a32ca27332c": "Where Hand to a worker starts a task. You can change it for each task.",
   "066142017d5f22b9": "Cloud Workers need AgentD set up and your LibraOS account linked on the AgentD page.",
+  "97567e841a7d32aa": "Ditt LibraOS-konto är länkat. Dess kredit och nyckel finns på AgentD-sidan.",
+  "3fe0466eb86553f8": "Kör uppgifter på LibraOS-maskiner i stället för den här. Ställ in dem på AgentD-sidan.",
+  "1001952bd82ee967": "Hantera Cloud Workers",
   "232e5a93f6fd9568": "Enter whole minutes and a dollar amount above zero.",
   "a074cd7f34d3e73f": "Used when AgentD has no estimate for the task. AgentD on this machine has no model prices, so tasks here get only the minutes; the dollar amount applies to Cloud Workers.",
   "7661d98010296c92": "Used when AgentD has no estimate for the task.",
@@ -3584,6 +3688,8 @@
   "423f5560c920e52f": "Check out a named branch in this working directory first.",
   "a542a9e7e7d46218": "The working directory is on {branch}. Switch to a different branch first.",
   "bd2c6c29bee82864": "AgentD on this machine has no model prices, so it cannot hold a dollar limit. Use minutes, such as 60m.",
+  "ae8470f8ec58cfa1": "Det gick inte att läsa den här utcheckningens origin för Cloud Workers. Försök igen, eller välj ”Redigera” och stäng av ”Run in the cloud” för att köra uppgiften här.",
+  "76f77c14c6d662e7": "Det gick inte att nå AgentD för att kontrollera Cloud Workers. Försök igen, eller välj ”Redigera” och stäng av ”Run in the cloud” för att köra uppgiften här.",
   "a4aff358558707df": "This session has no project working directory.",
   "cee006e381c89877": "There is not enough LibraOS credit for Cloud Workers.",
   "7e4a9f1615efb801": "Sign in to LibraOS or connect the LibraOS Gateway to use LibraOS models.",
@@ -3604,6 +3710,9 @@
   "ab91ee697b514f96": "Budget up to {cap} (agentd has no estimate for similar tasks yet).",
   "b77cf4ce030a03fd": "Budget up to {cap} (similar tasks cost {low}–{high}).",
   "1105b01379db64cd": "The estimate comes from local runs of similar tasks.",
+  "23d1644e8161e56b": "Det gick inte att nå AgentD för att kontrollera Cloud Workers.",
+  "2595e7b187340f8a": "Filen i fältet för OpenAI-nyckeln innehåller en Anthropic-nyckel, så inget skickades. Lägg varje nyckelfil i sin egen leverantörs fält.",
+  "c6053d841d41d8bc": "Filen i fältet för Anthropic-nyckeln innehåller en OpenAI-nyckel, så inget skickades. Lägg varje nyckelfil i sin egen leverantörs fält.",
   "87e3e1be8d076ca6": "Kunde inte nå den här miljön. Försök igen.",
   "74a8fc3d3e10acaf": "Den här inloggningslänken är ofullständig",
   "820397d04d4ea2df": "Stäng den här sidan och starta inloggningen igen från din agent.",
@@ -4253,7 +4362,6 @@
       "v": "v"
     }
   ],
-  "9bbecec926c3b695": "Försök igen",
   "4fd8927b7afc2a92": "Kopiera meddelande",
   "6f8651e48261911a": "Tanke",
   "ac511f991a3c1fab": "Webbsökning",
@@ -6493,7 +6601,6 @@
   "718a33a11c0e63a6": "Går ut {time} · en användning",
   "800f3d6ba89ed228": "Kopiera {label}",
   "402ad504ab1fe6a4": "Länkade: {environments}",
-  "9ec433045537acfc": "Kontrollera igen",
   "2fa65dc5d5e30e21": "Checking the hosted relay…",
   "e9aeca4977a84a3d": "Your hosted relay account is out of tunnels.",
   "aa5e468e4f0772e1": [
