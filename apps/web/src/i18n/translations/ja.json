@@ -3002,6 +3002,7 @@
   "1e358a7392662403": "ターミナルの起動入力が無効です",
   "78afe8f657a424b5": "この環境は使用量を報告できませんでした。",
   "7e007018635dcd2b": "この接続ではスレッドやプロジェクトを変更できません。",
+  "c28102a5b9d35f9c": "Budget used",
   "1e1df8f48c421413": "Stop this background task?\n{title}",
   "b7d61910316f86a9": "Untitled task",
   "465643a63f98226b": "Local worker",
@@ -3027,6 +3028,61 @@
       "v": "v"
     }
   ],
+  "b5210e40aa57d3d0": "Budget used",
+  "2a3aad5091e435a0": [
+    "Time: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " of ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    },
+    " min"
+  ],
+  "28200bcefb088b3a": [
+    "Budget: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "d277b0ec38959170": [
+    "Estimated cost: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " of",
+    " ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    }
+  ],
+  "6de5aa237e1aee92": [
+    "Cost: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " of",
+    " ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    }
+  ],
+  "8157da18a493cabf": "Latest report",
   "dc6fbc8cd1b7528b": "Check result",
   "de4069eb8cca9f58": "No check result was recorded.",
   "39bbd757e4977de7": "Next step",
@@ -3368,6 +3424,7 @@
   "7b6058e001c8cbbb": "Hand this to Cloud Workers",
   "4f46f448da7c06cf": "Hand this to a worker",
   "9fa3a3b35507d8c9": "A local worker cannot start on this branch, so Cloud Workers would take the task while you keep working.",
+  "db521ab750130dd8": "A worker on this machine or Cloud Workers can take this task in the background while you keep working.",
   "e3ceb4aa50f129f6": "A worker can take this task in the background while you keep working.",
   "2903b7545da9f578": "Draft the task",
   "50d55d89adc66bde": "Don't suggest again",
@@ -3430,6 +3487,13 @@
   "3ed9449038f86fe1": "No background tasks",
   "3e2b0e58ad657ac0": "Agentd tasks are unavailable in this environment.",
   "33838ca8ef5a710a": "No agentd tasks.",
+  "a8a5851eea99dbdb": "AgentD could not start the task.",
+  "915c8a1b47d2c43e": "別のタスク「{goal}」({taskId})がすでにこのフォルダーを使用しています。",
+  "b9ea4a0a3fe98599": "別のタスク {taskId} がすでにこのフォルダーを使用しています。",
+  "f6d2b8c94d5046e6": "そのワーカーはまだ実行中のため、ここでは解放できません。「それでも開始」を選ぶと、両方のタスクがこのフォルダーで実行されます。",
+  "b5614489d66314ac": "実行中のワーカーはありません。解放して取り消すか、それでも開始して両方を実行してください。",
+  "8890872addc84ccb": "解放する",
+  "b1300aafd1f80e70": "それでも開始",
   "d3005d337f16bbdc": "Claude Code に {folder} での作業を許可しますか?",
   "6c62d552e545baa3": "Claude Code はこのフォルダーでまだ作業したことがありません。ワーカーはこのフォルダー内のファイルを読み取り、変更し、実行できます。内容を信頼できる場合にのみ信頼してください。この設定はこのフォルダーについてのみ Claude Code の設定に保存されます。",
   "6bf889f29dcdea14": "フォルダーを信頼",
@@ -3610,7 +3674,6 @@
   "de894e40af577557": "Use at most {limit} acceptance criteria, one per line, with no leading dashes or NUL characters.",
   "de780c2046b3f051": "Use the format OWNER/REPO#123.",
   "11a534f7a660a029": "このプロジェクトの前回のクラウド送信を AgentD はまだ確認しておらず、これから開始される可能性があります。これで置き換えますか？前回が開始されていた場合、これは送信されません。",
-  "a8a5851eea99dbdb": "AgentD could not start the task.",
   "32aa561425215b73": "AgentD did not dispatch the task.",
   "06077698ed64f5df": "Started task {taskId}.",
   "27c99031d8a1610a": "The session’s agent did not return a usable draft. You can still fill in the form.",
@@ -6694,9 +6757,7 @@
   "f04449ef0f53b2dc": "AWS Bedrock",
   "3ebe9954c9b6bf42": "Ollama",
   "ebac2156346a59a2": "Custom endpoint",
-  "06ada39223f6f038": "Requires Anthropic Messages or a compatible Bedrock or Vertex endpoint.",
-  "3e015a7e4eba12f9": "Requires the OpenAI Responses API.",
-  "e7aaac4bb76fe7cc": "Supports Chat Completions, Responses, or Messages, depending on the provider.",
+  "f4f5a2036b7f72fb": "A gateway in OpenAI or Anthropic format.",
   "267bac6e490fa30f": "Endpoint options",
   "58544f79b951832d": "Requires a LibraOS account.",
   "fbd47bca1f578be2": "Could not reach this environment.",
@@ -6742,6 +6803,31 @@
   ],
   "fc05a3512bf05489": "確認しています…",
   "90f46dbf8782cfde": "接続",
+  "2346201ee58345a6": "URL にちなんだ名前",
+  "6007379944a37bdc": "1 行に 1 つ、またはカンマ区切り",
+  "2324770ba91371ac": "エンドポイント URL",
+  "68344050bb5b3a8e": "形式",
+  "0dba8cb3f91d917e": "Codex と opencode のエージェントを追加します。",
+  "21eb280a9c3079e1": "Claude Code と opencode のエージェントを追加します。",
+  "4fb1cb70618c4301": "Key",
+  "2e60ae63debbd25c": "キー（任意）",
+  "ef9e31c104663328": "キーはこの環境に保存されます。モデルはエンドポイントのモデル一覧から読み込まれます。",
+  "637bd3b695cd0478": "ゲートウェイを追加",
+  "fe31e277ec3e8ec9": [
+    "モデル一覧を読み込めませんでした: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "90df975988a89f95": "モデル ID",
+  "5a7e4ea65d71f6fc": "これらのモデルで保存",
+  "4febcd20bf8b3513": "あなたのゲートウェイ",
+  "ddc7443cc9ed3b07": "{name} を削除しますか？そのエージェントとキーがこの環境から削除されます。",
+  "7906a00299fbb2c8": "あなたのゲートウェイ",
+  "9b20df3e21a3d401": "名前を変更",
+  "111a44209dc6e701": "削除",
   "26dca8ee72dc5d74": "設定を読み取れませんでした",
   "52e7a660ce883609": "接続中です",
   "9a50b20569f2c9e7": "保存された設定を読み込めませんでした。",
@@ -10370,7 +10456,6 @@
   ],
   "13d4f258e93f1dc1": "プロバイダー変数の読み取り元となるシークレットプロバイダーを管理するには、環境に接続してください。",
   "88466f5a03be2419": "環境全体の設定です。変更するには環境を選択してください。",
-  "111a44209dc6e701": "削除",
   "a3538ba5ca802bd7": [
     {
       "i": 1,

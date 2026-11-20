@@ -3004,6 +3004,7 @@
   "1e358a7392662403": "Некорректные данные запуска терминала",
   "78afe8f657a424b5": "Окружение не смогло сообщить данные использования.",
   "7e007018635dcd2b": "Это подключение не может изменять треды или проекты.",
+  "c28102a5b9d35f9c": "Budget used",
   "1e1df8f48c421413": "Stop this background task?\n{title}",
   "b7d61910316f86a9": "Untitled task",
   "465643a63f98226b": "Local worker",
@@ -3029,6 +3030,61 @@
       "v": "v"
     }
   ],
+  "b5210e40aa57d3d0": "Budget used",
+  "2a3aad5091e435a0": [
+    "Time: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " of ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    },
+    " min"
+  ],
+  "28200bcefb088b3a": [
+    "Budget: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "d277b0ec38959170": [
+    "Estimated cost: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " of",
+    " ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    }
+  ],
+  "6de5aa237e1aee92": [
+    "Cost: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " of",
+    " ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    }
+  ],
+  "8157da18a493cabf": "Latest report",
   "dc6fbc8cd1b7528b": "Check result",
   "de4069eb8cca9f58": "No check result was recorded.",
   "39bbd757e4977de7": "Next step",
@@ -3370,6 +3426,7 @@
   "7b6058e001c8cbbb": "Hand this to Cloud Workers",
   "4f46f448da7c06cf": "Hand this to a worker",
   "9fa3a3b35507d8c9": "A local worker cannot start on this branch, so Cloud Workers would take the task while you keep working.",
+  "db521ab750130dd8": "A worker on this machine or Cloud Workers can take this task in the background while you keep working.",
   "e3ceb4aa50f129f6": "A worker can take this task in the background while you keep working.",
   "2903b7545da9f578": "Draft the task",
   "50d55d89adc66bde": "Don't suggest again",
@@ -3432,6 +3489,13 @@
   "3ed9449038f86fe1": "No background tasks",
   "3e2b0e58ad657ac0": "Agentd tasks are unavailable in this environment.",
   "33838ca8ef5a710a": "No agentd tasks.",
+  "a8a5851eea99dbdb": "AgentD could not start the task.",
+  "915c8a1b47d2c43e": "Другая задача, «{goal}» ({taskId}), уже занимает эту папку.",
+  "b9ea4a0a3fe98599": "Другая задача, {taskId}, уже занимает эту папку.",
+  "f6d2b8c94d5046e6": "Её воркер всё ещё работает, поэтому освободить её здесь нельзя. «Всё равно запустить» запустит обе задачи в этой папке.",
+  "b5614489d66314ac": "У неё нет работающего воркера. Освободите её, чтобы отменить, или всё равно запустите, чтобы выполнять обе.",
+  "8890872addc84ccb": "Освободить",
+  "b1300aafd1f80e70": "Всё равно запустить",
   "d3005d337f16bbdc": "Разрешить Claude Code работать в {folder}?",
   "6c62d552e545baa3": "Claude Code ещё не работал в этой папке. Исполнитель может читать, изменять и запускать в ней файлы. Доверяйте ей, только если доверяете её содержимому. Это сохраняется в настройках Claude Code только для этой папки.",
   "6bf889f29dcdea14": "Доверять папке",
@@ -3612,7 +3676,6 @@
   "de894e40af577557": "Use at most {limit} acceptance criteria, one per line, with no leading dashes or NUL characters.",
   "de780c2046b3f051": "Use the format OWNER/REPO#123.",
   "11a534f7a660a029": "AgentD не подтвердил вашу последнюю отправку в облако для этого проекта, и она ещё может запуститься. Заменить её этой? Если она запустилась, эта не будет отправлена.",
-  "a8a5851eea99dbdb": "AgentD could not start the task.",
   "32aa561425215b73": "AgentD did not dispatch the task.",
   "06077698ed64f5df": "Started task {taskId}.",
   "27c99031d8a1610a": "The session’s agent did not return a usable draft. You can still fill in the form.",
@@ -6707,9 +6770,7 @@
   "f04449ef0f53b2dc": "AWS Bedrock",
   "3ebe9954c9b6bf42": "Ollama",
   "ebac2156346a59a2": "Custom endpoint",
-  "06ada39223f6f038": "Requires Anthropic Messages or a compatible Bedrock or Vertex endpoint.",
-  "3e015a7e4eba12f9": "Requires the OpenAI Responses API.",
-  "e7aaac4bb76fe7cc": "Supports Chat Completions, Responses, or Messages, depending on the provider.",
+  "f4f5a2036b7f72fb": "A gateway in OpenAI or Anthropic format.",
   "267bac6e490fa30f": "Endpoint options",
   "58544f79b951832d": "Requires a LibraOS account.",
   "fbd47bca1f578be2": "Could not reach this environment.",
@@ -6755,6 +6816,31 @@
   ],
   "fc05a3512bf05489": "Проверка…",
   "90f46dbf8782cfde": "Подключить",
+  "2346201ee58345a6": "Назван по своему URL",
+  "6007379944a37bdc": "По одному в строке или через запятую",
+  "2324770ba91371ac": "URL конечной точки",
+  "68344050bb5b3a8e": "Формат",
+  "0dba8cb3f91d917e": "Добавляет агентов Codex и opencode.",
+  "21eb280a9c3079e1": "Добавляет агентов Claude Code и opencode.",
+  "4fb1cb70618c4301": "Key",
+  "2e60ae63debbd25c": "Ключ (необязательно)",
+  "ef9e31c104663328": "Ключ остаётся в этом окружении. Модели берутся из списка моделей конечной точки.",
+  "637bd3b695cd0478": "Добавить шлюз",
+  "fe31e277ec3e8ec9": [
+    "Не удалось прочитать список моделей: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "90df975988a89f95": "ID моделей",
+  "5a7e4ea65d71f6fc": "Сохранить с этими моделями",
+  "4febcd20bf8b3513": "Ваши шлюзы",
+  "ddc7443cc9ed3b07": "Удалить {name}? Его агенты и ключ будут удалены из этого окружения.",
+  "7906a00299fbb2c8": "Ваши шлюзы",
+  "9b20df3e21a3d401": "Переименовать",
+  "111a44209dc6e701": "Удалить",
   "26dca8ee72dc5d74": "Не удалось прочитать настройки",
   "52e7a660ce883609": "Подключение ещё идёт",
   "9a50b20569f2c9e7": "Не удалось загрузить сохранённые настройки.",
@@ -10407,7 +10493,6 @@
   ],
   "13d4f258e93f1dc1": "Подключите окружение, чтобы управлять провайдерами секретов, из которых читают его переменные провайдеров.",
   "88466f5a03be2419": "Настройка для всего окружения. Выберите окружение, чтобы изменить её.",
-  "111a44209dc6e701": "Удалить",
   "a3538ba5ca802bd7": [
     "Удалить ",
     {

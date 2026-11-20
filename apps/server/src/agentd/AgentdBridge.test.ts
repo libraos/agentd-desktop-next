@@ -524,6 +524,93 @@ describe("AgentdBridge", () => {
     }),
   );
 
+  it.effect("names the task holding the directory, and releases or forces past it as chosen", () =>
+    Effect.gen(function* () {
+      const calls: string[] = [];
+      let running = false;
+      const refusal =
+        "error: dispatch refused: /work/app already has handoff hof-b10c4ed001, claimed by session codex-615065aa16; wait for it, use another worktree or issue, or override with --force";
+      const bridge = yield* makeBridge({ AGENTD_BIN: process.execPath }, (input) => {
+        const line = input.args.join(" ");
+        calls.push(line);
+        if (input.args[0] === "new") return Effect.succeed(output(`{"handoff":"hof-0e3d000001"}`));
+        switch (line) {
+          case "handoff dispatch hof-0e3d000001 --tool codex":
+            return Effect.succeed(
+              calls.includes(
+                "handoff done hof-b10c4ed001 --cancel --reason Released from AgentD Next to start hof-0e3d000001",
+              )
+                ? output("{}")
+                : { ...output("", 1), stderr: refusal },
+            );
+          case "handoff dispatch hof-0e3d000001 --tool codex --force":
+          case "handoff done hof-b10c4ed001 --cancel --reason Released from AgentD Next to start hof-0e3d000001":
+            return Effect.succeed(output("{}"));
+          case "handoff list --json":
+            return Effect.succeed(
+              output(
+                JSON.stringify([
+                  {
+                    id: "hof-b10c4ed001",
+                    state: "claimed",
+                    goal: "Tidy the README",
+                    ...(running ? { worker_running: true } : {}),
+                  },
+                ]),
+              ),
+            );
+          default:
+            return Effect.die(`unexpected agentd ${line}`);
+        }
+      });
+      const started = yield* bridge.startTask({
+        goal: "Fix the login form",
+        accept: [],
+        check: null,
+        worker: "codex",
+        budget: "30m",
+        cwd: "/work/app",
+        issue: null,
+      });
+      expect(started).toEqual({
+        id: "hof-0e3d000001",
+        started: false,
+        note: refusal,
+        blocking: {
+          id: "hof-b10c4ed001",
+          state: "claimed",
+          goal: "Tidy the README",
+          running: false,
+        },
+      });
+
+      const retry = { id: "hof-0e3d000001", worker: "codex", blocking: "hof-b10c4ed001" } as const;
+      running = true;
+      const live = yield* Effect.flip(bridge.retryStart({ ...retry, action: "release" }));
+      expect(live.message).toBe(
+        "Task hof-b10c4ed001 still has a worker running, so it was not released.",
+      );
+      expect(calls.some((call) => call.startsWith("handoff done"))).toBe(false);
+
+      calls.length = 0;
+      expect(yield* bridge.retryStart({ ...retry, action: "force" })).toMatchObject({
+        started: true,
+      });
+      expect(calls).toEqual(["handoff dispatch hof-0e3d000001 --tool codex --force"]);
+
+      running = false;
+      calls.length = 0;
+      expect(yield* bridge.retryStart({ ...retry, action: "release" })).toMatchObject({
+        started: true,
+      });
+      expect(calls).toEqual([
+        "handoff list --json",
+        "handoff done hof-b10c4ed001 --cancel --reason Released from AgentD Next to start hof-0e3d000001",
+        "handoff dispatch hof-0e3d000001 --tool codex",
+      ]);
+    }),
+  );
+
   it.effect("syncs open cloud jobs beside the task list, never holding it up", () =>
     Effect.gen(function* () {
       const row = (state: string) =>

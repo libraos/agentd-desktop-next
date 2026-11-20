@@ -1173,10 +1173,10 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const tabThreads = threads.filter((thread) => tabOfThread(thread) === sidebarTab);
   const hasCodeThreadsOutsideChat =
     sidebarTab === "chat" && threads.some((thread) => tabOfThread(thread) === "code");
-  // Chat lists only scratch projects, so its Settled shelf counts and reads only theirs.
-  const chatProjectKeys = new Set(
+  // Each tab lists only its own projects, so its unscoped Settled shelf counts and reads only theirs.
+  const tabProjectKeys = new Set(
     projects.flatMap((project) =>
-      tabOfThread({ environmentId: project.environmentId, projectId: project.id }) === "chat"
+      tabOfThread({ environmentId: project.environmentId, projectId: project.id }) === sidebarTab
         ? [`${project.environmentId}:${project.id}`]
         : [],
     ),
@@ -1422,7 +1422,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   } = useSidebarThreads({
     projectScopeKey,
     scopedProjectKeys,
-    settledProjectKeys: sidebarTab === "chat" ? chatProjectKeys : scopedProjectKeys,
+    settledProjectKeys: scopedProjectKeys ?? tabProjectKeys,
     serverConfigs,
     connectedEnvironmentIds,
     optimisticDrop,

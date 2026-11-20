@@ -79,6 +79,7 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   [WS_METHODS.scheduledTasksRotateWebhookToken]: AuthOrchestrationOperateScope,
   // agentd tasks start and stop agent workers on this host, as threads do.
   [WS_METHODS.agentdStartTask]: AuthOrchestrationOperateScope,
+  [WS_METHODS.agentdRetryStart]: AuthOrchestrationOperateScope,
   [WS_METHODS.agentdStopTask]: AuthOrchestrationOperateScope,
   // Connecting an agent edits its config on this host; joining a team links the host to a server.
   [WS_METHODS.agentdConnectAgent]: AuthEnvironmentMaintainScope,
@@ -99,6 +100,11 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   // The Gateway key goes to this host's agentd and its agents' sessions.
   [WS_METHODS.libraosGatewayConnect]: AuthEnvironmentMaintainScope,
   [WS_METHODS.libraosGatewayDisconnect]: AuthEnvironmentMaintainScope,
+  // A custom gateway's key goes to this host's agents' sessions, as the Gateway key does.
+  [WS_METHODS.customGatewayAdd]: AuthEnvironmentMaintainScope,
+  [WS_METHODS.customGatewayRename]: AuthEnvironmentMaintainScope,
+  [WS_METHODS.customGatewayRemove]: AuthEnvironmentMaintainScope,
+  [WS_METHODS.customGatewayRefreshModels]: AuthEnvironmentMaintainScope,
   [ORCHESTRATION_V2_WS_METHODS.stopWorkflow]: AuthOrchestrationOperateScope,
   // Force stop kills agent processes, as Stop on a terminal does.
   [ORCHESTRATION_V2_WS_METHODS.forceStopThread]: AuthOrchestrationOperateScope,

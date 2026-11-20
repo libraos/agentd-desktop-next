@@ -391,6 +391,7 @@ import {
   AgentdPeopleInput,
   AgentdStartTaskInput,
   AgentdStartTaskResult,
+  AgentdRetryStartInput,
   AgentdStatus,
   AgentdStopTaskInput,
   AgentdTask,
@@ -425,6 +426,14 @@ import {
   LibraosGatewayError,
   LibraosGatewayStatus,
 } from "./libraosGateway.ts";
+import {
+  CustomGatewayAddInput,
+  CustomGatewayAddResult,
+  CustomGatewayError,
+  CustomGatewayIdInput,
+  CustomGatewayList,
+  CustomGatewayRenameInput,
+} from "./customGateway.ts";
 import {
   UsageLimitSourceError,
   ProviderConsumeResetCreditInput,
@@ -726,6 +735,7 @@ export const WS_METHODS = {
   agentdSubscribeTaskOutput: "agentd.subscribeTaskOutput",
   agentdStopTask: "agentd.stopTask",
   agentdStartTask: "agentd.startTask",
+  agentdRetryStart: "agentd.retryStart",
   agentdApprovals: "agentd.approvals",
   agentdInbox: "agentd.inbox",
   agentdPeople: "agentd.people",
@@ -752,6 +762,11 @@ export const WS_METHODS = {
   libraosGatewayStatus: "libraosGateway.status",
   libraosGatewayConnect: "libraosGateway.connect",
   libraosGatewayDisconnect: "libraosGateway.disconnect",
+  customGatewayList: "customGateway.list",
+  customGatewayAdd: "customGateway.add",
+  customGatewayRename: "customGateway.rename",
+  customGatewayRemove: "customGateway.remove",
+  customGatewayRefreshModels: "customGateway.refreshModels",
 } as const;
 
 const WsServerUpsertKeybindingRpc = Rpc.make(WS_METHODS.serverUpsertKeybinding, {
@@ -2370,6 +2385,12 @@ const WsAgentdStartTaskRpc = Rpc.make(WS_METHODS.agentdStartTask, {
   error: AgentdRpcError,
 });
 
+const WsAgentdRetryStartRpc = Rpc.make(WS_METHODS.agentdRetryStart, {
+  payload: AgentdRetryStartInput,
+  success: AgentdStartTaskResult,
+  error: AgentdRpcError,
+});
+
 const WsAgentdApprovalsRpc = Rpc.make(WS_METHODS.agentdApprovals, {
   payload: Schema.Struct({}),
   success: Schema.Array(AgentdApproval),
@@ -2524,6 +2545,38 @@ const WsLibraosGatewayDisconnectRpc = Rpc.make(WS_METHODS.libraosGatewayDisconne
   payload: Schema.Struct({}),
   success: LibraosGatewayStatus,
   error: LibraosGatewayRpcError,
+});
+
+const CustomGatewayRpcError = Schema.Union([CustomGatewayError, EnvironmentAuthorizationError]);
+
+const WsCustomGatewayListRpc = Rpc.make(WS_METHODS.customGatewayList, {
+  payload: Schema.Struct({}),
+  success: CustomGatewayList,
+  error: CustomGatewayRpcError,
+});
+
+const WsCustomGatewayAddRpc = Rpc.make(WS_METHODS.customGatewayAdd, {
+  payload: CustomGatewayAddInput,
+  success: CustomGatewayAddResult,
+  error: CustomGatewayRpcError,
+});
+
+const WsCustomGatewayRenameRpc = Rpc.make(WS_METHODS.customGatewayRename, {
+  payload: CustomGatewayRenameInput,
+  success: CustomGatewayList,
+  error: CustomGatewayRpcError,
+});
+
+const WsCustomGatewayRemoveRpc = Rpc.make(WS_METHODS.customGatewayRemove, {
+  payload: CustomGatewayIdInput,
+  success: CustomGatewayList,
+  error: CustomGatewayRpcError,
+});
+
+const WsCustomGatewayRefreshModelsRpc = Rpc.make(WS_METHODS.customGatewayRefreshModels, {
+  payload: CustomGatewayIdInput,
+  success: CustomGatewayList,
+  error: CustomGatewayRpcError,
 });
 
 export class RpcScopeAuthorization extends RpcMiddleware.Service<RpcScopeAuthorization>()(
@@ -2750,6 +2803,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsAgentdSubscribeTaskOutputRpc,
   WsAgentdStopTaskRpc,
   WsAgentdStartTaskRpc,
+  WsAgentdRetryStartRpc,
   WsAgentdApprovalsRpc,
   WsAgentdInboxRpc,
   WsAgentdPeopleRpc,
@@ -2775,6 +2829,11 @@ export const WsRpcGroup = RpcGroup.make(
   WsLibraosGatewayStatusRpc,
   WsLibraosGatewayConnectRpc,
   WsLibraosGatewayDisconnectRpc,
+  WsCustomGatewayListRpc,
+  WsCustomGatewayAddRpc,
+  WsCustomGatewayRenameRpc,
+  WsCustomGatewayRemoveRpc,
+  WsCustomGatewayRefreshModelsRpc,
   WsOrchestrationV2DispatchCommandRpc,
   WsOrchestrationV2GetWorkflowScriptRpc,
   WsOrchestrationV2GetNativeChildWorkRpc,

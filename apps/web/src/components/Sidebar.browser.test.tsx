@@ -656,7 +656,7 @@ describe("sidebar Chat and Code tabs", () => {
     ).toHaveLength(0);
   });
 
-  it("Chat counts and pages only chats as Settled, and points to Code for project sessions", async () => {
+  it("Chat and Code each count and page only their own Settled threads, and Chat points to Code", async () => {
     localStorage.setItem("t3code:sidebar:settled-expanded", "true");
     using _expanded = {
       [Symbol.dispose]: () => localStorage.removeItem("t3code:sidebar:settled-expanded"),
@@ -666,12 +666,17 @@ describe("sidebar Chat and Code tabs", () => {
       settledOverride: "settled" as const,
       settledAt: "2026-01-01T00:00:00.000Z",
     };
-    // The server holds 37 older settled project sessions this client has not loaded.
+    // The server holds 37 older settled project sessions and 3 older settled chats this client
+    // has not loaded; asked for every project, it counts both.
     const originalShelf = vi.mocked(shelfHooks.useOlderSettledShelf).getMockImplementation()!;
     using _shelf = vi.spyOn(shelfHooks, "useOlderSettledShelf").mockImplementation((input) => ({
       ...originalShelf(input),
       unloadedCount: () =>
-        input.scopes.some((scope) => scope.projectIds?.includes(app.id) ?? true) ? 37 : 0,
+        input.scopes.some((scope) => scope.projectIds === null)
+          ? 40
+          : input.scopes.some((scope) => scope.projectIds?.includes(app.id))
+            ? 37
+            : 0,
     }));
     using _setup = setup({ threads: [settledChat, appThread], route: null }).stack;
     await using screen = await renderSidebar();
@@ -690,6 +695,13 @@ describe("sidebar Chat and Code tabs", () => {
     expect(
       screen.getByRole("button", { name: "Project sessions are in Code" }).elements(),
     ).toHaveLength(0);
+    // Code with no project chosen counts and pages only project sessions, not the chats.
+    await expect.element(settledHeader().getByText("37", { exact: true })).toBeVisible();
+    expect(
+      vi
+        .mocked(shelfHooks.useOlderSettledShelf)
+        .mock.lastCall![0].scopes.map((scope) => scope.projectIds),
+    ).toEqual([[app.id]]);
   });
 
   it("Chat has no pointer to Code without project sessions", async () => {

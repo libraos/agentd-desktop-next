@@ -34,6 +34,7 @@ import {
   AuthFilesystemReadScope,
   AuthProvidersManageScope,
   isLibraosGatewayInstanceId,
+  customGatewayIdOfInstance,
   type AuthEnvironmentScope,
   type ScheduledTaskListResult,
   AuthSessionId,
@@ -248,6 +249,7 @@ import * as AgentdInit from "./agentd/agentdInit.ts";
 import * as AgentdSkills from "./agentd/AgentdSkills.ts";
 import { enteredKeyFiles, startErrorFor } from "./agentd/cloudFailure.ts";
 import * as LibraosGateway from "./gateway/LibraosGateway.ts";
+import * as CustomGateway from "./gateway/CustomGateway.ts";
 import * as ProcessDiagnostics from "./diagnostics/ProcessDiagnostics.ts";
 import * as ProcessResourceMonitor from "./diagnostics/ProcessResourceMonitor.ts";
 import * as ResourceTelemetry from "./resourceTelemetry/ResourceTelemetry.ts";
@@ -1606,6 +1608,7 @@ export const layerWsRpc = (
       const agentdInit = yield* AgentdInit.AgentdInit;
       const agentdSkills = yield* AgentdSkills.AgentdSkillsService;
       const libraosGateway = yield* LibraosGateway.LibraosGateway;
+      const customGateway = yield* CustomGateway.CustomGateway;
       const triage = yield* TriageService.TriageService;
       const hostResources = yield* HostResources.HostResources;
       const processResourceMonitor = yield* ProcessResourceMonitor.ProcessResourceMonitor;
@@ -2513,6 +2516,22 @@ export const layerWsRpc = (
               (input.instanceId === undefined || isLibraosGatewayInstanceId(input.instanceId))
             ) {
               yield* libraosGateway.refreshModels;
+            }
+            const customGatewayId =
+              input.instanceId === undefined ? null : customGatewayIdOfInstance(input.instanceId);
+            if (
+              input.refreshModels &&
+              customGatewayId !== null &&
+              currentSession.scopes.includes(AuthProvidersManageScope)
+            ) {
+              // An unreadable list keeps the last one; the provider's status shows the rest.
+              yield* customGateway.refreshModels(customGatewayId).pipe(
+                Effect.catch((error) =>
+                  Effect.logWarning("Custom gateway: could not refresh its models", {
+                    message: error.message,
+                  }),
+                ),
+              );
             }
             if (input.refreshModels) {
               yield* providerRegistry.invalidateModelCaches({
@@ -3634,6 +3653,7 @@ export const layerWsRpc = (
                 ),
               ),
             ),
+        [WS_METHODS.agentdRetryStart]: (input) => agentd.retryStart(input),
         [WS_METHODS.agentdApprovals]: (_input) => agentd.approvals,
         [WS_METHODS.agentdInbox]: (_input) => agentd.inbox,
         [WS_METHODS.agentdPeople]: (input) => agentd.people(input),
@@ -3659,6 +3679,11 @@ export const layerWsRpc = (
         [WS_METHODS.libraosGatewayStatus]: (_input) => libraosGateway.status,
         [WS_METHODS.libraosGatewayConnect]: (input) => libraosGateway.connect(input.key),
         [WS_METHODS.libraosGatewayDisconnect]: (_input) => libraosGateway.disconnect,
+        [WS_METHODS.customGatewayList]: (_input) => customGateway.list,
+        [WS_METHODS.customGatewayAdd]: (input) => customGateway.add(input),
+        [WS_METHODS.customGatewayRename]: (input) => customGateway.rename(input.id, input.name),
+        [WS_METHODS.customGatewayRemove]: (input) => customGateway.remove(input.id),
+        [WS_METHODS.customGatewayRefreshModels]: (input) => customGateway.refreshModels(input.id),
       });
       const splitHandlers: Pick<typeof handlers, SplitWsRpc["_tag"]> = handlers;
       const otherHandlers: Pick<typeof handlers, Exclude<ServerWsRpc, SplitWsRpc>["_tag"]> =
