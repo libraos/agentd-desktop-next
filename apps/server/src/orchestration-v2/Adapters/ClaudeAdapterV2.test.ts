@@ -908,6 +908,28 @@ describe("ClaudeAdapterV2 device instructions", () => {
     assert.include(text, "Use `delegate_task`");
   });
 
+  it("replaces the orchestration text with the AgentD skill when the session has no task tools", () => {
+    const withoutTaskTools =
+      (
+        ClaudeAdapterV2.makeClaudeQueryOptions({
+          modelSelection: {
+            instanceId: ProviderInstanceId.make("claudeAgent"),
+            model: "claude-opus-5-5",
+          },
+          nativeThreadId: "native-thread-claude-no-task-tools",
+          resume: false,
+          cwd: "/workspace",
+          mcpServers: { "agentd-next": { type: "http" as const, url: "http://127.0.0.1/mcp" } },
+          orchestrationToolsAvailable: false,
+          environment: {},
+        }).systemPrompt as { readonly append?: string }
+      ).append ?? "";
+    assert.notInclude(withoutTaskTools, "Use `delegate_task`");
+    assert.notInclude(withoutTaskTools, "Call `orchestrator_capabilities`");
+    assert.include(withoutTaskTools, "AgentD skill");
+    assert.include(withoutTaskTools, "call `background_wait`");
+  });
+
   it("leaves the device block out without device access or without T3 tools", () => {
     assert.notInclude(append({ mcp: true, deviceToolsAvailable: false }), "## T3 Code devices");
     assert.notInclude(append({ mcp: false, deviceToolsAvailable: true }), "## T3 Code devices");

@@ -4420,7 +4420,11 @@ export const make = Effect.fn("OpenCode2Adapter.make")(function* (instanceId: Pr
       }
       const instructions = [
         buildRuntimeInstructions({ harness: "OpenCode", model: turnInput.modelSelection.model }),
-        t3OrchestrationSystemPrompt(mcpAvailable, mcpSession?.capabilities?.has("device") === true),
+        t3OrchestrationSystemPrompt(
+          mcpAvailable,
+          mcpSession?.capabilities?.has("device") === true,
+          mcpSession?.capabilities?.has("orchestration") ?? true,
+        ),
         mcpAvailable
           ? "To wait for a background shell you started (tests, a build), call `background_wait` with its shell ID before you end your turn. Do not mark work you leave running, or PRs."
           : undefined,
