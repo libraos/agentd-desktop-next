@@ -268,13 +268,34 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     Effect.withSpan("AgentdBridge.eula"),
   );
 
+  const readDoctor = run(agentdArgs.doctor(), { jsonOnFailure: true }).pipe(
+    Effect.flatMap(decodeDoctor),
+  );
+
+  // Once per agent per server run: a registration left pointing at an agentd that moved (another
+  // install folder) is written again by the agentd this server runs. A failed try stays failed.
+  const repairTried = new Set<AgentdWorkerTool>();
+  const repairStaleRegistrations = Effect.fn("AgentdBridge.repairStaleRegistrations")(function* (
+    doctor: AgentdDoctorJson,
+  ) {
+    if (doctor.set_up === false) return doctor;
+    const stale = AgentdJson.staleRegistrations(doctor).filter((tool) => !repairTried.has(tool));
+    if (stale.length === 0) return doctor;
+    for (const tool of stale) repairTried.add(tool);
+    yield* Effect.forEach(
+      stale,
+      (agent) => run(agentdArgs.connectAgent({ agent, dryRun: false })).pipe(Effect.ignore),
+      { discard: true },
+    );
+    return yield* readDoctor.pipe(Effect.orElseSucceed(() => doctor));
+  });
+
   const status: AgentdBridge["Service"]["status"] = Effect.gen(function* () {
-    const [version, doctor] = yield* Effect.all(
-      [run(agentdArgs.version()), run(agentdArgs.doctor(), { jsonOnFailure: true })],
-      { concurrency: 2 },
-    ).pipe(
+    const [version, doctor] = yield* Effect.all([run(agentdArgs.version()), readDoctor], {
+      concurrency: 2,
+    }).pipe(
       Effect.flatMap(([version, doctor]) =>
-        Effect.map(decodeDoctor(doctor), (d) => [version, d] as const),
+        Effect.map(repairStaleRegistrations(doctor), (d) => [version, d] as const),
       ),
     );
     // Only a saved acceptance needs the carried version, to see whether agentd would ask again.
@@ -470,9 +491,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
 
   const taskOthers = Effect.fn("AgentdBridge.taskOthers")(
     function* ({ cwd, issue }: AgentdTaskOthersInput) {
-      const doctor = yield* run(agentdArgs.doctor(), { jsonOnFailure: true }).pipe(
-        Effect.flatMap(decodeDoctor),
-      );
+      const doctor = yield* readDoctor;
       const team = joinedPerson(doctor);
       if (doctor.set_up === false || team === null) return [];
       const namedUser = env.AGENTD_USER?.trim();

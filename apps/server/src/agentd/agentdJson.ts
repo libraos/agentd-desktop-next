@@ -14,12 +14,14 @@ import type {
   AgentdTaskRow,
   AgentdUserListJson,
   AgentdWhoJson,
+  AgentdWorkerTool,
 } from "@t3tools/contracts";
 
 import { cloudJobNote } from "./agentdCloud.ts";
 import { cloudPullRequest } from "./agentdCloudReview.ts";
 
-const WORKER_TOOLS = new Set(["claude", "codex", "opencode"]);
+const AGENT_TOOLS: ReadonlyArray<AgentdWorkerTool> = ["claude", "codex", "opencode"];
+const WORKER_TOOLS = new Set<string>(AGENT_TOOLS);
 
 // agentd names a session after its tool: "codex-615065aa16".
 function toolOfSession(session: string | null | undefined): string | null {
@@ -29,6 +31,24 @@ function toolOfSession(session: string | null | undefined): string | null {
 
 function nonEmpty(value: string | null | undefined): string | null {
   return value === undefined || value === null || value === "" ? null : value;
+}
+
+// doctor's `${tool}-mcp` check fails alike for "never registered" and for this; only the detail
+// tells them apart. The command is Go-quoted, so a Windows path carries escaped backslashes.
+const STALE_COMMAND = /^server \S+ runs "(?:[^"\\]|\\.)*", which is not there$/;
+
+function isStaleCommandDetail(detail: string | undefined): boolean {
+  return detail !== undefined && STALE_COMMAND.test(detail.trim());
+}
+
+/** The agents whose agentd MCP registration runs a command that is no longer there. */
+export function staleRegistrations(doctor: AgentdDoctorJson): AgentdWorkerTool[] {
+  return AGENT_TOOLS.filter((tool) =>
+    doctor.checks.some(
+      (check) =>
+        check.id === `${tool}-mcp` && check.status === "fail" && isStaleCommandDetail(check.detail),
+    ),
+  );
 }
 
 /** The EULA version doctor's activation check says is accepted; false: none is; null: it does not say. */
