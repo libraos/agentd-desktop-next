@@ -736,7 +736,8 @@ it.layer(
 
         // The Gateway answers once, then is down: the key's list stands, not Codex's catalog.
         // Another family's model runs too, by its full id and labelled with its family. A bare id
-        // equal to an own-family name is that same row, which keeps Codex's catalog entry.
+        // equal to an own-family name is that same row, which keeps Codex's catalog entry; the
+        // prefixed id it shadows stays reachable as a custom row.
         let gatewayAnswer = () =>
           Response.json({
             data: [
@@ -780,13 +781,14 @@ it.layer(
           // Only Codex's own models carry its reasoning and service-tier controls.
           [
             ["gpt-6-luna", "gpt-6-luna", undefined, false, true],
+            ["openai/gpt-6-luna", "openai/gpt-6-luna", "openai", true, false],
             ["gemini/gemini-2.5-pro", "gemini/gemini-2.5-pro", "gemini", true, false],
           ],
         );
         gatewayAnswer = () => Response.json({ error: { message: "Down" } }, { status: 503 });
         assert.deepStrictEqual(
           (yield* live()).models.map((model) => model.slug),
-          ["gpt-6-luna", "gemini/gemini-2.5-pro"],
+          ["gpt-6-luna", "openai/gpt-6-luna", "gemini/gemini-2.5-pro"],
         );
 
         // A later probe answers the account and models but not its config: the confirmed route

@@ -102,9 +102,11 @@ describe("gatewaySetup", () => {
       readCustomModelEntries(
         (after[instanceId]?.config as { customModels?: unknown } | undefined)?.customModels,
       ).map(({ slug, subProvider }) => [slug, subProvider]);
-    // A thread, favorite or hidden model saved as `gpt-5.5` still names the GPT 5.5 row.
+    // A thread, favorite or hidden model saved as `gpt-5.5` still names the GPT 5.5 row, and the
+    // full id the key also lists stays reachable as itself.
     expect(entries(GATEWAY_INSTANCE_IDS.codex)).toEqual([
       ["gpt-5.5", undefined],
+      ["openai/gpt-5.5", "openai"],
       ["anthropic/claude-opus-5-5", "anthropic"],
       ["claude-opus-5-5", undefined],
     ]);
@@ -112,6 +114,7 @@ describe("gatewaySetup", () => {
       ["claude-opus-5-5", undefined],
       ["openai/gpt-5.5", "openai"],
       ["gpt-5.5", undefined],
+      ["anthropic/claude-opus-5-5", "anthropic"],
     ]);
   });
 

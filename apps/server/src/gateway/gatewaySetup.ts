@@ -94,10 +94,10 @@ const CLAUDE_CODE_KEEP_MODEL = [
   "CLAUDE_CODE_NO_MODEL_FALLBACK",
 ];
 
-// The agent's own family drops its prefix (as agentd's workers ask) to keep its catalog entry and
-// options. A slug depends on its id alone, so saved choices survive key changes; a bare id equal to
-// an own-family name is the request that row already sends. Other models keep their full id, their
-// family and none of the agent's options (Codex would lend them a GPT model's).
+// The agent's own family drops its prefix (agentd's workers ask so) to keep its catalog options; a
+// slug depends on its id alone, so saved choices survive key changes. A bare id equal to that name
+// is the row's own request, and the prefixed id then gets its own row. Other models keep their full
+// id, their family and none of the agent's options (Codex would lend them a GPT model's).
 export function gatewayAgentModels(models: ReadonlyArray<LibraosGatewayModel>, family: string) {
   // An id the agent would send as another model is not offered, or kept whole when that avoids it.
   const sendsAsIs = family === "anthropic" ? claudeCodeSendsAsIs : () => true;
@@ -106,23 +106,28 @@ export function gatewayAgentModels(models: ReadonlyArray<LibraosGatewayModel>, f
     return name !== undefined && sendsAsIs(name) ? name : undefined;
   };
   const ownNames = new Set(models.flatMap((model) => own(model.id) ?? []));
+  const ids = new Set(models.map((model) => model.id));
   const ownModels: Array<CustomModelEntry> = [];
   const other: Array<CustomModelEntry> = [];
+  const pushOther = (id: string, named: { name?: string }) => {
+    const owner = id.split("/")[0] ?? "";
+    other.push({
+      slug: id,
+      ...named,
+      ...(owner !== "" && id.includes("/") ? { subProvider: owner } : {}),
+      capabilities: { optionDescriptors: [] },
+    });
+  };
   for (const model of models) {
     const named = model.name ? { name: model.name } : {};
     const name = own(model.id);
     if (name !== undefined) {
       ownModels.push({ slug: name, ...named });
+      if (ids.has(name)) pushOther(model.id, named);
       continue;
     }
     if (ownNames.has(model.id) || !sendsAsIs(model.id)) continue;
-    const owner = model.id.split("/")[0] ?? "";
-    other.push({
-      slug: model.id,
-      ...named,
-      ...(owner !== "" && model.id.includes("/") ? { subProvider: owner } : {}),
-      capabilities: { optionDescriptors: [] },
-    });
+    pushOther(model.id, named);
   }
   return [...ownModels, ...other];
 }

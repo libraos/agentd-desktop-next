@@ -7,6 +7,7 @@ import type { EndpointKeyModels } from "@t3tools/provider-core/server/snapshotPr
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
+import * as Ref from "effect/Ref";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
@@ -121,4 +122,17 @@ export const makeGatewayKeyModels = Effect.fn("LibraosGateway.makeGatewayKeyMode
     );
   };
   return keyModels;
+});
+
+/**
+ * Keeps the list `keyModels` last gave this agent, so its turns read an id the way its picker
+ * showed it even when the agent's own settings list no models (a hand-configured endpoint).
+ */
+export const rememberServedModels = Effect.fn("LibraosGateway.rememberServedModels")(function* (
+  keyModels: EndpointKeyModels,
+) {
+  const served = yield* Ref.make<ReadonlyArray<CustomModelSetting>>([]);
+  const remembering: EndpointKeyModels = (input) =>
+    keyModels(input).pipe(Effect.tap((models) => Ref.set(served, models ?? [])));
+  return { keyModels: remembering, served: Ref.get(served) };
 });

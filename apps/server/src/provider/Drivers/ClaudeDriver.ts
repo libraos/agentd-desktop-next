@@ -1,4 +1,4 @@
-import { makeGatewayKeyModels } from "../../gateway/gatewayKeyModels.ts";
+import { makeGatewayKeyModels, rememberServedModels } from "../../gateway/gatewayKeyModels.ts";
 import { ClaudeSettings, isLibraosGatewayInstanceId, ProviderDriverKind } from "@t3tools/contracts";
 import * as Cache from "effect/Cache";
 import type * as Cause from "effect/Cause";
@@ -39,7 +39,7 @@ import {
 } from "../ClaudeProvider.ts";
 import { makeManagedServerProvider } from "@t3tools/provider-core/server/managedProvider";
 import * as ModelCatalog from "@t3tools/provider-core/server/ModelCatalog";
-import { resolveClaudeModelCatalog } from "../ClaudeModelCatalog.ts";
+import { resolveClaudeModelCatalog, scopeClaudeModelCatalog } from "../ClaudeModelCatalog.ts";
 import {
   makeClaudeCodeModelRoutes,
   resolveClaudeModelSettingsKey,
@@ -173,6 +173,22 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
         ),
       stateDir,
     );
+    const gatewayKeyModels = yield* makeGatewayKeyModels("anthropic").pipe(
+      Effect.provideService(HttpClient.HttpClient, httpClient),
+      Effect.flatMap(rememberServedModels),
+    );
+    // A turn reads the picked id against the key's models, as the snapshot listed them; routing
+    // waits for the first probe, which is also what asks the key.
+    const routeModelCatalog: typeof modelRoutes.route = (catalog, cwd, launchSettings) =>
+      modelRoutes
+        .route(catalog, cwd, launchSettings)
+        .pipe(
+          Effect.flatMap((routed) =>
+            Effect.map(gatewayKeyModels.served, (served) =>
+              scopeClaudeModelCatalog(routed, served),
+            ),
+          ),
+        );
     // Retain reports until the registry subscribes; end its listener on teardown.
     const workspaceRescans = yield* Queue.unbounded<string, Cause.Done>();
     yield* Effect.addFinalizer(() => Queue.end(workspaceRescans));
@@ -190,7 +206,7 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
         onUsageLimits: (update) => snapshot.applyUsageLimits(update),
         onSessionInit: (cwd) => Queue.offer(workspaceRescans, cwd).pipe(Effect.asVoid),
         modelCatalog,
-        routeModelCatalog: modelRoutes.route,
+        routeModelCatalog,
       },
     ).pipe(
       Effect.mapError(
@@ -207,7 +223,7 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
       effectiveConfig,
       processEnv,
       modelCatalog,
-      modelRoutes.route,
+      routeModelCatalog,
     );
 
     // Per-instance capabilities cache: keyed on binary + resolved HOME so
@@ -273,9 +289,6 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
       Effect.map((result) => result.capabilities),
     );
 
-    const gatewayKeyModels = yield* makeGatewayKeyModels("anthropic").pipe(
-      Effect.provideService(HttpClient.HttpClient, httpClient),
-    );
     const checkProvider = catalogService.refreshInBackground.pipe(
       Effect.andThen(
         modelCatalog.pipe(
@@ -294,7 +307,7 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
                   Effect.provideService(Path.Path, path),
                 ),
 
-              gatewayKeyModels,
+              gatewayKeyModels.keyModels,
             ),
           ),
           Effect.tap((provider) =>
