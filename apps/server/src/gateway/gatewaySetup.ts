@@ -81,22 +81,41 @@ const ownName = (id: string, family: string) => {
   return owner === family && name !== "" && rest.length === 0 ? name : undefined;
 };
 
+// Claude Code swaps these for a model of its own (case-insensitively); the adapter pins only the
+// four lowercase family aliases back to themselves (`compileClaudeModelSelection`).
+const CLAUDE_CODE_PINNED_ALIASES = new Set(["opus", "sonnet", "haiku", "fable"]);
+const CLAUDE_CODE_REWRITES = /^(?:best|opusplan|opus|sonnet|haiku|fable)$|\[1m\]$/i;
+const claudeCodeSendsAsIs = (slug: string) =>
+  CLAUDE_CODE_PINNED_ALIASES.has(slug) || !CLAUDE_CODE_REWRITES.test(slug);
+// Claude Code otherwise remaps old Opus ids (`claude-opus-4-1`) to its current Opus, and moves a
+// Claude model the Gateway calls unavailable down to an older one.
+const CLAUDE_CODE_KEEP_MODEL = [
+  "CLAUDE_CODE_DISABLE_LEGACY_MODEL_REMAP",
+  "CLAUDE_CODE_NO_MODEL_FALLBACK",
+];
+
 // The agent's own family drops its prefix (as agentd's workers ask) to keep its catalog entry and
 // options. A slug depends on its id alone, so saved choices survive key changes; a bare id equal to
 // an own-family name is the request that row already sends. Other models keep their full id, their
 // family and none of the agent's options (Codex would lend them a GPT model's).
 export function gatewayAgentModels(models: ReadonlyArray<LibraosGatewayModel>, family: string) {
-  const ownNames = new Set(models.flatMap((model) => ownName(model.id, family) ?? []));
-  const own: Array<CustomModelEntry> = [];
+  // An id the agent would send as another model is not offered, or kept whole when that avoids it.
+  const sendsAsIs = family === "anthropic" ? claudeCodeSendsAsIs : () => true;
+  const own = (id: string) => {
+    const name = ownName(id, family);
+    return name !== undefined && sendsAsIs(name) ? name : undefined;
+  };
+  const ownNames = new Set(models.flatMap((model) => own(model.id) ?? []));
+  const ownModels: Array<CustomModelEntry> = [];
   const other: Array<CustomModelEntry> = [];
   for (const model of models) {
     const named = model.name ? { name: model.name } : {};
-    const name = ownName(model.id, family);
+    const name = own(model.id);
     if (name !== undefined) {
-      own.push({ slug: name, ...named });
+      ownModels.push({ slug: name, ...named });
       continue;
     }
-    if (ownNames.has(model.id)) continue;
+    if (ownNames.has(model.id) || !sendsAsIs(model.id)) continue;
     const owner = model.id.split("/")[0] ?? "";
     other.push({
       slug: model.id,
@@ -105,7 +124,7 @@ export function gatewayAgentModels(models: ReadonlyArray<LibraosGatewayModel>, f
       capabilities: { optionDescriptors: [] },
     });
   }
-  return [...own, ...other];
+  return [...ownModels, ...other];
 }
 
 const tomlString = (value: string) => JSON.stringify(value);
@@ -162,6 +181,7 @@ export function gatewayProviderInstances(
         environment: [
           plain("ANTHROPIC_BASE_URL", LIBRAOS_GATEWAY_ORIGIN),
           secret("ANTHROPIC_API_KEY", key),
+          ...CLAUDE_CODE_KEEP_MODEL.map((name) => plain(name, "1")),
         ],
         // The key's models replace Claude's catalog: any other model would fail on the Gateway.
         config: { customModels: gatewayAgentModels(models, "anthropic"), onlyCustomModels: true },
@@ -279,8 +299,19 @@ export function withGatewayModels(
     const existing = current[instanceId];
     if (existing === undefined) continue;
     const config = isRecord(existing.config) ? existing.config : {};
+    const environment = existing.environment ?? [];
+    // Claude agents connected before these variables existed get them too.
+    const missing =
+      instanceId === GATEWAY_INSTANCE_IDS.claude
+        ? CLAUDE_CODE_KEEP_MODEL.filter(
+            (name) => !environment.some((variable) => variable.name === name),
+          )
+        : [];
     set(instanceId, {
       ...existing,
+      ...(missing.length > 0
+        ? { environment: [...environment, ...missing.map((name) => plain(name, "1"))] }
+        : {}),
       config: {
         ...config,
         ...(models === null ? {} : { customModels: gatewayAgentModels(models, family) }),

@@ -160,6 +160,60 @@ describe("gatewaySetup", () => {
       current[GATEWAY_INSTANCE_IDS.claude]?.environment,
     );
     expect(next).not.toHaveProperty(GATEWAY_INSTANCE_IDS.opencode);
+
+    // A Claude agent connected by an older build learns to send the picked id as it is.
+    const claude = current[GATEWAY_INSTANCE_IDS.claude]!;
+    const older = {
+      ...current,
+      [GATEWAY_INSTANCE_IDS.claude]: {
+        ...claude,
+        environment: (claude.environment ?? []).filter(
+          ({ name }) => !name.startsWith("CLAUDE_CODE_"),
+        ),
+      },
+    };
+    expect(withGatewayModels(older, before)[GATEWAY_INSTANCE_IDS.claude]?.environment).toEqual(
+      claude.environment,
+    );
+  });
+
+  it("offers Claude Code only the ids it sends as they are", () => {
+    const [claude, codex] = gatewayProviderInstances("lk_test_key_123456", [
+      { id: "anthropic/opusplan" },
+      { id: "anthropic/opus" },
+      { id: "anthropic/claude-opus-4-1" },
+      { id: "best" },
+      { id: "Sonnet" },
+      { id: "haiku" },
+      { id: "gemini/gemini-2.5-pro[1m]" },
+    ]);
+    // No legacy remap (`claude-opus-4-1` to the current Opus), no fallback to another model.
+    expect(
+      claude?.instance.environment?.filter(({ name }) => name.startsWith("CLAUDE_CODE_")),
+    ).toEqual([
+      { name: "CLAUDE_CODE_DISABLE_LEGACY_MODEL_REMAP", value: "1", sensitive: false },
+      { name: "CLAUDE_CODE_NO_MODEL_FALLBACK", value: "1", sensitive: false },
+    ]);
+    const slugs = (config: unknown) =>
+      readCustomModelEntries((config as { customModels?: unknown } | undefined)?.customModels).map(
+        ({ slug }) => slug,
+      );
+    // Claude Code swaps aliases for its own models; only the lowercase family names are pinned.
+    expect(slugs(claude?.instance.config)).toEqual([
+      "opus",
+      "claude-opus-4-1",
+      "anthropic/opusplan",
+      "haiku",
+    ]);
+    expect(slugs(codex?.instance.config)).toEqual([
+      "anthropic/opusplan",
+      "anthropic/opus",
+      "anthropic/claude-opus-4-1",
+      "best",
+      "Sonnet",
+      "haiku",
+      "gemini/gemini-2.5-pro[1m]",
+    ]);
   });
 
   it("gives opencode the new list without touching its other variables", () => {
