@@ -27,7 +27,7 @@ Upstream files:
 - `apps/server/src/provider/ProviderRegistry.ts`, `apps/server/src/provider/providerStatusCache.ts` — Treat custom gateway instances like LibraOS Gateway ones: a model missing from the gateway's list is gone, not kept from cache.
 - `apps/web/src/i18n/translations/*.json` — New strings in every locale.
 
-Keys: kept in the server secret store and in instance variables marked `sensitive`; clients see only `hasKey`. Error text from the gateway is redacted of the key itself and of `sk-`/`lk-`/Bearer shapes. No key means no key variable, no Codex `env_key` and no opencode `apiKey`.
+Keys: kept in the server secret store and in instance variables marked `sensitive`; clients see only `hasKey`. Error text from the gateway is redacted of the key itself and of `sk-`/`lk-`/Bearer shapes. No key means no key variable, no Codex `env_key` and no opencode `apiKey`. An Anthropic-format gateway needs a key: without one, Claude Code would send the person's own Claude login to it.
 
 The user's own provider instances and the agents' config files are not touched: each gateway only adds, renames or removes its own `gw-<id>-claude|codex|opencode` instances. Windows, Linux and macOS: only environment variables and launch arguments (`-c` for Codex, `OPENCODE_CONFIG_CONTENT`, `ANTHROPIC_BASE_URL`), as LibraOS Gateway already uses on all three; no new paths or processes. Tested on Linux only.
 
