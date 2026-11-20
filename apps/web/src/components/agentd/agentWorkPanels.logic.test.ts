@@ -1,7 +1,7 @@
 import type { ThreadStructureTurnItem } from "@t3tools/client-runtime/state/models";
 import { describe, expect, it } from "vite-plus/test";
 
-import type { ThreadRightPanelState } from "../../rightPanelStore";
+import type { RightPanelSurface, ThreadRightPanelState } from "../../rightPanelStore";
 import {
   agentWorkPanelKind,
   latestAgentWorkItem,
@@ -14,9 +14,21 @@ const command = (id: string, status = "running", monitor?: boolean) =>
 const tool = (id: string, toolName: string | null, status = "running") =>
   item({ id, type: "dynamic_tool", status, toolName, input: {} });
 
-const terminal = { id: "terminal:term-1", kind: "terminal", resourceId: "term-1" } as const;
-const browser = { id: "browser:tab-1", kind: "preview", resourceId: "tab-1" } as const;
-const file = { id: "file:a.ts", kind: "file", relativePath: "a.ts" } as const;
+const terminal: RightPanelSurface = {
+  id: "terminal:term-1",
+  kind: "terminal",
+  resourceId: "term-1",
+  terminalIds: ["term-1"],
+  activeTerminalId: "term-1",
+};
+const browser: RightPanelSurface = { id: "browser:tab-1", kind: "preview", resourceId: "tab-1" };
+const file: RightPanelSurface = {
+  id: "file:a.ts",
+  kind: "file",
+  relativePath: "a.ts",
+  revealLine: null,
+  revealRequestId: 0,
+};
 const panel = (fields: Partial<ThreadRightPanelState>) =>
   ({ isOpen: false, activeSurfaceId: null, surfaces: [], ...fields }) as ThreadRightPanelState;
 
