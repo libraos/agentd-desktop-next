@@ -6,6 +6,7 @@ import { useLibraosGatewayConnected } from "~/lib/libraosGatewayState";
 import { rightPanelHostRef, useRightPanelStore } from "~/rightPanelStore";
 import { Button } from "../ui/button";
 import { toastManager } from "../ui/toast";
+import { ClaudeTrustDialog } from "./ClaudeTrustDialog";
 import { useStartTaskCloud } from "./StartTaskCloud";
 import { OfferedCloudTask, openStartTaskDialog, replaceQuestion } from "./StartTaskDialog";
 import type { TaskFields } from "./startTask.logic";
@@ -33,11 +34,13 @@ export function TaskDraftCard({
   // A cloud task agentd saved but didn't confirm: followed until the synced list shows it started.
   const [offered, setOffered] = useState<string | null>(null);
   const [replaceSubmission, setReplaceSubmission] = useState<string | null>(null);
+  const [untrustedFolder, setUntrustedFolder] = useState<string | null>(null);
 
-  async function start(replacing: string | null = null) {
+  async function start(replacing: string | null = null, trustClaudeFolder = false) {
     setResult(null);
     setReplaceSubmission(null);
-    const outcome = await plan.start(replacing);
+    setUntrustedFolder(null);
+    const outcome = await plan.start(replacing, trustClaudeFolder);
     switch (outcome?.kind) {
       case undefined:
         return;
@@ -61,6 +64,9 @@ export function TaskDraftCard({
       case "refused":
         setResult(outcome.reason);
         return;
+      case "untrusted":
+        setUntrustedFolder(outcome.folder);
+        return;
       case "failed":
         setReplaceSubmission(outcome.replaceSubmission);
         setResult(
@@ -80,6 +86,11 @@ export function TaskDraftCard({
     >
       <p className="wrap-anywhere text-sm font-medium">{plan.filled.goal}</p>
       <TaskPlanSummary plan={plan} />
+      <ClaudeTrustDialog
+        folder={untrustedFolder}
+        onTrust={() => void start(null, true)}
+        onCancel={() => setUntrustedFolder(null)}
+      />
       {result !== null ? (
         <OfferedCloudTask environmentId={threadRef.environmentId} taskId={offered}>
           <p role="status" className="wrap-anywhere whitespace-pre-wrap text-xs">

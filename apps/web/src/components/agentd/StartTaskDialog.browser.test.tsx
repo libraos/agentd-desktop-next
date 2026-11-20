@@ -277,6 +277,51 @@ it("shows what is missing, displays a refusal in full, and opens the tasks pane 
   });
 });
 
+it("asks before a Claude worker runs in an untrusted folder, and starts only on Trust", async () => {
+  setup("feature/export");
+  state.worker = "claude";
+  const untrusted = AsyncResult.failure(
+    Cause.fail(
+      new AgentdCommandError({
+        message: "Claude Code hasn’t been allowed to work in /repo yet.",
+        notSetUp: false,
+        untrustedFolder: "/repo",
+      }),
+    ),
+  );
+  state.start
+    .mockResolvedValueOnce(untrusted)
+    .mockResolvedValueOnce(untrusted)
+    .mockResolvedValueOnce(
+      AsyncResult.success({
+        id: "hof-123abc",
+        started: true,
+        note: null,
+      } satisfies AgentdStartTaskResult),
+    );
+  await using _screen = await renderDialog();
+  await fillTask();
+  const start = page.getByRole("button", { name: "Start", exact: true });
+  const question = page.getByRole("alertdialog");
+
+  await start.click();
+  await expect.element(question.getByText("Let Claude Code work in /repo?")).toBeVisible();
+  await question.getByRole("button", { name: "Cancel" }).click();
+  await expect.element(question).not.toBeInTheDocument();
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
+  expect(state.start).toHaveBeenCalledTimes(1);
+
+  await start.click();
+  await question.getByRole("button", { name: "Trust folder" }).click();
+  await expect.element(page.getByText("Started task hof-123abc.")).toBeVisible();
+  expect(state.start).toHaveBeenCalledTimes(3);
+  expect(state.start.mock.calls[1]![0].input).not.toHaveProperty("trustClaudeFolder");
+  expect(state.start).toHaveBeenLastCalledWith({
+    environmentId: thread.environmentId,
+    input: expect.objectContaining({ worker: "claude", trustClaudeFolder: true }),
+  });
+});
+
 it("starts a cloud task with a dollar cap and a provider key path, without the local branch gate", async () => {
   setup("main");
   state.cloud = {

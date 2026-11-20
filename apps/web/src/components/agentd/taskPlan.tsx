@@ -68,7 +68,9 @@ export type TaskStartOutcome =
       /** A key file of the user's that agentd refused because others can read it. */
       readonly privateFile?: string;
     }
-  | { readonly kind: "refused"; readonly reason: string };
+  | { readonly kind: "refused"; readonly reason: string }
+  /** Claude Code never ran in folder: nothing started until the person trusts it. */
+  | { readonly kind: "untrusted"; readonly folder: string };
 
 /**
  * Everything a Start decides for the person: the fields filled from agentd's estimate and the
@@ -267,7 +269,10 @@ export function useTaskPlan({
     !cloud.waiting &&
     (cloud.enabled ? cloud.input !== null : validation.budget === null && !validation.issue);
 
-  async function run(replacing: string | null): Promise<TaskStartOutcome> {
+  async function run(
+    replacing: string | null,
+    trustClaudeFolder: boolean,
+  ): Promise<TaskStartOutcome> {
     if (cwd === null)
       return { kind: "refused", reason: gt("This session has no project working directory.") };
     if (cloud.waiting)
@@ -295,11 +300,18 @@ export function useTaskPlan({
           cloud:
             replacing === null ? cloud.input : { ...cloud.input, replaceSubmission: replacing },
         }
-      : worker !== null && { ...validation.input, cwd, worker };
+      : worker !== null && {
+          ...validation.input,
+          cwd,
+          worker,
+          ...(trustClaudeFolder ? { trustClaudeFolder } : {}),
+        };
     if (!input) return { kind: "refused", reason: gt("AgentD could not start the task.") };
     const result = await startTask({ environmentId, input });
     if (result._tag === "Failure") {
       const failure = squashAtomCommandFailure(result);
+      if (isCommandError(failure) && failure.untrustedFolder !== undefined)
+        return { kind: "untrusted", folder: failure.untrustedFolder };
       if (isCommandError(failure) && failure.wrongKeyFile !== undefined)
         return {
           kind: "refused",
@@ -331,12 +343,15 @@ export function useTaskPlan({
     return { kind: "offered", task: result.value };
   }
 
-  /** One Start at a time; null while one is running. */
-  function start(replacing: string | null = null): Promise<TaskStartOutcome | null> {
+  /** One Start at a time; null while one is running. trustClaudeFolder answers an untrusted one. */
+  function start(
+    replacing: string | null = null,
+    trustClaudeFolder = false,
+  ): Promise<TaskStartOutcome | null> {
     if (startingRef.current) return Promise.resolve(null);
     startingRef.current = true;
     setStarting(true);
-    return run(cloud.enabled ? replacing : null)
+    return run(cloud.enabled ? replacing : null, trustClaudeFolder)
       .catch((error: unknown): TaskStartOutcome => ({
         kind: "failed",
         error,

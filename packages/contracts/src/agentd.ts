@@ -29,6 +29,8 @@ export class AgentdCommandError extends Schema.TaggedError<AgentdCommandError>()
     privateFile: Schema.optionalKey(Schema.String),
     /** The BYOK key field whose file holds the other provider's key; only to a host-file reader. */
     wrongKeyFile: Schema.optionalKey(Schema.Literals(["anthropic", "openai"])),
+    /** The folder Claude Code hasn't been allowed to work in; Start asks before trusting it. */
+    untrustedFolder: Schema.optionalKey(Schema.String),
   },
 ) {}
 
@@ -445,6 +447,8 @@ export const AgentdStartTaskInput = Schema.Struct({
   ),
   cwd: AbsolutePath,
   issue: Schema.NullOr(IssueRef),
+  /** The person agreed to let Claude Code work in the folder an untrustedFolder refusal named. */
+  trustClaudeFolder: Schema.optionalKey(Schema.Boolean),
   cloud: Schema.optionalKey(Schema.Never),
 });
 export type AgentdStartTaskInput = typeof AgentdStartTaskInput.Type;
