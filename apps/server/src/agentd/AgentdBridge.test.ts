@@ -328,6 +328,8 @@ describe("AgentdBridge", () => {
             return Effect.succeed(output("agentd: ~/.codex/config.toml is not writable", 1));
           case "config get dispatch.default_tool":
             return Effect.succeed(output("claude\n"));
+          case "config get budget.prices":
+            return Effect.succeed(output("{}\n"));
           default:
             return Effect.die(`unexpected agentd ${key}`);
         }
@@ -387,6 +389,7 @@ describe("AgentdBridge", () => {
             ),
           );
         if (key === "config get dispatch.default_tool") return Effect.succeed(output("claude\n"));
+        if (key === "config get budget.prices") return Effect.succeed(output("{}\n"));
         return Effect.die(`unexpected agentd ${key}`);
       });
       yield* bridge.status;
