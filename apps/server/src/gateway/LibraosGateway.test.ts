@@ -22,6 +22,8 @@ import {
 import * as LibraosGateway from "./LibraosGateway.ts";
 
 const GOOD_KEY = "lk_good_key_0123456789";
+// A key the user put on the opencode Gateway agent instead of the connected one.
+const OWN_KEY = "lk_own_key_0123456789";
 const GATEWAY_INSTANCES = ["libraosClaude", "libraosCodex", "libraosOpencode"];
 
 function setup(
@@ -67,10 +69,12 @@ function setup(
           ? Response.json({ error: { message: "Upstream unavailable." } }, { status: 503 })
           : request.headers.authorization === `Bearer ${GOOD_KEY}` && gatewayState.now === "served"
             ? Response.json({ data: served })
-            : Response.json(
-                { error: { message: "This API key is not valid.", type: "invalid_api_key" } },
-                { status: 401 },
-              ),
+            : request.headers.authorization === `Bearer ${OWN_KEY}`
+              ? Response.json({ data: [{ id: "openai/gpt-6-sol" }] })
+              : Response.json(
+                  { error: { message: "This API key is not valid.", type: "invalid_api_key" } },
+                  { status: 401 },
+                ),
       ),
     ),
   );
@@ -180,6 +184,26 @@ it.effect("a refresh gives the Gateway agents the key's models as they are now",
       },
     });
 
+    // On the opencode agent: its own key and an unrelated preference in its inline config.
+    const opencode = (yield* settings.getSettings).providerInstances[GATEWAY_INSTANCE_IDS.opencode];
+    yield* settings.updateProviderInstance({
+      operation: "upsert",
+      instanceId: GATEWAY_INSTANCE_IDS.opencode,
+      instance: {
+        ...opencode!,
+        environment: (opencode?.environment ?? []).map((variable) =>
+          variable.name === "LIBRAOS_API_KEY"
+            ? { ...variable, value: OWN_KEY }
+            : variable.name === "OPENCODE_CONFIG_CONTENT"
+              ? {
+                  ...variable,
+                  value: JSON.stringify({ ...JSON.parse(variable.value), autoupdate: false }),
+                }
+              : variable,
+        ),
+      },
+    });
+
     // In Console the key loses its Claude model and gains a Codex one.
     served.splice(0, served.length, { id: "openai/gpt-5.5" }, { id: "openai/gpt-6-luna" });
     yield* gateway.refreshModels;
@@ -201,6 +225,19 @@ it.effect("a refresh gives the Gateway agents the key's models as they are now",
       value: "http://proxy:3128",
       sensitive: false,
     });
+    const opencodeConfig = JSON.parse(
+      String(
+        instances[GATEWAY_INSTANCE_IDS.opencode]?.environment?.find(
+          (variable) => variable.name === "OPENCODE_CONFIG_CONTENT",
+        )?.value,
+      ),
+    );
+    assert.strictEqual(opencodeConfig.autoupdate, false);
+    // The list of the key opencode sends, not the connected key's.
+    assert.deepStrictEqual(Object.keys(opencodeConfig.provider.libraos.models), [
+      "openai/gpt-6-sol",
+    ]);
+    assert.strictEqual(opencodeConfig.model, "libraos/openai/gpt-6-sol");
   }).pipe(Effect.provide(layer));
 });
 

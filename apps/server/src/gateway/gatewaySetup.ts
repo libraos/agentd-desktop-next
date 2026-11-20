@@ -178,15 +178,68 @@ export function gatewayProviderInstances(
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/** The inline config with only the Gateway provider's models, and a default it lost, replaced. */
+function patchOpencodeGatewayConfig(
+  current: string | undefined,
+  models: ReadonlyArray<LibraosGatewayModel>,
+): string {
+  const fresh = opencodeGatewayConfig(models);
+  let parsed: unknown;
+  try {
+    parsed = current === undefined ? undefined : JSON.parse(current);
+  } catch {
+    parsed = undefined;
+  }
+  if (!isRecord(parsed)) return fresh;
+  const served = JSON.parse(fresh) as { model?: string };
+  const providers = isRecord(parsed.provider) ? parsed.provider : {};
+  const own = isRecord(providers[PROVIDER_ID]) ? providers[PROVIDER_ID] : {};
+  const ownModels = isRecord(own.models) ? own.models : {};
+  const next: Record<string, unknown> = { ...parsed };
+  const model = typeof parsed.model === "string" ? parsed.model : undefined;
+  const lost =
+    model === undefined ||
+    (model.startsWith(`${PROVIDER_ID}/`) &&
+      !models.some((entry) => `${PROVIDER_ID}/${entry.id}` === model));
+  if (lost) {
+    if (served.model === undefined) delete next.model;
+    else next.model = served.model;
+  }
+  next.provider = {
+    ...providers,
+    [PROVIDER_ID]: {
+      ...own,
+      models: Object.fromEntries(
+        models.map((entry) => [
+          entry.id,
+          ownModels[entry.id] ?? (entry.name ? { name: entry.name } : {}),
+        ]),
+      ),
+    },
+  };
+  return JSON.stringify(next);
+}
+
+/** The key the opencode Gateway agent sends, when it is not `connected` (settings with secrets). */
+export function opencodeOwnGatewayKey(
+  current: ProviderInstanceConfigMap,
+  connected: string,
+): string | undefined {
+  const value = current[GATEWAY_INSTANCE_IDS.opencode]?.environment
+    ?.find((variable) => variable.name === KEY_ENV)
+    ?.value?.trim();
+  return value && value !== connected ? value : undefined;
+}
+
 /**
- * The Gateway agents still present with the key's models: only their model lists change, so the
- * user's launch arguments, variables and credentials stay. `models: null` (Gateway not asked yet)
- * keeps their lists and only marks Claude and Codex as limited to them, as #80 agents were not.
- * Returns `current` itself when nothing changes.
+ * Only the Gateway agents' model lists change; `models: null` (not asked yet) keeps them and marks
+ * Claude and Codex limited to them. opencode keeps its list in its config, so it takes the list of
+ * the key it sends as `opencodeModels`. Returns `current` itself when nothing changes.
  */
 export function withGatewayModels(
   current: ProviderInstanceConfigMap,
   models: ReadonlyArray<LibraosGatewayModel> | null,
+  opencodeModels: ReadonlyArray<LibraosGatewayModel> | null = models,
 ): ProviderInstanceConfigMap {
   const next: Record<string, ProviderInstanceConfig> = { ...current };
   let changed = false;
@@ -215,7 +268,9 @@ export function withGatewayModels(
   if (opencode !== undefined) {
     const config = isRecord(opencode.config) ? opencode.config : {};
     const environment = opencode.environment ?? [];
-    const value = models === null ? null : opencodeGatewayConfig(models);
+    const existing = environment.find((variable) => variable.name === OPENCODE_CONFIG_ENV)?.value;
+    const value =
+      opencodeModels === null ? null : patchOpencodeGatewayConfig(existing, opencodeModels);
     set(GATEWAY_INSTANCE_IDS.opencode, {
       ...opencode,
       // Its models live in OPENCODE_CONFIG_CONTENT; an older build let users add custom ones.

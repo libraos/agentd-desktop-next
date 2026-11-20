@@ -27,6 +27,7 @@ import {
   GATEWAY_INSTANCE_IDS,
   GATEWAY_KEY_SECRET,
   gatewayProviderInstances,
+  opencodeOwnGatewayKey,
   readGatewayKey,
   withGatewayModels,
 } from "./gatewaySetup.ts";
@@ -254,11 +255,25 @@ export const make = Effect.fn("LibraosGateway.make")(function* () {
 
   // Patches the stored agents in the same write, so an agent removed or edited meanwhile stays so.
   const applyModels = Effect.fn("LibraosGateway.applyModels")(function* (
+    key: string,
     list: ReadonlyArray<LibraosGatewayModel> | null,
   ) {
     const snapshot = yield* settings.getSettings;
-    if (withGatewayModels(snapshot.providerInstances, list) === snapshot.providerInstances) return;
-    yield* settings.updateProviderInstances((current) => withGatewayModels(current, list));
+    // opencode's list is in its config, so a key edited on that agent is asked for its own list.
+    const ownKey = opencodeOwnGatewayKey(snapshot.providerInstances, key);
+    const opencodeList =
+      ownKey === undefined
+        ? list
+        : yield* askGatewayModels(ownKey).pipe(
+            Effect.provideService(HttpClient.HttpClient, http),
+            Effect.map((answer) =>
+              answer.kind === "models" ? answer.models : answer.kind === "refused" ? [] : null,
+            ),
+          );
+    const update = (current: typeof snapshot.providerInstances) =>
+      withGatewayModels(current, list, opencodeList);
+    if (update(snapshot.providerInstances) === snapshot.providerInstances) return;
+    yield* settings.updateProviderInstances(update);
   });
 
   const refreshModels: LibraosGateway["Service"]["refreshModels"] = lock
@@ -281,7 +296,7 @@ export const make = Effect.fn("LibraosGateway.make")(function* () {
           yield* Ref.set(refusal, asked.value.refused);
         }
         // Unreachable: the agents keep their last list, still limited to it.
-        yield* applyModels(Option.isSome(asked) ? asked.value.list : null);
+        yield* applyModels(key.value, Option.isSome(asked) ? asked.value.list : null);
       }),
     )
     .pipe(

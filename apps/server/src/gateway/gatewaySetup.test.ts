@@ -106,16 +106,25 @@ describe("gatewaySetup", () => {
       ({ instanceId }) => instanceId === "libraosOpencode",
     )!.instance;
     const proxy = { name: "HTTPS_PROXY", value: "http://proxy:3128", sensitive: false };
+    // What the user set in the inline config: a preference, a model option and their default.
+    const userConfig = JSON.parse(String(opencode.environment![1]?.value));
+    userConfig.autoupdate = false;
+    userConfig.model = "libraos/openai/gpt-6-luna";
+    userConfig.provider.libraos.models = { "openai/gpt-6-luna": { limit: { context: 1000 } } };
     const next = withGatewayModels(
       {
         [GATEWAY_INSTANCE_IDS.opencode]: {
           ...opencode,
-          environment: [...opencode.environment!, proxy],
+          environment: [
+            opencode.environment![0]!,
+            { ...opencode.environment![1]!, value: JSON.stringify(userConfig) },
+            proxy,
+          ],
           // Added while an older build still offered the control; the key does not serve it.
           config: { enabled: true, customModels: [{ slug: "libraos/openai/gpt-unserved" }] },
         },
       },
-      [{ id: "openai/gpt-6-luna" }],
+      [{ id: "openai/gpt-6-luna" }, { id: "openai/gpt-6-astra" }],
     );
     expect(next[GATEWAY_INSTANCE_IDS.opencode]?.config).toEqual({
       enabled: true,
@@ -128,7 +137,13 @@ describe("gatewaySetup", () => {
       "HTTPS_PROXY",
     ]);
     const config = JSON.parse(String(environment[1]?.value));
-    expect(Object.keys(config.provider.libraos.models)).toEqual(["openai/gpt-6-luna"]);
+    expect(config.provider.libraos.models).toEqual({
+      "openai/gpt-6-luna": { limit: { context: 1000 } },
+      "openai/gpt-6-astra": {},
+    });
+    expect(config.autoupdate).toBe(false);
+    expect(config.model).toBe("libraos/openai/gpt-6-luna");
+    expect(config.provider.libraos.options.baseURL).toBe("https://api.libraos.com/v1");
   });
 
   it("limits agents connected before #117 to the models they already list", () => {
