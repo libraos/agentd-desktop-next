@@ -7290,6 +7290,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
 
     const startElicitationTurn = Effect.fnUntraced(function* (
       options?: Parameters<typeof makeWakeHarnessWithOptions>[0],
+      runtimeMode: "approval-required" | "full-access" = "approval-required",
     ) {
       const harness = yield* makeWakeHarnessWithOptions(options);
       yield* harness.runtime.startTurn(
@@ -7300,6 +7301,11 @@ describe("ClaudeAdapterV2 background wake turns", () => {
           attemptId: RunAttemptId.make("attempt-claude-elicitation"),
           text: "Deploy web.",
           attachments: [],
+          runtimePolicy: ProviderAdapter.ProviderAdapterV2RuntimePolicy.make({
+            runtimeMode,
+            interactionMode: "default",
+            cwd: "/workspace",
+          }),
         }),
       );
       const onElicitation = harness.getOpenedOptions()?.onElicitation;
@@ -7320,6 +7326,15 @@ describe("ClaudeAdapterV2 background wake turns", () => {
       });
       return { harness, elicit, awaitCard, runtimeRequests };
     });
+
+    it.effect("accepts an approval-only form without a card in Full access", () =>
+      Effect.gen(function* () {
+        const { elicit, runtimeRequests } = yield* startElicitationTurn(undefined, "full-access");
+        const answer = yield* elicit(approvalOnly);
+        assert.deepEqual(yield* Fiber.join(answer), { action: "accept", content: {} });
+        assert.equal(runtimeRequests().length, 0);
+      }).pipe(Effect.scoped, Effect.provide(testLayer)),
+    );
 
     it.effect("shows an approval-only form and accepts only after Approve", () =>
       Effect.gen(function* () {

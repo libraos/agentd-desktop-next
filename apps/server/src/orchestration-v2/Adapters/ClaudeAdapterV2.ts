@@ -12487,6 +12487,10 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
           if ((yield* Ref.get(mcpElicitationSessionGrants)).has(grantKey)) {
             return acceptance;
           }
+          // Full access approves these without a card, as the Codex adapter does.
+          if (context.input.runtimePolicy.runtimeMode === "full-access") {
+            return acceptance;
+          }
           // The CLI waits on this answer, so a turn held for its prompt echo
           // must show its output now, as canUseTool does.
           if (context.heldRootFrames.length > 0) {
