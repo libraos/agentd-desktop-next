@@ -3572,6 +3572,8 @@
   "b77cf4ce030a03fd": "Budget up to {cap} (similar tasks cost {low}–{high}).",
   "1105b01379db64cd": "The estimate comes from local runs of similar tasks.",
   "23d1644e8161e56b": "Cloud Workers を確認するために AgentD に接続できませんでした。",
+  "2595e7b187340f8a": "OpenAI キーの欄のファイルには Anthropic のキーが入っているため、何も送信されませんでした。各キーファイルはそれぞれのプロバイダーの欄に指定してください。",
+  "c6053d841d41d8bc": "Anthropic キーの欄のファイルには OpenAI のキーが入っているため、何も送信されませんでした。各キーファイルはそれぞれのプロバイダーの欄に指定してください。",
   "87e3e1be8d076ca6": "この環境に接続できませんでした。もう一度お試しください。",
   "74a8fc3d3e10acaf": "このサインインリンクは不完全です",
   "820397d04d4ea2df": "このページを閉じて、エージェントからもう一度サインインを開始してください。",

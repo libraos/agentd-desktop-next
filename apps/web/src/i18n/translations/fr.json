@@ -3574,6 +3574,8 @@
   "b77cf4ce030a03fd": "Budget up to {cap} (similar tasks cost {low}–{high}).",
   "1105b01379db64cd": "The estimate comes from local runs of similar tasks.",
   "23d1644e8161e56b": "Impossible de joindre AgentD pour vérifier Cloud Workers.",
+  "2595e7b187340f8a": "Le fichier du champ de clé OpenAI contient une clé Anthropic, rien n’a donc été envoyé. Placez chaque fichier de clé dans le champ de son propre fournisseur.",
+  "c6053d841d41d8bc": "Le fichier du champ de clé Anthropic contient une clé OpenAI, rien n’a donc été envoyé. Placez chaque fichier de clé dans le champ de son propre fournisseur.",
   "87e3e1be8d076ca6": "Impossible de joindre cet environnement. Réessayez.",
   "74a8fc3d3e10acaf": "Ce lien de connexion est incomplet",
   "820397d04d4ea2df": "Fermez cette page et relancez la connexion depuis votre agent.",

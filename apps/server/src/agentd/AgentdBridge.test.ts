@@ -639,12 +639,14 @@ describe("AgentdBridge", () => {
       }).pipe(Effect.provide(NodeServices.layer));
       const before = offers().length;
       expect(
-        (yield* Effect.flip(
+        yield* Effect.flip(
           bridge.startTask({ ...input, cloud: { ...byok, openaiKeyFile: keys.anthropic } }),
-        )).message,
-      ).toBe(
-        "The file in the OpenAI key field holds an Anthropic key, so nothing was submitted. Put each key file in its own provider’s field.",
-      );
+        ),
+      ).toMatchObject({
+        message:
+          "The file in the OpenAI key field holds an Anthropic key, so nothing was submitted. Put each key file in its own provider’s field.",
+        wrongKeyFile: "openai",
+      });
       expect(
         (yield* Effect.flip(
           bridge.startTask({

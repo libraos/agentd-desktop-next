@@ -27,6 +27,8 @@ export class AgentdCommandError extends Schema.TaggedError<AgentdCommandError>()
     replaceSubmission: Schema.optionalKey(Schema.String),
     /** A credential file of the user's that others can read; the app can make it private. */
     privateFile: Schema.optionalKey(Schema.String),
+    /** The BYOK key field whose file holds the other provider's key; only to a host-file reader. */
+    wrongKeyFile: Schema.optionalKey(Schema.Literals(["anthropic", "openai"])),
   },
 ) {}
 

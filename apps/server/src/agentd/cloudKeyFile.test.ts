@@ -19,6 +19,9 @@ describe("keyFileProvider", () => {
     // agentd trims leading whitespace before it reads the key.
     [" sk-ant-api03", "anthropic"],
     ["\n\t sk-proj-ab", "openai"],
+    // A prefix cut off inside "sk-ant-" could be either provider's.
+    [`${" ".repeat(44)}sk-a`, null],
+    ["sk-", null],
     ["lcw_live_0", null],
     ["", null],
   ] as const)("%s", (prefix, provider) => {
@@ -51,6 +54,10 @@ describe("makeCloudKeyFile", () => {
         openToOthers: false,
       });
       expect(((yield* fs.stat(anthropic)).mode & 0o777).toString(8)).toBe("600");
+      // Leading whitespace agentd trims doesn't cut the key short.
+      const padded = path.join(dir, "padded.key");
+      yield* fs.writeFileString(padded, `${" ".repeat(44)}sk-ant-api03-secret\n`);
+      expect(yield* check({ path: padded }, false)).toMatchObject({ provider: "anthropic" });
       expect(yield* check({ path: path.join(dir, "missing.key") }, false)).toEqual({
         provider: null,
         readable: false,

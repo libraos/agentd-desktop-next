@@ -15,9 +15,9 @@ import * as Effect from "effect/Effect";
 // only the provider's name leaves this module. agentd-core#978 adds this check to agentd itself;
 // once the bundled agentd answers it, its answer replaces this one.
 
-// agentd trims leading whitespace before the key, so a little of it is read past; "sk-ant-" after
+// agentd trims leading whitespace before the key, so some of it is read past; "sk-ant-" after
 // that is enough to tell the two prefixes apart.
-const PREFIX_BYTES = 48;
+const PREFIX_BYTES = 4096;
 const OPEN_TO_OTHERS = 0o077;
 const EXECUTABLE = 0o111;
 // A provider key, a Claude setup-token or Codex's auth.json is a few KiB at most.
@@ -30,6 +30,8 @@ export function keyFileProvider(prefix: string): AgentdCloudKeyFileCheck["provid
   // trimStart drops a byte order mark too.
   const text = prefix.trimStart();
   if (text.startsWith("sk-ant-")) return "anthropic";
+  // Cut off before "sk-ant-" is whole: either provider's, so neither.
+  if ("sk-ant-".startsWith(text)) return null;
   return text.startsWith("sk-") ? "openai" : null;
 }
 

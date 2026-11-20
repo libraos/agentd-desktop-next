@@ -3574,6 +3574,8 @@
   "b77cf4ce030a03fd": "Budget up to {cap} (similar tasks cost {low}–{high}).",
   "1105b01379db64cd": "The estimate comes from local runs of similar tasks.",
   "23d1644e8161e56b": "No se pudo contactar con AgentD para comprobar Cloud Workers.",
+  "2595e7b187340f8a": "El archivo del campo de clave de OpenAI contiene una clave de Anthropic, así que no se envió nada. Pon cada archivo de clave en el campo de su propio proveedor.",
+  "c6053d841d41d8bc": "El archivo del campo de clave de Anthropic contiene una clave de OpenAI, así que no se envió nada. Pon cada archivo de clave en el campo de su propio proveedor.",
   "87e3e1be8d076ca6": "No se pudo acceder a este entorno. Vuelve a intentarlo.",
   "74a8fc3d3e10acaf": "Este enlace de inicio de sesión está incompleto",
   "820397d04d4ea2df": "Cierra esta página y vuelve a iniciar sesión desde tu agente.",

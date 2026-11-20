@@ -504,11 +504,14 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
         if (file === undefined) continue;
         const holds = yield* keyProvider(file);
         if (holds !== null && holds !== field)
-          return yield* commandError(
-            field === "openai"
-              ? "The file in the OpenAI key field holds an Anthropic key, so nothing was submitted. Put each key file in its own provider’s field."
-              : "The file in the Anthropic key field holds an OpenAI key, so nothing was submitted. Put each key file in its own provider’s field.",
-          );
+          return yield* new AgentdCommandError({
+            message:
+              field === "openai"
+                ? "The file in the OpenAI key field holds an Anthropic key, so nothing was submitted. Put each key file in its own provider’s field."
+                : "The file in the Anthropic key field holds an OpenAI key, so nothing was submitted. Put each key file in its own provider’s field.",
+            notSetUp: false,
+            wrongKeyFile: field,
+          });
       }
     }
     const found = yield* cloudAgentd;

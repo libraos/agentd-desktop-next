@@ -2,7 +2,7 @@
 // pattern is anchored to a phrase agentd prints, so a path or project name that happens to contain
 // "byok", "cloud-key" or "[cloud]" is not read as a setup or credential problem.
 
-import { chmodPrivateCommand } from "@t3tools/contracts";
+import { AgentdCommandError, chmodPrivateCommand } from "@t3tools/contracts";
 
 export type CloudProblem = "setup" | "credit" | "repository";
 
@@ -202,4 +202,10 @@ export function cloudFailureReason(
     if (reason !== null) return reason;
   }
   return STATE_REASONS[state] ?? null;
+}
+
+/** A Start error for a connection that may not read host files: whose key a file holds isn't said. */
+export function startErrorFor<E>(error: E, readsHostFiles: boolean): E | AgentdCommandError {
+  if (readsHostFiles || !(error instanceof AgentdCommandError) || !error.wrongKeyFile) return error;
+  return new AgentdCommandError({ message: CLOUD_REASONS.keyFile, notSetUp: false });
 }

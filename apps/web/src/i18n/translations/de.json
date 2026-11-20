@@ -3574,6 +3574,8 @@
   "b77cf4ce030a03fd": "Budget up to {cap} (similar tasks cost {low}–{high}).",
   "1105b01379db64cd": "The estimate comes from local runs of similar tasks.",
   "23d1644e8161e56b": "AgentD war für die Prüfung der Cloud Workers nicht erreichbar.",
+  "2595e7b187340f8a": "Die Datei im Feld für den OpenAI-Schlüssel enthält einen Anthropic-Schlüssel, daher wurde nichts übermittelt. Lege jede Schlüsseldatei in das Feld ihres eigenen Anbieters.",
+  "c6053d841d41d8bc": "Die Datei im Feld für den Anthropic-Schlüssel enthält einen OpenAI-Schlüssel, daher wurde nichts übermittelt. Lege jede Schlüsseldatei in das Feld ihres eigenen Anbieters.",
   "87e3e1be8d076ca6": "Diese Umgebung ist nicht erreichbar. Versuche es erneut.",
   "74a8fc3d3e10acaf": "Dieser Anmeldelink ist unvollständig",
   "820397d04d4ea2df": "Schließe diese Seite und starte die Anmeldung erneut über deinen Agenten.",

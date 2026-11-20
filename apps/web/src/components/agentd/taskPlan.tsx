@@ -270,6 +270,18 @@ export function useTaskPlan({
     const result = await startTask({ environmentId, input });
     if (result._tag === "Failure") {
       const failure = squashAtomCommandFailure(result);
+      if (isCommandError(failure) && failure.wrongKeyFile !== undefined)
+        return {
+          kind: "refused",
+          reason:
+            failure.wrongKeyFile === "openai"
+              ? gt(
+                  "The file in the OpenAI key field holds an Anthropic key, so nothing was submitted. Put each key file in its own provider’s field.",
+                )
+              : gt(
+                  "The file in the Anthropic key field holds an OpenAI key, so nothing was submitted. Put each key file in its own provider’s field.",
+                ),
+        };
       return {
         kind: "failed",
         error: failure,

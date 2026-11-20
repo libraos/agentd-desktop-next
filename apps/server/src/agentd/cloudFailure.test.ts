@@ -1,7 +1,9 @@
 import { describe, expect, it } from "@effect/vitest";
 
 import { cloudJobNote } from "./agentdCloud.ts";
-import { CLOUD_REASONS, cloudReason, openKeyFile } from "./cloudFailure.ts";
+import { AgentdCommandError } from "@t3tools/contracts";
+
+import { CLOUD_REASONS, cloudReason, openKeyFile, startErrorFor } from "./cloudFailure.ts";
 
 describe("cloudJobNote", () => {
   it.each([
@@ -87,5 +89,21 @@ describe("openKeyFile", () => {
       openKeyFile("cloud.openai_key_file /srv/openai.key belongs to another user (uid 501)"),
     ).toBe(null);
     expect(openKeyFile("check exited 1")).toBe(null);
+  });
+});
+
+describe("startErrorFor", () => {
+  it("names whose key a file holds only to a connection that may read host files", () => {
+    const wrong = new AgentdCommandError({
+      message: "The file in the OpenAI key field holds an Anthropic key.",
+      notSetUp: false,
+      wrongKeyFile: "openai",
+    });
+    expect(startErrorFor(wrong, true)).toBe(wrong);
+    const hidden = startErrorFor(wrong, false);
+    expect(hidden).toMatchObject({ message: CLOUD_REASONS.keyFile });
+    expect(hidden).not.toHaveProperty("wrongKeyFile");
+    const other = new AgentdCommandError({ message: "x", notSetUp: false });
+    expect(startErrorFor(other, false)).toBe(other);
   });
 });

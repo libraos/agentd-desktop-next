@@ -3574,6 +3574,8 @@
   "b77cf4ce030a03fd": "Budget up to {cap} (similar tasks cost {low}–{high}).",
   "1105b01379db64cd": "The estimate comes from local runs of similar tasks.",
   "23d1644e8161e56b": "Det gick inte att nå AgentD för att kontrollera Cloud Workers.",
+  "2595e7b187340f8a": "Filen i fältet för OpenAI-nyckeln innehåller en Anthropic-nyckel, så inget skickades. Lägg varje nyckelfil i sin egen leverantörs fält.",
+  "c6053d841d41d8bc": "Filen i fältet för Anthropic-nyckeln innehåller en OpenAI-nyckel, så inget skickades. Lägg varje nyckelfil i sin egen leverantörs fält.",
   "87e3e1be8d076ca6": "Kunde inte nå den här miljön. Försök igen.",
   "74a8fc3d3e10acaf": "Den här inloggningslänken är ofullständig",
   "820397d04d4ea2df": "Stäng den här sidan och starta inloggningen igen från din agent.",

@@ -3574,6 +3574,8 @@
   "b77cf4ce030a03fd": "Budget up to {cap} (similar tasks cost {low}–{high}).",
   "1105b01379db64cd": "The estimate comes from local runs of similar tasks.",
   "23d1644e8161e56b": "Couldn’t reach AgentD to check Cloud Workers.",
+  "2595e7b187340f8a": "The file in the OpenAI key field holds an Anthropic key, so nothing was submitted. Put each key file in its own provider’s field.",
+  "c6053d841d41d8bc": "The file in the Anthropic key field holds an OpenAI key, so nothing was submitted. Put each key file in its own provider’s field.",
   "87e3e1be8d076ca6": "Could not reach this environment. Try again.",
   "74a8fc3d3e10acaf": "This sign-in link is incomplete",
   "820397d04d4ea2df": "Close this page and start the sign-in again from your agent.",
