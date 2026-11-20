@@ -1,3 +1,4 @@
+import type { AgentdCloudTaskInput } from "@t3tools/contracts";
 import { persistClientSettingsUpdate } from "~/hooks/useSettings";
 import { ensureLocalApi } from "~/localApi";
 import { rememberKeyFiles } from "./startTask.logic";
@@ -35,4 +36,14 @@ export function persistRememberedKeyFiles(
   });
   queue = save.catch(() => undefined);
   return save;
+}
+
+/** After a cloud worker took the task: the BYOK paths it was given prefill the next one. */
+export function rememberCloudKeyFiles(
+  environmentId: string,
+  submitted: AgentdCloudTaskInput["cloud"],
+) {
+  if (submitted.modelAccess !== "byok") return;
+  // A path not remembered is typed again next time; the task already started.
+  void persistRememberedKeyFiles(environmentId, submitted).catch(() => undefined);
 }

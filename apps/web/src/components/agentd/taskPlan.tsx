@@ -3,6 +3,7 @@ import { scopeProjectRef } from "@t3tools/client-runtime/environment";
 import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import {
   AgentdCommandError,
+  type AgentdCloudTaskInput,
   type AgentdStartTaskResult,
   type AgentdTaskDefaults,
   type EnvironmentId,
@@ -53,7 +54,12 @@ export function useTaskDefaults(
 
 export type TaskStartOutcome =
   | { readonly kind: "started"; readonly task: AgentdStartTaskResult }
-  | { readonly kind: "offered"; readonly task: AgentdStartTaskResult }
+  | {
+      readonly kind: "offered";
+      readonly task: AgentdStartTaskResult;
+      /** The cloud input sent, kept until the synced list shows the task started. */
+      readonly cloud: AgentdCloudTaskInput["cloud"] | null;
+    }
   | {
       readonly kind: "failed";
       readonly error: unknown;
@@ -318,7 +324,11 @@ export function useTaskPlan({
     if (cloud.enabled && cloud.input !== null && result.value.started) cloud.remember(cloud.input);
     return result.value.started
       ? { kind: "started", task: result.value }
-      : { kind: "offered", task: result.value };
+      : {
+          kind: "offered",
+          task: result.value,
+          cloud: cloud.enabled && cloud.input !== null ? cloud.input : null,
+        };
   }
 
   /** One Start at a time; null while one is running. */

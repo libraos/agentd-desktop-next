@@ -3163,21 +3163,21 @@
   ],
   "5328410a6f60d4c2": "AgentD:s watchdog-tjänst kör den här appens AgentD, men systemd har inte slagit på dess timer, så AgentD följer inte dina uppgifter medan appen är stängd. Reparera slår på den.",
   "6a59746b82dd08fb": "AgentD kunde inte läsa hur en av dess bakgrundstjänster är registrerad, och agentd install skulle skriva om den också, så Reparera erbjuds inte. Försök igen senare, eller kör agentd install i en terminal med den AgentD du använder.",
-  "b2a2dba155789771": "En systemd-drop-in anger programmet som den här tjänsten kör, och agentd install ändrar inte drop-ins, så Reparera erbjuds inte för den. Ta bort ExecStart-raderna från drop-in-filen i ~/.config/systemd/user och kör sedan systemctl --user daemon-reload.",
+  "3d3633596c70ff27": "En systemd-drop-in anger programmet som tjänsten kör, och agentd install ändrar inte drop-ins, så Reparera erbjuds inte för den. Ta bort ExecStart-raderna från drop-in-filen i ~/.config/systemd/user och kör systemctl --user daemon-reload. Kör sedan, i en terminal med den AgentD du använder, agentd install för watchdog eller agentd dash install för instrumentpanelen.",
   "74d5bd28e284fa57": "En av AgentD:s bakgrundstjänster kör ett AgentD som saknas eller hör till gamla AgentD Desktop, och en annan kör ditt eget AgentD. Appen lät båda vara: kör agentd install med det AgentD du använder. Det skriver om båda tjänsterna med de AGENTD_ROOT och AGENTD_DB som är satta där du kör det; om instrumentpanelen använder egna, kör sedan agentd dash install med dem.",
   "feed1033187aadc9": "AgentD:s bakgrundstjänster kör en AgentD som saknas eller tillhör gamla AgentD Desktop. Appens AgentD försvinner när appen stängs, så de lämnades orörda: installera agentd för terminalen och kör sedan agentd install.",
   "e5409921bb75522c": "AgentD:s bakgrundstjänster kör inte den här appens AgentD än: AgentD startar dem inte medan äldre AgentD-tjänster är på. Kör det här och sedan agentd install i en terminal.",
   "ef7c30f129576625": "Reparerar…",
   "afb4c74d1cc655a7": "Reparera…",
   "dc26fcb837031237": "Reparera AgentD:s bakgrundstjänster?",
-  "b67927339f1854f8": [
-    "Detta kör agentd install från den här appens AgentD (",
+  "f24024c34b0e9c61": [
+    "Detta kör agentd install från appens AgentD (",
     {
       "i": 1,
       "k": "_gt_value_1",
       "v": "v"
     },
-    "). Både instrumentpanelen och watchdog registreras om med den här appens AgentD och den rot som appen använder; en AGENTD_ROOT eller AGENTD_DB som de anger nu behålls inte."
+    "), och på Linux även agentd dash install. Instrumentpanelen och watchdog registreras om med appens AgentD och den rot appen använder; en AGENTD_ROOT eller AGENTD_DB som de har nu behålls inte."
   ],
   "0e47cafe3b9470e4": [
     "Detta kör agentd dash install från den här appens AgentD (",

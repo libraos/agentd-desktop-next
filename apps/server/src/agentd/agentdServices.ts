@@ -338,7 +338,8 @@ const runner =
 
 /**
  * agentd's services that run a missing agentd or the old app's, and what Repair would re-register;
- * null when none does. Only reads: service files, and schtasks queries on Windows.
+ * null when none does. Only reads: service files, schtasks queries on Windows, and on Linux
+ * whether systemd runs the watchdog timer.
  */
 export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps: ServiceDeps) {
   const { bundled, target, platform, home, root } = deps;
@@ -460,6 +461,11 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
         watchdogOff = yield* fs
           .exists(path.join(unitDir, "agentd-watchdog.timer"))
           .pipe(Effect.orElseSucceed(() => false));
+    } else {
+      // enable --now links the timer before it starts it, so a failed start leaves it enabled
+      // but stopped. A manager that doesn't answer prints no state: not taken as off.
+      const state = yield* exec("systemctl", ["--user", "is-active", "agentd-watchdog.timer"]);
+      watchdogOff = ["inactive", "failed"].includes(state.text.split("\n")[0]!.trim());
     }
   }
   if (services.length === 0 && command === null && !watchdogOff) return null;

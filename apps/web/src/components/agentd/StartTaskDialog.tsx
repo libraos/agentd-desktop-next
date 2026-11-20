@@ -2,10 +2,15 @@ import { useAtomValue } from "@effect/atom-react";
 import { scopedThreadKey } from "@t3tools/client-runtime/environment";
 import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import { threadRuntimeIsActive } from "@t3tools/client-runtime/state/shell";
-import { type EnvironmentId, type MessageId, type ScopedThreadRef } from "@t3tools/contracts";
+import {
+  type AgentdCloudTaskInput,
+  type EnvironmentId,
+  type MessageId,
+  type ScopedThreadRef,
+} from "@t3tools/contracts";
 import { Atom } from "effect/reactivity";
 import { T, useGT } from "gt-react";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 
 import { agentdEnvironment, useAgentdCommands, useAgentdTasks } from "~/lib/agentdState";
 import { useLibraosGatewayConnected } from "~/lib/libraosGatewayState";
@@ -32,6 +37,7 @@ import { Textarea } from "../ui/textarea";
 import { toastManager } from "../ui/toast";
 import { CloudWorkersSetup } from "./CloudWorkersSetup";
 import { StartTaskCloud, useStartTaskCloud } from "./StartTaskCloud";
+import { rememberCloudKeyFiles } from "./rememberKeyFiles";
 import { StartTaskOthers } from "./StartTaskOthers";
 import {
   cloudOfferStarted,
@@ -72,11 +78,13 @@ export function openStartTaskDialog(threadRef: ScopedThreadRef, fields: TaskFiel
 
 /**
  * The refusal shown for a cloud task agentd saved but didn't confirm, until the synced task list
- * shows it started. Its subscription runs the server's cloud sync fallback, tasks pane closed or not.
+ * shows it started; then the BYOK paths it was sent prefill the next one. Its subscription runs
+ * the server's cloud sync fallback, tasks pane closed or not.
  */
 export function OfferedCloudTask(props: {
   environmentId: EnvironmentId;
   taskId: string | null;
+  submitted: AgentdCloudTaskInput["cloud"] | null;
   children: ReactNode;
 }) {
   return props.taskId === null ? (
@@ -89,15 +97,22 @@ export function OfferedCloudTask(props: {
 function SyncedCloudTask({
   environmentId,
   taskId,
+  submitted,
   children,
 }: {
   environmentId: EnvironmentId;
   taskId: string;
+  submitted: AgentdCloudTaskInput["cloud"] | null;
   children: ReactNode;
 }) {
   const gt = useGT();
   const { data } = useAgentdTasks(environmentId);
-  if (!cloudOfferStarted(data, taskId)) return children;
+  const started = cloudOfferStarted(data, taskId);
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- saves to client settings once the synced task list shows the offer started
+  useEffect(() => {
+    if (started && submitted !== null) rememberCloudKeyFiles(environmentId, submitted);
+  }, [started, environmentId, submitted]);
+  if (!started) return children;
   return (
     <p role="status" className="text-muted-foreground text-sm">
       {gt("Task {taskId} started in Cloud Workers. Check Background tasks for its progress.", {
@@ -169,6 +184,7 @@ function StartTaskDialog({
   const [draftError, setDraftError] = useState<string | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
   const [offeredId, setOfferedId] = useState<string | null>(null);
+  const [offeredCloud, setOfferedCloud] = useState<AgentdCloudTaskInput["cloud"] | null>(null);
   // An earlier cloud offer whose outcome is unknown: Start checks agentd before offering again.
   const [outcomeUnknown, setOutcomeUnknown] = useState(false);
   const [replaceSubmission, setReplaceSubmission] = useState<string | null>(null);
@@ -298,6 +314,7 @@ function StartTaskDialog({
         setOutcomeUnknown(false);
         setReplaceSubmission(null);
         setOfferedId(outcome.task.id);
+        setOfferedCloud(outcome.cloud);
         setStartError(outcome.task.note ?? gt("AgentD did not dispatch the task."));
         return;
       case "started":
@@ -490,6 +507,7 @@ function StartTaskDialog({
             <OfferedCloudTask
               environmentId={environmentId}
               taskId={offeredId !== null && cloud.enabled ? offeredId : null}
+              submitted={offeredCloud}
             >
               <div
                 role="alert"

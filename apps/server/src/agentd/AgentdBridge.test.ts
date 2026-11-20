@@ -569,24 +569,36 @@ describe("AgentdBridge", () => {
       const unit = path.join(units, "agentd-watchdog.service");
       yield* fs.writeFileString(unit, "[Service]\nExecStart=/gone/agentd watchdog\n");
       let rewrites = false;
-      // Whether the systemd user manager answers; enabling the timer links it into timers.target.
-      let managerUp = false;
+      // Whether systemd can start the timer; enabling it links it into timers.target either way.
+      let starts = false;
+      let active = false;
       const runs: Array<string> = [];
       const bridge = yield* makeBridge(
         { PATH: "", AGENTD_BIN: process.execPath, AGENTD_DESKTOP_BUNDLED: "1" },
         (input) => {
           runs.push([input.command, ...input.args].join(" "));
           if (input.command === "systemctl") {
-            if (!managerUp) return Effect.succeed(output("", 1));
+            if (input.args[1] === "is-active")
+              return Effect.succeed(active ? output("active\n") : output("inactive\n", 3));
             if (input.args[1] !== "enable") return Effect.succeed(output(""));
             const wants = path.join(units, "timers.target.wants");
-            return fs
-              .makeDirectory(wants, { recursive: true })
-              .pipe(
-                Effect.andThen(fs.writeFileString(path.join(wants, "agentd-watchdog.timer"), "")),
-                Effect.orDie,
-                Effect.as(output("")),
-              );
+            return fs.makeDirectory(wants, { recursive: true }).pipe(
+              Effect.andThen(
+                fs
+                  .symlink(
+                    path.join(units, "agentd-watchdog.timer"),
+                    path.join(wants, "agentd-watchdog.timer"),
+                  )
+                  .pipe(Effect.ignore),
+              ),
+              Effect.orDie,
+              Effect.andThen(
+                Effect.sync(() => {
+                  active = starts;
+                  return output("", starts ? 0 : 1);
+                }),
+              ),
+            );
           }
           if (input.args[0] !== "install") return Effect.succeed(output(""));
           const written = rewrites
@@ -615,16 +627,18 @@ describe("AgentdBridge", () => {
       // An install that leaves the stale program in effect is no repair.
       expect(yield* bridge.repairServices({ moves: ["watchdog"] })).toEqual({ ok: false });
       rewrites = true;
-      // The unit is rewritten but systemd can't enable its timer: still a failure, still offered.
+      // The unit is rewritten, systemd enables its timer but can't start it: still a failure, and
+      // the same Repair is still offered.
       expect(yield* bridge.repairServices({ moves: ["watchdog"] })).toEqual({ ok: false });
-      // Once systemd answers, the same Repair enables the timer, and then has nothing to do.
-      managerUp = true;
+      expect(yield* bridge.repairServices({ moves: ["watchdog"] })).toEqual({ ok: false });
+      // Once systemd can start it, the same Repair starts the timer, and then has nothing to do.
+      starts = true;
       runs.length = 0;
       expect(yield* bridge.repairServices({ moves: ["watchdog"] })).toEqual({ ok: true });
       expect(runs).toContain("systemctl --user enable --now agentd-watchdog.timer");
       runs.length = 0;
       expect(yield* bridge.repairServices({ moves: ["watchdog"] })).toEqual({ ok: true });
-      expect(runs).toEqual([]);
+      expect(runs).toEqual(["systemctl --user is-active agentd-watchdog.timer"]);
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );
 

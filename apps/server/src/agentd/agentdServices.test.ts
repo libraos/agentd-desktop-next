@@ -368,7 +368,20 @@ describe("agentd services", () => {
         "",
       );
       expect(yield* detectServices(linux)).toBe(null);
-      expect(runs).toEqual([]);
+      expect(runs).toEqual([["systemctl", "--user", "is-active", "agentd-watchdog.timer"]]);
+      // A timer systemd enabled but couldn't start: still reported, and Repair starts it.
+      const stopped =
+        (state: string): ProcessRunner.ProcessRunner["Service"]["run"] =>
+        (input) =>
+          Effect.succeed(input.args[1] === "is-active" ? output(`${state}\n`, 3) : output(""));
+      for (const state of ["inactive", "failed"])
+        expect(yield* detectServices({ ...linux, run: stopped(state) })).toEqual({
+          services: [],
+          agentd: bundled,
+          moves: ["watchdog"],
+          watchdogOff: true,
+        });
+      runs.length = 0;
       // A repair whose reload or enable failed left the timer written but off, legacy units gone:
       // still reported, and Repair enables it again.
       yield* fs.remove(path.join(units, "timers.target.wants"), { recursive: true });

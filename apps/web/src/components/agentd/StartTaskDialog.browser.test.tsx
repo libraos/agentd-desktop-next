@@ -1334,12 +1334,39 @@ it("checks each BYOK key file's provider and privacy, and remembers the paths th
     await page.getByRole("button", { name: "Close" }).first().click();
   }
   openStartTaskDialog(threadRef);
+  {
+    await using _screen = await renderDialog();
+    await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+    await page.getByRole("combobox", { name: "Model access" }).click();
+    await page.getByRole("option", { name: "Your API key" }).click();
+    await expect
+      .element(page.getByLabelText("OpenAI key file path"))
+      .toHaveValue("/home/me/openai.key");
+    await expect.element(page.getByLabelText("Anthropic key file path")).toHaveValue("");
+    // One agentd saved without a receipt keeps its path once sync shows it started.
+    state.keyFiles["/home/me/later.key"] = {
+      provider: "openai",
+      readable: true,
+      openToOthers: false,
+    };
+    state.start.mockResolvedValue(
+      AsyncResult.success({ id: "hof-789aaa", started: false, note: "Recorded." }),
+    );
+    await userEvent.fill(page.getByLabelText("Goal"), "Fix export");
+    await userEvent.fill(page.getByLabelText("OpenAI key file path"), "/home/me/later.key");
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await expect.element(page.getByText("Recorded.")).toBeVisible();
+    state.rows = [{ id: "hof-789aaa", cloudState: "running" }];
+    for (const listener of state.rowListeners) listener();
+    await expect.element(page.getByText(/Task hof-789aaa started in Cloud Workers/)).toBeVisible();
+    await page.getByRole("button", { name: "Close" }).first().click();
+  }
+  openStartTaskDialog(threadRef);
   await using _screen = await renderDialog();
   await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
   await page.getByRole("combobox", { name: "Model access" }).click();
   await page.getByRole("option", { name: "Your API key" }).click();
   await expect
     .element(page.getByLabelText("OpenAI key file path"))
-    .toHaveValue("/home/me/openai.key");
-  await expect.element(page.getByLabelText("Anthropic key file path")).toHaveValue("");
+    .toHaveValue("/home/me/later.key");
 });

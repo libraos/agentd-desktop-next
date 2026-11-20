@@ -3167,21 +3167,21 @@
   ],
   "5328410a6f60d4c2": "AgentD 的 watchdog 服务运行的是此应用的 AgentD，但 systemd 尚未开启它的定时器，因此此应用关闭时 AgentD 不会跟进你的任务。修复会将其开启。",
   "6a59746b82dd08fb": "AgentD 无法读取其某个后台服务的注册信息，而 agentd install 也会重写它，因此不提供修复。请稍后重试，或在终端中用你使用的 AgentD 运行 agentd install。",
-  "b2a2dba155789771": "systemd drop-in 设置了此服务运行的程序，而 agentd install 不会修改 drop-in，因此不为它提供修复。请从 ~/.config/systemd/user 中的 drop-in 删除 ExecStart 行，然后运行 systemctl --user daemon-reload。",
+  "3d3633596c70ff27": "systemd drop-in 设置了此服务运行的程序，而 agentd install 不会修改 drop-in，因此不为它提供修复。请从 ~/.config/systemd/user 中的 drop-in 删除 ExecStart 行，并运行 systemctl --user daemon-reload。然后在使用你的 AgentD 的终端中，为 watchdog 运行 agentd install，为仪表板运行 agentd dash install。",
   "74d5bd28e284fa57": "AgentD 的一个后台服务运行的 AgentD 已缺失或属于旧版 AgentD Desktop，另一个运行的是你自己的 AgentD。此应用未改动两者：请用你使用的 AgentD 运行 agentd install。它会用运行处设置的 AGENTD_ROOT 和 AGENTD_DB 重写两个服务；如果仪表板使用自己的设置，之后请用这些设置运行 agentd dash install。",
   "feed1033187aadc9": "AgentD 的后台服务运行的 AgentD 已不存在或属于旧版 AgentD Desktop。此应用的 AgentD 会在应用关闭后消失，因此未做更改：请为终端安装 agentd，然后运行 agentd install。",
   "e5409921bb75522c": "AgentD 的后台服务尚未运行此应用的 AgentD：在旧的 AgentD 服务开启期间，AgentD 不会启动它们。请在终端中运行此命令，然后运行 agentd install。",
   "ef7c30f129576625": "正在修复…",
   "afb4c74d1cc655a7": "修复…",
   "dc26fcb837031237": "修复 AgentD 的后台服务？",
-  "b67927339f1854f8": [
-    "这会从此应用的 AgentD（",
+  "f24024c34b0e9c61": [
+    "这会用此应用的 AgentD（",
     {
       "i": 1,
       "k": "_gt_value_1",
       "v": "v"
     },
-    "）运行 agentd install。它会用此应用的 AgentD 和此应用使用的根目录重新注册仪表盘和 watchdog；它们当前设置的 AGENTD_ROOT 或 AGENTD_DB 不会保留。"
+    "）运行 agentd install，在 Linux 上还会运行 agentd dash install。它会用此应用的 AgentD 和此应用使用的根目录重新注册仪表板和 watchdog；它们当前设置的 AGENTD_ROOT 或 AGENTD_DB 不会保留。"
   ],
   "0e47cafe3b9470e4": [
     "这会从此应用的 AgentD（",

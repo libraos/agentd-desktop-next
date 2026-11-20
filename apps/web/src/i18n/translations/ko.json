@@ -3162,21 +3162,21 @@
   ],
   "5328410a6f60d4c2": "AgentD의 watchdog 서비스는 이 앱의 AgentD를 실행하지만 systemd가 타이머를 켜지 않아, 이 앱이 닫혀 있는 동안 AgentD가 작업을 추적하지 않습니다. 복구하면 켜집니다.",
   "6a59746b82dd08fb": "AgentD가 백그라운드 서비스 중 하나의 등록 내용을 읽지 못했고, agentd install이 그것도 다시 쓰기 때문에 복구를 제공하지 않습니다. 나중에 다시 시도하거나, 사용하는 AgentD로 터미널에서 agentd install을 실행하세요.",
-  "b2a2dba155789771": "systemd 드롭인이 이 서비스가 실행하는 프로그램을 지정하고 있으며, agentd install은 드롭인을 변경하지 않으므로 이 서비스에 대한 복구를 제공하지 않습니다. ~/.config/systemd/user의 드롭인에서 ExecStart 줄을 제거한 다음 systemctl --user daemon-reload를 실행하세요.",
+  "3d3633596c70ff27": "systemd 드롭인이 이 서비스가 실행하는 프로그램을 설정하고 있고 agentd install은 드롭인을 바꾸지 않으므로, 이 서비스에는 복구가 제공되지 않습니다. ~/.config/systemd/user의 드롭인에서 ExecStart 줄을 지우고 systemctl --user daemon-reload를 실행하세요. 그런 다음 사용하는 AgentD가 있는 터미널에서 watchdog은 agentd install, 대시보드는 agentd dash install을 실행하세요.",
   "74d5bd28e284fa57": "AgentD 백그라운드 서비스 중 하나가 없거나 이전 AgentD Desktop의 AgentD를 실행하고 있고, 다른 하나는 사용자의 AgentD를 실행하고 있습니다. 이 앱은 둘 다 그대로 두었습니다. 사용하는 AgentD로 agentd install을 실행하세요. 실행하는 곳에 설정된 AGENTD_ROOT와 AGENTD_DB로 두 서비스를 모두 다시 씁니다. 대시보드가 자체 값을 사용한다면 그 후에 해당 값으로 agentd dash install을 실행하세요.",
   "feed1033187aadc9": "AgentD의 백그라운드 서비스가 없거나 이전 AgentD Desktop에 속한 AgentD를 실행하고 있습니다. 이 앱의 AgentD는 앱을 닫으면 사라지므로 그대로 두었습니다. 터미널용 agentd를 설치한 다음 agentd install을 실행하세요.",
   "e5409921bb75522c": "AgentD의 백그라운드 서비스가 아직 이 앱의 AgentD를 실행하지 않습니다. 이전 AgentD 서비스가 켜져 있는 동안 AgentD는 이를 시작하지 않습니다. 터미널에서 이 명령을 실행한 다음 agentd install을 실행하세요.",
   "ef7c30f129576625": "복구 중…",
   "afb4c74d1cc655a7": "복구…",
   "dc26fcb837031237": "AgentD 백그라운드 서비스를 복구할까요?",
-  "b67927339f1854f8": [
+  "f24024c34b0e9c61": [
     "이 앱의 AgentD(",
     {
       "i": 1,
       "k": "_gt_value_1",
       "v": "v"
     },
-    ")로 agentd install을 실행합니다. 대시보드와 워치독을 모두 이 앱의 AgentD와 이 앱이 사용하는 루트로 다시 등록합니다. 지금 설정된 AGENTD_ROOT 또는 AGENTD_DB는 유지되지 않습니다."
+    ")로 agentd install을 실행하고, Linux에서는 agentd dash install도 실행합니다. 대시보드와 watchdog을 이 앱의 AgentD와 이 앱이 사용하는 루트로 다시 등록하며, 지금 설정된 AGENTD_ROOT 또는 AGENTD_DB는 유지되지 않습니다."
   ],
   "0e47cafe3b9470e4": [
     "이 앱의 AgentD(",

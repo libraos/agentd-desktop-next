@@ -31,7 +31,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { CloudWorkersSetup } from "./CloudWorkersSetup";
-import { persistRememberedKeyFiles } from "./rememberKeyFiles";
+import { rememberCloudKeyFiles } from "./rememberKeyFiles";
 import {
   autoBudget,
   budgetDollars,
@@ -183,12 +183,7 @@ export function useStartTaskCloud(
     anthropicCheck.refresh();
     openaiCheck.refresh();
   };
-  /** After a cloud worker took the task: the BYOK paths it was given prefill the next one. */
-  const remember = (submitted: CloudInput) => {
-    if (submitted.modelAccess !== "byok") return;
-    // A path not remembered is typed again next time; the task already started.
-    void persistRememberedKeyFiles(environmentId, submitted).catch(() => undefined);
-  };
+  const remember = (submitted: CloudInput) => rememberCloudKeyFiles(environmentId, submitted);
   return {
     setup,
     requested,

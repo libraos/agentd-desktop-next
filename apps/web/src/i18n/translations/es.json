@@ -3163,21 +3163,21 @@
   ],
   "5328410a6f60d4c2": "El servicio watchdog de AgentD ejecuta el AgentD de esta app, pero systemd no ha activado su temporizador, así que AgentD no sigue tus tareas mientras esta app está cerrada. Reparar lo activa.",
   "6a59746b82dd08fb": "AgentD no pudo leer cómo está registrado uno de sus servicios en segundo plano, y agentd install también lo reescribiría, así que no se ofrece Reparar. Inténtalo más tarde o ejecuta agentd install en una terminal con el AgentD que usas.",
-  "b2a2dba155789771": "Un drop-in de systemd establece el programa que ejecuta este servicio, y agentd install no cambia los drop-ins, así que no se ofrece Reparar para él. Quita las líneas ExecStart del drop-in en ~/.config/systemd/user y luego ejecuta systemctl --user daemon-reload.",
+  "3d3633596c70ff27": "Un drop-in de systemd define el programa que ejecuta este servicio, y agentd install no cambia los drop-ins, así que no se ofrece Reparar para él. Quita las líneas ExecStart del drop-in en ~/.config/systemd/user y ejecuta systemctl --user daemon-reload. Después, en una terminal con el AgentD que usas, ejecuta agentd install para el watchdog o agentd dash install para el panel.",
   "74d5bd28e284fa57": "Uno de los servicios en segundo plano de AgentD ejecuta un AgentD que falta o pertenece al antiguo AgentD Desktop, y otro ejecuta tu propio AgentD. Esta app no tocó ninguno: ejecuta agentd install con el AgentD que usas. Reescribe ambos servicios con el AGENTD_ROOT y AGENTD_DB definidos donde lo ejecutes; si el panel usa los suyos, ejecuta después agentd dash install con ellos.",
   "feed1033187aadc9": "Los servicios en segundo plano de AgentD ejecutan un AgentD que falta o que pertenece al antiguo AgentD Desktop. El AgentD de esta app desaparece al cerrarla, así que no se tocaron: instala agentd para la terminal y luego ejecuta agentd install.",
   "e5409921bb75522c": "Los servicios en segundo plano de AgentD aún no ejecutan el AgentD de esta app: AgentD no los iniciará mientras haya servicios antiguos de AgentD activos. Ejecuta esto y luego agentd install en una terminal.",
   "ef7c30f129576625": "Reparando…",
   "afb4c74d1cc655a7": "Reparar…",
   "dc26fcb837031237": "¿Reparar los servicios en segundo plano de AgentD?",
-  "b67927339f1854f8": [
+  "f24024c34b0e9c61": [
     "Esto ejecuta agentd install desde el AgentD de esta app (",
     {
       "i": 1,
       "k": "_gt_value_1",
       "v": "v"
     },
-    "). Vuelve a registrar el panel y el watchdog con el AgentD de esta app y la raíz que usa esta app; no se conserva un AGENTD_ROOT o AGENTD_DB que tengan ahora."
+    "), y en Linux también agentd dash install. Vuelve a registrar el panel y el watchdog con el AgentD de esta app y la raíz que usa esta app; no se conserva el AGENTD_ROOT o AGENTD_DB que tengan ahora."
   ],
   "0e47cafe3b9470e4": [
     "Esto ejecuta agentd dash install desde el AgentD de esta app (",

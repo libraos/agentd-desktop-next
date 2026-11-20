@@ -1,4 +1,4 @@
-import type { ScopedThreadRef } from "@t3tools/contracts";
+import type { AgentdCloudTaskInput, ScopedThreadRef } from "@t3tools/contracts";
 import { T, useGT } from "gt-react";
 import { useState } from "react";
 
@@ -31,7 +31,10 @@ export function TaskDraftCard({
   const [result, setResult] = useState<string | null>(null);
   const [startedId, setStartedId] = useState<string | null>(null);
   // A cloud task agentd saved but didn't confirm: followed until the synced list shows it started.
-  const [offeredCloudId, setOfferedCloudId] = useState<string | null>(null);
+  const [offered, setOffered] = useState<{
+    id: string;
+    cloud: AgentdCloudTaskInput["cloud"] | null;
+  } | null>(null);
   const [replaceSubmission, setReplaceSubmission] = useState<string | null>(null);
 
   async function start(replacing: string | null = null) {
@@ -51,7 +54,7 @@ export function TaskDraftCard({
         return;
       case "offered":
         setStartedId(outcome.task.id);
-        if (cloud.enabled) setOfferedCloudId(outcome.task.id);
+        if (cloud.enabled) setOffered({ id: outcome.task.id, cloud: outcome.cloud });
         setResult(
           outcome.task.note ??
             gt("Task {taskId} was offered but did not start.", { taskId: outcome.task.id }),
@@ -80,7 +83,11 @@ export function TaskDraftCard({
       <p className="wrap-anywhere text-sm font-medium">{plan.filled.goal}</p>
       <TaskPlanSummary plan={plan} />
       {result !== null ? (
-        <OfferedCloudTask environmentId={threadRef.environmentId} taskId={offeredCloudId}>
+        <OfferedCloudTask
+          environmentId={threadRef.environmentId}
+          taskId={offered?.id ?? null}
+          submitted={offered?.cloud ?? null}
+        >
           <p role="status" className="wrap-anywhere whitespace-pre-wrap text-xs">
             {result}
           </p>

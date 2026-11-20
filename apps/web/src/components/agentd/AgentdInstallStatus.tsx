@@ -180,7 +180,9 @@ function ServicesNotice({
           <T>
             A systemd drop-in sets the program this service runs, and agentd install doesn’t change
             drop-ins, so Repair isn’t offered for it. Remove the ExecStart lines from the drop-in in
-            ~/.config/systemd/user, then run systemctl --user daemon-reload.
+            ~/.config/systemd/user and run systemctl --user daemon-reload. Then, in a terminal with
+            the AgentD you use, run agentd install for the watchdog or agentd dash install for the
+            dashboard.
           </T>
         </p>
       ) : null}
@@ -246,9 +248,10 @@ function ServicesNotice({
             <AlertDialogDescription>
               {both ? (
                 <T>
-                  This runs agentd install from this app’s AgentD (<Var>{agentd}</Var>). It
-                  re-registers both the dashboard and the watchdog with this app’s AgentD and the
-                  root this app uses; an AGENTD_ROOT or AGENTD_DB they set now isn’t kept.
+                  This runs agentd install from this app’s AgentD (<Var>{agentd}</Var>), and on
+                  Linux agentd dash install too. It re-registers both the dashboard and the watchdog
+                  with this app’s AgentD and the root this app uses; an AGENTD_ROOT or AGENTD_DB
+                  they set now isn’t kept.
                 </T>
               ) : problem.moves[0] === "dash" ? (
                 <T>

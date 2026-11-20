@@ -250,7 +250,7 @@ export const AgentdServicesProblem = Schema.Struct({
   overridden: Schema.optionalKey(Schema.Array(AgentdServiceName)),
   /** What agentd install asked the user to run first, before it would enable the services. */
   command: Schema.optionalKey(Schema.String),
-  /** Linux: the watchdog runs this app's agentd, but systemd hasn't enabled its timer. */
+  /** Linux: the watchdog runs this app's agentd, but systemd hasn't enabled or started its timer. */
   watchdogOff: Schema.optionalKey(Schema.Boolean),
 });
 export type AgentdServicesProblem = typeof AgentdServicesProblem.Type;
