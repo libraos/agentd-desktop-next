@@ -453,6 +453,57 @@ describe("sidebar settled pagination", () => {
     expect(screen.container.querySelectorAll("[data-thread-item]")).toHaveLength(loadedRows);
   });
 
+  it("opens Settled when every listed thread is settled and no project is chosen", async () => {
+    localStorage.removeItem("t3code:sidebar:settled-expanded");
+    const imported = project("imported");
+    vi.mocked(useProjects).mockReturnValue([imported]);
+    vi.mocked(useQuietThreadShells).mockReturnValue([
+      makeThreadFixture({
+        environmentId: imported.environmentId,
+        projectId: imported.id,
+        id: ThreadId.make("imported-1"),
+        title: "Imported thread",
+        settledOverride: "settled",
+        settledAt: "2026-01-01T00:00:00.000Z",
+      }),
+    ]);
+    vi.mocked(useThreadRouteTarget).mockReturnValue(null);
+    vi.mocked(useHandleNewThread).mockReturnValue({
+      activeDraftThread: null,
+      activeThread: null,
+      defaultProjectRef: { environmentId: imported.environmentId, projectId: imported.id },
+      defaultProjectFallbackReady: true,
+      handleNewThread: vi.fn().mockResolvedValue(null),
+      routeDraftId: null,
+      routeThreadRef: null,
+    });
+    vi.mocked(useServerConfigs).mockReturnValue(
+      new Map([
+        [
+          imported.environmentId,
+          {
+            scratchWorkspaceRoot: null,
+            shellThreadFamilies: false,
+          } as unknown as EnvironmentServerConfig,
+        ],
+      ]),
+    );
+    await using screen = await render(
+      <SidebarProvider>
+        <Sidebar routeReveal={{ observedKey: null, pendingKey: null }} />
+      </SidebarProvider>,
+    );
+    const importedRow = () => screen.getByText("Imported thread", { exact: true });
+    const shelf = () =>
+      screen.container.querySelector<HTMLElement>('[data-sidebar-row="shelf:settled"]')!;
+
+    await expect.element(importedRow()).toBeVisible();
+    expect(shelf().getAttribute("aria-expanded")).toBe("true");
+
+    await act(() => shelf().click());
+    await expect.poll(() => importedRow().elements()).toHaveLength(0);
+  });
+
   it("opens Settled for a chosen project whose threads are all settled, until it is closed", async () => {
     localStorage.removeItem("t3code:sidebar:settled-expanded");
     const imported = project("imported");

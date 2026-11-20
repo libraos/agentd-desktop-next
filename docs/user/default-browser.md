@@ -15,3 +15,10 @@ HTML files you open from Finder open the same way. [Prompt links](prompt-links.m
 as a draft.
 
 A link that launches AgentD Next waits until the app has connected to its environment, then opens.
+
+## The browser opens beside the agent's work
+
+In a Code thread, the right panel opens on the browser tab when the agent uses the app's
+browser, so you can watch the page it is working on. It does not take focus from the composer,
+and it leaves an open panel on the tab you chose. If you close the panel, that thread stops
+opening it. Turn this off in **Settings > Chat > Open the browser as the agent uses it**.

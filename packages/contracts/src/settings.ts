@@ -540,6 +540,8 @@ export const ClientSettingsSchema = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed("steer")),
   ),
   proactivePanelsEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  /** Code threads open the browser panel tab when the agent starts using it. */
+  agentWorkPanelsEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   showSkillsInSlashMenu: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   boringSidebarEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   boringSidebarMultilineRows: Schema.Boolean.pipe(
@@ -2132,6 +2134,7 @@ export const ClientSettingsPatch = Schema.Struct({
   sendShortcut: Schema.optionalKey(Schema.Literals(["enter", "mod-enter-multiline", "mod-enter"])),
   followUpBehavior: Schema.optionalKey(Schema.Literals(["queue", "steer"])),
   proactivePanelsEnabled: Schema.optionalKey(Schema.Boolean),
+  agentWorkPanelsEnabled: Schema.optionalKey(Schema.Boolean),
   showSkillsInSlashMenu: Schema.optionalKey(Schema.Boolean),
   boringSidebarEnabled: Schema.optionalKey(Schema.Boolean),
   boringSidebarMultilineRows: Schema.optionalKey(Schema.Boolean),

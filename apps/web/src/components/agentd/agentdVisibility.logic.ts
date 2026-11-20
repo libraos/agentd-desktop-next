@@ -1,4 +1,9 @@
-import type { AgentdRunTasksOn, AgentdStatus, AgentdTaskRow } from "@t3tools/contracts";
+import type {
+  AgentdCloudSetup,
+  AgentdRunTasksOn,
+  AgentdStatus,
+  AgentdTaskRow,
+} from "@t3tools/contracts";
 
 import type { taskBranchProblem } from "./startTask.logic";
 
@@ -83,4 +88,15 @@ export function parseDefaultBudget(budget: string): { minutes: number; dollars: 
   const match = /^(\d{1,4})m,\$(\d{1,4}(?:\.\d{1,2})?)$/.exec(budget);
   if (!match) return null;
   return { minutes: Number(match[1]), dollars: Number(match[2]) };
+}
+
+/**
+ * Whether to offer linking the LibraOS account: only when this agentd has Cloud Workers and no
+ * account key yet. Null until agentd answers, so a linked account never sees the step.
+ */
+export function offerAccountLink(
+  account: Pick<AgentdCloudSetup, "supported" | "problem"> | null | undefined,
+): boolean | null {
+  if (account === null || account === undefined) return null;
+  return account.supported && account.problem === "setup";
 }

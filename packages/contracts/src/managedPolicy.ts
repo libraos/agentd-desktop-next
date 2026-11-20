@@ -81,6 +81,8 @@ export const ManagedPolicyLimits = Schema.Struct({
   /** Can only turn product analytics off, never force it on. */
   telemetry: Schema.optionalKey(Schema.Boolean),
   browserCookieImport: Schema.optionalKey(Schema.Boolean),
+  /** `false` turns the Skills catalogue off: it is never fetched and nothing is installed from it. */
+  skillCatalog: Schema.optionalKey(Schema.Boolean),
   providers: Schema.optionalKey(ManagedProviderLimits),
   updates: Schema.optionalKey(ManagedUpdatesPolicy),
 });
@@ -95,6 +97,7 @@ export const ManagedPolicySummaryLimits = Schema.Struct({
   webhookTasks: Schema.optionalKey(Schema.Boolean),
   telemetry: Schema.optionalKey(Schema.Boolean),
   browserCookieImport: Schema.optionalKey(Schema.Boolean),
+  skillCatalog: Schema.optionalKey(Schema.Boolean),
   providers: Schema.optionalKey(
     Schema.Struct({
       /** Absent means every driver is allowed. */

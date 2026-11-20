@@ -412,6 +412,12 @@ import {
   AgentdTaskOthersInput,
 } from "./agentd.ts";
 import {
+  AgentdSkillError,
+  AgentdSkillInput,
+  AgentdSkillInstallInput,
+  AgentdSkills,
+} from "./agentdSkills.ts";
+import {
   LibraosGatewayConnectInput,
   LibraosGatewayError,
   LibraosGatewayStatus,
@@ -735,6 +741,9 @@ export const WS_METHODS = {
   agentdEula: "agentd.eula",
   agentdSetupStart: "agentd.setupStart",
   agentdSubscribeSetup: "agentd.subscribeSetup",
+  agentdSkillsList: "agentd.skillsList",
+  agentdSkillsInstall: "agentd.skillsInstall",
+  agentdSkillsRemove: "agentd.skillsRemove",
 
   libraosGatewayStatus: "libraosGateway.status",
   libraosGatewayConnect: "libraosGateway.connect",
@@ -2467,6 +2476,26 @@ const WsAgentdSubscribeSetupRpc = Rpc.make(WS_METHODS.agentdSubscribeSetup, {
   stream: true,
 });
 
+const AgentdSkillsRpcError = Schema.Union([AgentdSkillError, EnvironmentAuthorizationError]);
+
+const WsAgentdSkillsListRpc = Rpc.make(WS_METHODS.agentdSkillsList, {
+  payload: Schema.Struct({}),
+  success: AgentdSkills,
+  error: AgentdSkillsRpcError,
+});
+
+const WsAgentdSkillsInstallRpc = Rpc.make(WS_METHODS.agentdSkillsInstall, {
+  payload: AgentdSkillInstallInput,
+  success: AgentdSkills,
+  error: AgentdSkillsRpcError,
+});
+
+const WsAgentdSkillsRemoveRpc = Rpc.make(WS_METHODS.agentdSkillsRemove, {
+  payload: AgentdSkillInput,
+  success: AgentdSkills,
+  error: AgentdSkillsRpcError,
+});
+
 const LibraosGatewayRpcError = Schema.Union([LibraosGatewayError, EnvironmentAuthorizationError]);
 
 const WsLibraosGatewayStatusRpc = Rpc.make(WS_METHODS.libraosGatewayStatus, {
@@ -2728,6 +2757,9 @@ export const WsRpcGroup = RpcGroup.make(
   WsAgentdTeamNodeForegroundRpc,
   WsAgentdEulaRpc,
   WsAgentdSetupStartRpc,
+  WsAgentdSkillsListRpc,
+  WsAgentdSkillsInstallRpc,
+  WsAgentdSkillsRemoveRpc,
   WsAgentdSubscribeSetupRpc,
   WsLibraosGatewayStatusRpc,
   WsLibraosGatewayConnectRpc,

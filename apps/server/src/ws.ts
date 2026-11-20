@@ -243,6 +243,7 @@ import { RpcInstrumentation, rpcInstrumentationLayer } from "./observability/Rpc
 import * as AgentdBridge from "./agentd/AgentdBridge.ts";
 import * as AgentdTeamNode from "./agentd/AgentdTeamNode.ts";
 import * as AgentdInit from "./agentd/agentdInit.ts";
+import * as AgentdSkills from "./agentd/AgentdSkills.ts";
 import { startErrorFor } from "./agentd/cloudFailure.ts";
 import * as LibraosGateway from "./gateway/LibraosGateway.ts";
 import * as ProcessDiagnostics from "./diagnostics/ProcessDiagnostics.ts";
@@ -1599,6 +1600,7 @@ export const layerWsRpc = (
       const agentd = yield* AgentdBridge.AgentdBridge;
       const teamNode = yield* AgentdTeamNode.AgentdTeamNode;
       const agentdInit = yield* AgentdInit.AgentdInit;
+      const agentdSkills = yield* AgentdSkills.AgentdSkillsService;
       const libraosGateway = yield* LibraosGateway.LibraosGateway;
       const triage = yield* TriageService.TriageService;
       const hostResources = yield* HostResources.HostResources;
@@ -3629,6 +3631,9 @@ export const layerWsRpc = (
         [WS_METHODS.agentdEula]: (_input) => agentd.eula,
         [WS_METHODS.agentdSetupStart]: (_input) => agentdInit.start,
         [WS_METHODS.agentdSubscribeSetup]: (_input) => agentdInit.subscribe,
+        [WS_METHODS.agentdSkillsList]: (_input) => agentdSkills.list,
+        [WS_METHODS.agentdSkillsInstall]: (input) => agentdSkills.install(input),
+        [WS_METHODS.agentdSkillsRemove]: (input) => agentdSkills.remove(input),
         [WS_METHODS.libraosGatewayStatus]: (_input) => libraosGateway.status,
         [WS_METHODS.libraosGatewayConnect]: (input) => libraosGateway.connect(input.key),
         [WS_METHODS.libraosGatewayDisconnect]: (_input) => libraosGateway.disconnect,
