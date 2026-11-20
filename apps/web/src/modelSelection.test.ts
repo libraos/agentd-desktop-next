@@ -523,6 +523,17 @@ describe("instance-scoped model selection", () => {
     expect(
       getAppModelOptionsForInstance(settings, ownLogin!, "gpt-6.2-sol").map((o) => o.slug),
     ).toEqual(["gpt-6-astra"]);
+
+    // Codex's own config sends its requests to the Gateway.
+    const [ownGateway] = deriveProviderInstanceEntries([
+      {
+        ...provider({ instanceId: "codex", models: ["gpt-6-astra"] }),
+        auth: { status: "authenticated", endpoint: "https://api.libraos.com" },
+      },
+    ]);
+    expect(getAppModelOptionsForInstance(settings, ownGateway!, "gpt-6.2-sol")).toContainEqual(
+      expect.objectContaining({ slug: "gpt-6.2-sol", isUnavailable: true }),
+    );
   });
 
   it("falls back from an explicit non-OpenCode draft with a missing model", () => {

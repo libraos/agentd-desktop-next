@@ -45,6 +45,7 @@ import {
   providerModelsFromSettings,
   withNoServedModelsNotice,
   providerProbeEnvironment,
+  type EndpointKeyModels,
   spawnAndCollect,
   type ServerProviderDraft,
 } from "@t3tools/provider-core/server/snapshotProbe";
@@ -677,6 +678,7 @@ const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(functio
   /** Shared with the adapter so turn events reuse the scoped-bucket names this probe saw. */
   scopedLimitNames?: Ref.Ref<ClaudeScopedLimitNames>,
   resolveResetCredits?: (version: string) => Effect.Effect<ServerProviderResetCredits | undefined>,
+  endpointKeyModels?: EndpointKeyModels,
 ): Effect.fn.Return<
   ServerProviderDraft,
   never,
@@ -828,9 +830,8 @@ const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(functio
   }
 
   // First-party account fields cannot verify custom endpoint credentials.
-  const baseUrl =
-    (yield* readClaudeSettingsEnv(claudeSettings, cwd, resolvedEnvironment)).ANTHROPIC_BASE_URL ??
-    resolvedEnvironment.ANTHROPIC_BASE_URL;
+  const settingsEnv = yield* readClaudeSettingsEnv(claudeSettings, cwd, resolvedEnvironment);
+  const baseUrl = settingsEnv.ANTHROPIC_BASE_URL ?? resolvedEnvironment.ANTHROPIC_BASE_URL;
   const customApiEndpoint = customClaudeApiEndpointHost(baseUrl) !== undefined;
   const endpoint = customApiEndpoint ? URL.parse(baseUrl?.trim() ?? "")?.origin : undefined;
   if (!customApiEndpoint && claudeAuthStatus(capabilities) === "unauthenticated") {
@@ -881,6 +882,31 @@ const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(functio
           response: capabilities.usage,
           checkedAt: usageCheckedAt,
         }).limits;
+  // Claude lists its own catalog whatever endpoint it sends requests to; one that serves only some
+  // models for the key Claude sends (LibraOS Gateway) decides which of them work.
+  const endpointKey = (
+    settingsEnv.ANTHROPIC_AUTH_TOKEN ??
+    settingsEnv.ANTHROPIC_API_KEY ??
+    resolvedEnvironment.ANTHROPIC_AUTH_TOKEN ??
+    resolvedEnvironment.ANTHROPIC_API_KEY
+  )?.trim();
+  const endpointModels =
+    endpointKeyModels && endpoint && endpointKey && claudeSettings.onlyCustomModels !== true
+      ? yield* endpointKeyModels({ endpoint, key: endpointKey })
+      : undefined;
+  const servedModels = endpointModels
+    ? capClaudeCatalogEffort(
+        modelCatalog,
+        claudeProviderModels(
+          [
+            ...resolveClaudeModelsForVersion(modelCatalog, parsedVersion),
+            ...claudeReportedModels(modelCatalog, endpointModels, capabilities.models),
+          ],
+          { customModels: endpointModels, onlyCustomModels: true },
+        ),
+        capabilities.effortCapSources ?? [],
+      )
+    : models;
   const resetCredits =
     resolveResetCredits &&
     capabilities.subscriptionType &&
@@ -888,11 +914,11 @@ const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(functio
     parsedVersion
       ? yield* resolveResetCredits(parsedVersion)
       : undefined;
-  return buildServerProvider({
+  const draft = buildServerProvider({
     presentation: CLAUDE_PRESENTATION,
     enabled: claudeSettings.enabled,
     checkedAt,
-    models,
+    models: servedModels,
     updateRequiredModels,
     slashCommands: dedupedSlashCommands,
     skills,
@@ -910,6 +936,7 @@ const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(functio
       usageLimits: resetCredits ? { ...usageLimits, resetCredits } : usageLimits,
     },
   });
+  return withNoServedModelsNotice(draft, endpointModels !== undefined);
 });
 
 export const checkClaudeProviderStatus = (...args: Parameters<typeof probeClaudeProviderStatus>) =>

@@ -15,6 +15,7 @@ import type {
 } from "@t3tools/contracts";
 import {
   isLibraosGatewayInstanceId,
+  LIBRAOS_GATEWAY_ORIGIN,
   isManagedDriverAllowed,
   isProviderDriverKind,
   resolveProjectProviderInstanceEnabled,
@@ -183,14 +184,16 @@ export function serverConfigForCwd<C extends T3ServerConfig | null | undefined>(
   return providers === config.providers ? config : { ...config, providers };
 }
 
-// A LibraOS Gateway agent serves only its key's models; one the key dropped fails at the first turn.
+// An agent on the LibraOS Gateway serves only its key's models; one the key dropped fails at the
+// first turn.
 function isDroppedGatewayModel(
   provider: T3ServerConfig["providers"][number] | undefined,
   selection: ModelSelection,
 ): boolean {
   return (
     provider !== undefined &&
-    isLibraosGatewayInstanceId(selection.instanceId) &&
+    (isLibraosGatewayInstanceId(selection.instanceId) ||
+      provider.auth.endpoint === LIBRAOS_GATEWAY_ORIGIN) &&
     !provider.models.some((model) => model.slug === selection.model)
   );
 }

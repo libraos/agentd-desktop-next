@@ -410,6 +410,22 @@ describe("mobile model options", () => {
     expect(isModelSelectionUnavailable(config, { instanceId, model: "gpt-6-luna" }, null)).toBe(
       false,
     );
+
+    // Codex's own config sends its requests to the Gateway.
+    const codex = ProviderInstanceId.make("codex");
+    const ownConfig = {
+      providers: [
+        {
+          ...config.providers[0],
+          instanceId: codex,
+          displayName: "Codex",
+          auth: { status: "authenticated", endpoint: "https://api.libraos.com" },
+        },
+      ],
+    } as unknown as ServerConfig;
+    expect(
+      isModelSelectionUnavailable(ownConfig, { instanceId: codex, model: "gpt-6-astra" }, null),
+    ).toBe(true);
   });
 
   describe("Antigravity selections", () => {

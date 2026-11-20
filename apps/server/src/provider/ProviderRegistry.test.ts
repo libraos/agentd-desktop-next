@@ -665,6 +665,43 @@ it.layer(
         assert.deepStrictEqual(none.models, []);
         assert.strictEqual(none.status, "warning");
         assert.strictEqual(none.message, NO_SERVED_MODELS_MESSAGE);
+
+        // Codex's own config routes to the Gateway: the key it sends decides, not a stored list.
+        const asked: Array<{ readonly endpoint: string; readonly key: string }> = [];
+        const ownConfig = (environment: NodeJS.ProcessEnv, served: ReadonlyArray<string>) =>
+          checkCodexProviderStatus(
+            decodeCodexSettings({}),
+            () =>
+              Effect.succeed(
+                makeCodexProbeSnapshot({
+                  models: catalog,
+                  endpoint: "https://api.libraos.com",
+                  endpointKeyEnv: "LIBRAOS_API_KEY",
+                }),
+              ),
+            environment,
+            undefined,
+            (input) => Effect.sync(() => asked.push(input)).pipe(Effect.as(served)),
+          );
+        const own = yield* ownConfig({ LIBRAOS_API_KEY: " lk_codex_key_123 " }, [
+          "gpt-6-astra",
+          "gpt-6-luna",
+          "gpt-6.1-sol",
+        ]);
+        assert.deepStrictEqual(
+          own.models.map((model) => model.slug),
+          ["gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna"],
+        );
+        assert.deepStrictEqual(asked, [
+          { endpoint: "https://api.libraos.com", key: "lk_codex_key_123" },
+        ]);
+        const revoked = yield* ownConfig({ LIBRAOS_API_KEY: "lk_codex_key_123" }, []);
+        assert.deepStrictEqual(revoked.models, []);
+        assert.strictEqual(revoked.message, NO_SERVED_MODELS_MESSAGE);
+        // Without the key in its environment Codex cannot use the Gateway either; nothing is asked.
+        const keyless = yield* ownConfig({}, []);
+        assert.strictEqual(keyless.models.length, catalog.length);
+        assert.strictEqual(asked.length, 2);
       }),
     );
 
@@ -1356,10 +1393,13 @@ it.layer(
     });
 
     it("does not bring back a model the LibraOS Gateway key no longer allows", () => {
-      for (const [instanceId, driver, status] of [
-        ["libraosCodex", "codex", "warning"],
-        ["libraosOpencode", "opencode", "warning"],
-        ["libraosClaude", "claudeAgent", "ready"],
+      for (const [instanceId, driver, status, endpoint] of [
+        ["libraosCodex", "codex", "warning", undefined],
+        ["libraosOpencode", "opencode", "warning", undefined],
+        ["libraosClaude", "claudeAgent", "ready", undefined],
+        // Configured by hand: its own config sends requests to the Gateway.
+        ["codex", "codex", "warning", "https://api.libraos.com"],
+        ["claudeAgent", "claudeAgent", "ready", "https://api.libraos.com"],
       ] as const) {
         const previousProvider = {
           instanceId: ProviderInstanceId.make(instanceId),
@@ -1367,7 +1407,7 @@ it.layer(
           status: "ready",
           enabled: true,
           installed: true,
-          auth: { status: "authenticated" },
+          auth: { status: "authenticated", ...(endpoint ? { endpoint } : {}) },
           checkedAt: "2026-04-14T00:00:00.000Z",
           version: "1.0.0",
           models: [
@@ -4571,6 +4611,59 @@ it.layer(
         assert.deepStrictEqual(status.updateRequiredModels, [
           { slug: "claude-next", name: "Next", minVersion: "1.1.0" },
         ]);
+      }).pipe(
+        Effect.provide(
+          layerMockSpawner((args) => {
+            const joined = args.join(" ");
+            if (joined === "--version") return { stdout: "1.0.0\n", stderr: "", code: 0 };
+            throw new Error(`Unexpected args: ${joined}`);
+          }),
+        ),
+      ),
+    );
+
+    it.effect("lists only the models the Gateway allows for the key Claude sends itself", () =>
+      Effect.gen(function* () {
+        const asked: Array<{ readonly endpoint: string; readonly key: string }> = [];
+        const check = (environment: NodeJS.ProcessEnv, served: ReadonlyArray<string>) =>
+          checkClaudeProviderStatus(
+            defaultClaudeSettings,
+            claudeCapabilities({
+              tokenSource: "none",
+              apiKeySource: "none",
+              apiProvider: "firstParty",
+            }),
+            { ANTHROPIC_BASE_URL: "https://api.libraos.com", ...environment },
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            (input) => Effect.sync(() => asked.push(input)).pipe(Effect.as(served)),
+          );
+
+        const gateway = yield* check({ ANTHROPIC_API_KEY: "lk_claude_key_123" }, [
+          "claude-sonnet-5",
+          "claude-unlisted",
+        ]);
+        assert.deepStrictEqual(
+          gateway.models.map((model) => [model.slug, model.isCustom]),
+          [
+            ["claude-sonnet-5", false],
+            ["claude-unlisted", true],
+          ],
+        );
+        assert.deepStrictEqual(asked, [
+          { endpoint: "https://api.libraos.com", key: "lk_claude_key_123" },
+        ]);
+
+        const none = yield* check({ ANTHROPIC_AUTH_TOKEN: "lk_claude_key_123" }, []);
+        assert.deepStrictEqual(none.models, []);
+        assert.strictEqual(none.status, "warning");
+        assert.strictEqual(none.message, NO_SERVED_MODELS_MESSAGE);
+
+        const keyless = yield* check({}, []);
+        assert.isAbove(keyless.models.length, 1);
+        assert.strictEqual(asked.length, 2);
       }).pipe(
         Effect.provide(
           layerMockSpawner((args) => {

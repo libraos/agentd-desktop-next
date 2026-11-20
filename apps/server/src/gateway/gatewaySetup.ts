@@ -75,7 +75,7 @@ export const isKeyRefusal = (status: number): boolean => status === 401 || statu
 
 // Claude Code asks for `claude-…` and Codex for `gpt-…`, as agentd's workers do; the Gateway's ids
 // carry the model family in front.
-function familyModels(models: ReadonlyArray<LibraosGatewayModel>, family: string) {
+export function gatewayFamilyModels(models: ReadonlyArray<LibraosGatewayModel>, family: string) {
   return models.flatMap((model) => {
     const [owner, name, ...rest] = model.id.split("/");
     if (owner !== family || !name || rest.length > 0) return [];
@@ -139,7 +139,7 @@ export function gatewayProviderInstances(
           secret("ANTHROPIC_API_KEY", key),
         ],
         // The key's models replace Claude's catalog: any other model would fail on the Gateway.
-        config: { customModels: familyModels(models, "anthropic"), onlyCustomModels: true },
+        config: { customModels: gatewayFamilyModels(models, "anthropic"), onlyCustomModels: true },
       },
     },
     {
@@ -152,7 +152,7 @@ export function gatewayProviderInstances(
         config: {
           setupMode: "existing",
           launchArgs: codexGatewayLaunchArgs(),
-          customModels: familyModels(models, "openai"),
+          customModels: gatewayFamilyModels(models, "openai"),
           onlyCustomModels: true,
         },
       },
@@ -204,7 +204,7 @@ export function withGatewayModels(
       ...existing,
       config: {
         ...config,
-        ...(models === null ? {} : { customModels: familyModels(models, family) }),
+        ...(models === null ? {} : { customModels: gatewayFamilyModels(models, family) }),
         onlyCustomModels: true,
       },
     });

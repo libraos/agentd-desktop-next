@@ -1,5 +1,4 @@
 import {
-  LIBRAOS_GATEWAY_ORIGIN,
   LibraosGatewayError,
   type LibraosGatewayAgentdSetup,
   type LibraosGatewayModel,
@@ -16,19 +15,17 @@ import * as Path from "effect/Path";
 import * as Ref from "effect/Ref";
 import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
-import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
+import { FetchHttpClient, HttpClient } from "effect/http";
 
 import { AgentdBridge } from "../agentd/AgentdBridge.ts";
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import * as ServerConfig from "../config.ts";
 import * as ProcessRunner from "../processRunner.ts";
 import { ServerSettingsService } from "../serverSettings.ts";
+import { askGatewayModels } from "./gatewayKeyModels.ts";
 import {
   GATEWAY_INSTANCE_IDS,
   gatewayProviderInstances,
-  gatewayRefusal,
-  isKeyRefusal,
-  parseGatewayModels,
   readGatewayKey,
   withGatewayModels,
 } from "./gatewaySetup.ts";
@@ -50,7 +47,6 @@ export class LibraosGateway extends Context.Service<
 >()("t3/gateway/LibraosGateway") {}
 
 const SECRET_NAME = "libraos-gateway-key";
-const CHECK_TIMEOUT = Duration.seconds(15);
 const INIT_TIMEOUT = Duration.minutes(3);
 const OUTPUT_LIMIT = 8 * 1024;
 
@@ -100,29 +96,12 @@ export const make = Effect.fn("LibraosGateway.make")(function* () {
     );
 
   const listModels = Effect.fn("LibraosGateway.listModels")(function* (key: string) {
-    const request = HttpClientRequest.get(`${LIBRAOS_GATEWAY_ORIGIN}/v1/models`).pipe(
-      HttpClientRequest.acceptJson,
+    const answer = yield* askGatewayModels(key).pipe(
+      Effect.provideService(HttpClient.HttpClient, http),
     );
-    const response = yield* http.execute(HttpClientRequest.bearerToken(request, key)).pipe(
-      // A redirect could carry the key to another origin.
-      Effect.provideService(FetchHttpClient.RequestInit, { redirect: "error" }),
-      Effect.provideService(HttpClient.TracerPropagationEnabled, false),
-      Effect.timeout(CHECK_TIMEOUT),
-      Effect.mapError(() =>
-        fail("Couldn't reach LibraOS Gateway at api.libraos.com. Check your connection."),
-      ),
-    );
-    const body = yield* response.json.pipe(Effect.orElseSucceed((): unknown => undefined));
-    if (response.status < 200 || response.status >= 300) {
-      const message = gatewayRefusal(response.status, body);
-      return yield* isKeyRefusal(response.status)
-        ? new KeyRefusedError({ message })
-        : fail(message);
-    }
-    const list = parseGatewayModels(body);
-    if (list === null)
-      return yield* fail("LibraOS Gateway answered with an unreadable model list.");
-    return list;
+    if (answer.kind === "refused") return yield* new KeyRefusedError({ message: answer.message });
+    if (answer.kind === "unavailable") return yield* fail(answer.message);
+    return answer.models;
   });
 
   // A new file has inherited entries only, so dropping inheritance and granting the person leaves

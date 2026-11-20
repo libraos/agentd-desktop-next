@@ -3,6 +3,7 @@ import {
   DEFAULT_TEXT_GENERATION_MODEL_BY_PROVIDER,
   defaultInstanceIdForDriver,
   isLibraosGatewayInstanceId,
+  LIBRAOS_GATEWAY_ORIGIN,
   type ModelSelection,
   type ProjectId,
   ProviderDriverKind,
@@ -75,9 +76,13 @@ export interface AppModelOption {
   isUnavailable?: boolean;
 }
 
-// A LibraOS Gateway agent lists its key's models, so it loses a model when the key does.
+// An agent on the LibraOS Gateway lists its key's models, so it loses a model when the key does.
 function listsModelsAtRuntime(entry: ProviderInstanceEntry): boolean {
-  return hasRuntimeModelCatalog(entry.driverKind) || isLibraosGatewayInstanceId(entry.instanceId);
+  return (
+    hasRuntimeModelCatalog(entry.driverKind) ||
+    isLibraosGatewayInstanceId(entry.instanceId) ||
+    entry.snapshot.auth.endpoint === LIBRAOS_GATEWAY_ORIGIN
+  );
 }
 
 function appendUnavailableDynamicModelSelection(

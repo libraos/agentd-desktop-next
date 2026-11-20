@@ -46,6 +46,7 @@ import {
   providerModelsFromSettings,
   withNoServedModelsNotice,
   providerProbeEnvironment,
+  type EndpointKeyModels,
   spawnAndCollect,
   type ServerProviderDraft,
 } from "@t3tools/provider-core/server/snapshotProbe";
@@ -90,7 +91,10 @@ const CodexRoutingConfig = Schema.Struct({
   model_providers: Schema.optionalKey(
     Schema.Record(
       Schema.String,
-      Schema.Struct({ base_url: Schema.optionalKey(Schema.NullOr(Schema.String)) }),
+      Schema.Struct({
+        base_url: Schema.optionalKey(Schema.NullOr(Schema.String)),
+        env_key: Schema.optionalKey(Schema.NullOr(Schema.String)),
+      }),
     ),
   ),
 });
@@ -140,6 +144,14 @@ export function codexCustomEndpoint(config: unknown): string | undefined {
     : undefined;
 }
 
+/** The variable Codex reads its key from for a custom endpoint (`model_providers.*.env_key`). */
+export function codexEndpointKeyEnv(config: unknown): string | undefined {
+  if (codexCustomEndpoint(config) === undefined) return undefined;
+  const routing = Option.getOrUndefined(decodeCodexRoutingConfig(config));
+  const providerId = routing?.model_provider ?? "openai";
+  return routing?.model_providers?.[providerId]?.env_key?.trim() || undefined;
+}
+
 // A stored login does not mean this provider's traffic spends that login's quota.
 export const codexRoutesSpendNativeQuota = (
   account: CodexSchema.V2GetAccountResponse,
@@ -169,6 +181,7 @@ const CODEX_PRESENTATION = {
 export interface CodexAppServerProviderSnapshot {
   readonly account: CodexSchema.V2GetAccountResponse;
   readonly endpoint?: string | undefined;
+  readonly endpointKeyEnv?: string | undefined;
   readonly nativeUsage?: boolean;
   readonly rateLimits?: CodexRateLimitsProbe;
   readonly version: string | undefined;
@@ -826,6 +839,7 @@ const probeCodexAppServerProvider = Effect.fn("probeCodexAppServerProvider")(fun
   return {
     account: accountResponse,
     endpoint: config ? codexCustomEndpoint(config) : undefined,
+    endpointKeyEnv: config ? codexEndpointKeyEnv(config) : undefined,
     nativeUsage,
     ...(rateLimits ? { rateLimits } : {}),
     version,
@@ -1040,6 +1054,7 @@ const probeCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(function*
   > = probeCodexAppServerProvider,
   environment?: NodeJS.ProcessEnv,
   managedAuth?: ServerProvider["auth"],
+  endpointKeyModels?: EndpointKeyModels,
 ): Effect.fn.Return<
   ServerProviderDraft,
   ServerSettingsError,
@@ -1136,6 +1151,18 @@ const probeCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(function*
   }
 
   const snapshot = probeResult.success.value;
+  // Codex lists its own catalog whatever endpoint it sends requests to; one that serves only some
+  // models for the key Codex sends (LibraOS Gateway) decides which of them work.
+  const endpointKey = snapshot.endpointKeyEnv
+    ? resolvedEnvironment[snapshot.endpointKeyEnv]?.trim()
+    : undefined;
+  const endpointModels =
+    endpointKeyModels && snapshot.endpoint && endpointKey && codexSettings.onlyCustomModels !== true
+      ? yield* endpointKeyModels({ endpoint: snapshot.endpoint, key: endpointKey })
+      : undefined;
+  const modelSettings = endpointModels
+    ? { customModels: endpointModels, onlyCustomModels: true }
+    : codexSettings;
   const accountStatus = managedAuth
     ? { status: "ready" as const, auth: managedAuth, message: undefined }
     : accountProbeStatus(
@@ -1162,12 +1189,12 @@ const probeCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(function*
             checkedAt,
           });
 
-  return buildServerProvider({
+  const draft = buildServerProvider({
     presentation: CODEX_PRESENTATION,
     enabled: codexSettings.enabled,
     checkedAt,
     models: pipe(
-      appendCustomCodexModels(snapshot.models ?? [], codexSettings),
+      appendCustomCodexModels(snapshot.models ?? [], modelSettings),
       applyPreferredCodexDefaultModel,
       (models) => applyConfiguredCodexServiceTier(models, snapshot.serviceTier),
       (models) => applyConfiguredCodexCyberAccess(models, snapshot),
@@ -1201,6 +1228,7 @@ const probeCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(function*
       ...(managedAuth ? {} : { usageLimits }),
     },
   });
+  return withNoServedModelsNotice(draft, modelSettings.onlyCustomModels);
 });
 
 export const checkCodexProviderStatus = (...args: Parameters<typeof probeCodexProviderStatus>) =>

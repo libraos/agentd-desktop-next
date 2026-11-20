@@ -1,3 +1,4 @@
+import { makeGatewayKeyModels } from "../../gateway/gatewayKeyModels.ts";
 import { ClaudeSettings, isLibraosGatewayInstanceId, ProviderDriverKind } from "@t3tools/contracts";
 import * as Cache from "effect/Cache";
 import type * as Cause from "effect/Cause";
@@ -272,6 +273,9 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
       Effect.map((result) => result.capabilities),
     );
 
+    const gatewayKeyModels = yield* makeGatewayKeyModels("anthropic").pipe(
+      Effect.provideService(HttpClient.HttpClient, httpClient),
+    );
     const checkProvider = catalogService.refreshInBackground.pipe(
       Effect.andThen(
         modelCatalog.pipe(
@@ -289,6 +293,8 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
                   Effect.provideService(FileSystem.FileSystem, fileSystem),
                   Effect.provideService(Path.Path, path),
                 ),
+
+              gatewayKeyModels,
             ),
           ),
           Effect.tap((provider) =>
