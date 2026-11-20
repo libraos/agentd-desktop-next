@@ -67,6 +67,7 @@ export * from "./previewCapture.ts";
 export * from "./usage.ts";
 export * from "./scheduledTask.ts";
 export * from "./worktreeMcp.ts";
+export * from "./gatewayMediaMcp.ts";
 export * from "./resourceTelemetry.ts";
 export * from "./agentd.ts";
 export * from "./agentdSkills.ts";
