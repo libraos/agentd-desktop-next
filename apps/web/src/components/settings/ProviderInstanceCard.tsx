@@ -20,7 +20,7 @@ import { Fragment, useState, type ReactElement, type ReactNode } from "react";
 import { T, useGT, useMessages, Var } from "gt-react";
 import {
   isEndpointDecidedModel,
-  isLibraosGatewayInstanceId,
+  LIBRAOS_GATEWAY_INSTANCE_IDS,
   isProviderDriverKind,
   resolveProviderInstanceEnabled,
   type ProviderInstanceConfig,
@@ -1509,14 +1509,12 @@ export function ProviderInstanceCard({
             </p>
             {gatewayModels ? (
               <p className="mb-3 text-xs text-muted-foreground">
-                {readOnly && isLibraosGatewayInstanceId(instanceId) ? (
-                  // The refresh this session may run re-checks the saved list; only a provider
-                  // manager's refresh asks the Gateway again. An agent configured by hand asks
-                  // the Gateway at every status check.
+                {readOnly && instanceId === LIBRAOS_GATEWAY_INSTANCE_IDS.opencode ? (
+                  // Every status check asks the Gateway with the agent's key, but opencode's
+                  // inventory, which a key can only narrow, is rewritten by a manager's refresh.
                   <T>
-                    These are the models your LibraOS Gateway key allowed when a device that manages
-                    providers last refreshed or the server last started. A refresh from here does
-                    not ask the Gateway again.
+                    These are the models your LibraOS Gateway key allows. A model added in Console
+                    shows here after a device that manages providers refreshes.
                   </T>
                 ) : (
                   <T>

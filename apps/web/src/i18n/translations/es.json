@@ -9801,7 +9801,7 @@
     ", que no está disponible en esta compilación. Se conserva su configuración."
   ],
   "b534d4cd528ede39": "Las preferencias de modelos y los modelos personalizados se guardan en el entorno seleccionado y se comparten entre los dispositivos conectados.",
-  "9c1f2116b3b99fb0": "Estos son los modelos que tu clave de LibraOS Gateway permitía cuando un dispositivo que administra proveedores actualizó por última vez o el servidor se inició por última vez. Actualizar desde aquí no vuelve a consultar el Gateway.",
+  "b732084e8eca4d61": "Estos son los modelos que permite tu clave de LibraOS Gateway. Un modelo añadido en Console aparece aquí cuando un dispositivo que gestiona proveedores actualiza.",
   "a48023474bd3fb52": "Estos son los modelos que permite tu clave de LibraOS Gateway. Cámbialos en Console y luego actualiza.",
   "caaef21e8722857d": "Modo rápido",
   "a860db2b1bb3aa31": "Sin razonamiento",

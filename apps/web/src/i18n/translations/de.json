@@ -9803,7 +9803,7 @@
     ", das in diesem Build nicht verfügbar ist. Die Konfiguration bleibt erhalten."
   ],
   "b534d4cd528ede39": "Modelleinstellungen und benutzerdefinierte Modelle werden in der ausgewählten Umgebung gespeichert und mit verbundenen Geräten geteilt.",
-  "9c1f2116b3b99fb0": "Das sind die Modelle, die Ihr LibraOS-Gateway-Schlüssel erlaubte, als ein Gerät, das Anbieter verwaltet, zuletzt aktualisiert hat oder der Server zuletzt gestartet wurde. Eine Aktualisierung von hier fragt das Gateway nicht erneut.",
+  "b732084e8eca4d61": "Das sind die Modelle, die Ihr LibraOS-Gateway-Schlüssel erlaubt. Ein in der Console hinzugefügtes Modell erscheint hier, nachdem ein Gerät, das Anbieter verwaltet, aktualisiert hat.",
   "a48023474bd3fb52": "Das sind die Modelle, die Ihr LibraOS-Gateway-Schlüssel erlaubt. Ändern Sie sie in der Console und aktualisieren Sie dann.",
   "caaef21e8722857d": "Schnellmodus",
   "a860db2b1bb3aa31": "Kein Reasoning",

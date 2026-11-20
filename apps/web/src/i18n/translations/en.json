@@ -9810,7 +9810,7 @@
     ", which is not available in this build. Its configuration is preserved."
   ],
   "b534d4cd528ede39": "Model preferences and custom models are saved on the selected environment and shared across connected devices.",
-  "9c1f2116b3b99fb0": "These are the models your LibraOS Gateway key allowed when a device that manages providers last refreshed or the server last started. A refresh from here does not ask the Gateway again.",
+  "b732084e8eca4d61": "These are the models your LibraOS Gateway key allows. A model added in Console shows here after a device that manages providers refreshes.",
   "a48023474bd3fb52": "These are the models your LibraOS Gateway key allows. Change them in Console, then refresh.",
   "caaef21e8722857d": "Fast mode",
   "a860db2b1bb3aa31": "No reasoning",

@@ -9808,7 +9808,7 @@
     ", som inte finns i den här versionen. Dess konfiguration bevaras."
   ],
   "b534d4cd528ede39": "Modellinställningar och anpassade modeller sparas i den valda miljön och delas mellan anslutna enheter.",
-  "9c1f2116b3b99fb0": "Det här är modellerna som din LibraOS Gateway-nyckel tillät när en enhet som hanterar leverantörer senast uppdaterade eller servern senast startade. En uppdatering härifrån frågar inte Gateway igen.",
+  "b732084e8eca4d61": "Det här är modellerna som din LibraOS Gateway-nyckel tillåter. En modell som läggs till i Console visas här när en enhet som hanterar leverantörer har uppdaterat.",
   "a48023474bd3fb52": "Det här är modellerna som din LibraOS Gateway-nyckel tillåter. Ändra dem i Console och uppdatera sedan.",
   "caaef21e8722857d": "Snabbläge",
   "a860db2b1bb3aa31": "Inget resonerande",
