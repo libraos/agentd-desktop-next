@@ -33,6 +33,24 @@ export function keyFileProvider(prefix: string): AgentdCloudKeyFileCheck["provid
   return text.startsWith("sk-") ? "openai" : null;
 }
 
+// Codex's auth.json: an object with its sign-in tokens, API key or auth mode. Any other JSON is
+// someone's config, which a host-wide repair must not lock away from its other readers.
+function isCodexAuth(text: string): boolean {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text.replace(/^\uFEFF/, ""));
+  } catch {
+    return false;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return false;
+  const auth = parsed as Record<string, unknown>;
+  return (
+    (typeof auth.tokens === "object" && auth.tokens !== null) ||
+    typeof auth.OPENAI_API_KEY === "string" ||
+    typeof auth.auth_mode === "string"
+  );
+}
+
 const unreadable: AgentdCloudKeyFileCheck = {
   provider: null,
   readable: false,
@@ -89,10 +107,17 @@ export const makeCloudKeyFile = (deps: {
             if (uid !== undefined && info.uid !== uid)
               return yield* notChanged(path, "it belongs to another user.");
             // Only a file that looks like a credential: never a program, a document or a config.
-            const credential =
-              (mode & EXECUTABLE) === 0 &&
-              info.size <= MAX_CREDENTIAL_BYTES &&
-              (provider !== null || /^\s*\{/.test(prefix));
+            let credential =
+              (mode & EXECUTABLE) === 0 && info.size <= MAX_CREDENTIAL_BYTES && provider !== null;
+            if (!credential && (mode & EXECUTABLE) === 0 && info.size <= MAX_CREDENTIAL_BYTES) {
+              const whole = new Uint8Array(info.size);
+              const all = /^\s*\{/.test(prefix)
+                ? yield* orNull(() => file.read(whole, 0, whole.length, 0))
+                : null;
+              credential =
+                all !== null &&
+                isCodexAuth(new TextDecoder().decode(whole.subarray(0, all.bytesRead)));
+            }
             if (!credential)
               return yield* notChanged(
                 path,

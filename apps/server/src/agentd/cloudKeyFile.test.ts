@@ -101,6 +101,8 @@ describe("makeCloudKeyFile", () => {
           ["notes.txt", "meeting notes\n", 0o644],
           ["key-but-executable", "sk-ant-api03-secret\n", 0o755],
           ["huge.json", `{${" ".repeat(70 * 1024)}}`, 0o644],
+          ["settings.json", '{"theme":"dark","editor":{"tabSize":2}}\n', 0o644],
+          ["broken.json", '{"tokens": ', 0o644],
         ] as const;
         for (const [name, text, mode] of notKeys) {
           const file = path.join(dir, name);
@@ -112,7 +114,7 @@ describe("makeCloudKeyFile", () => {
         }
         // Codex's auth.json is JSON and is made private.
         const auth = path.join(dir, "auth.json");
-        yield* fs.writeFileString(auth, '{"tokens":{}}\n');
+        yield* fs.writeFileString(auth, '\uFEFF{"auth_mode":"chatgpt","tokens":{}}\n');
         yield* fs.chmod(auth, 0o644);
         yield* check({ path: auth }, true);
         expect(((yield* fs.stat(auth)).mode & 0o777).toString(8)).toBe("600");
