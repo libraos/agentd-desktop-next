@@ -21,7 +21,9 @@ Merges upstream T3 Code `badd5f6d18` (2026-11-19, "fix(relay): parse Hermes stac
 - **Web.**
   - `ChatView.tsx`: kept our `showCodeSurfaces` gate (#81) on the desktop menu-action effect, added upstream's `backgroundThread` and `rightPanel.close`.
   - `ThreadDetailsUsage.tsx`: kept both imports.
-  - `ChatView.browser.test.tsx`: both new tests kept, ours first, as its comment requires.
+  - `ChatView.browser.test.tsx` is upstream's again. Our Chat and Code panels test moved to `ChatView.chatPanels.browser.test.tsx`: the shell a file's first test loads stays for the rest, and both it and upstream's new linked-issue test need to be first.
+  - `JoinTeamScreen.browser.test.tsx`: its fake command now returns an Effect, as upstream's commands do since this sync.
+  - `provider-testing/replayWorkspace.test.ts` (new upstream): expects the renamed test author `AgentD Next Test`.
 - **Tests.**
   - `McpHttpServer.test.ts`: took upstream's forge-aware test and put back our browser-only token case and tool search layer (#6).
   - Replay tests and the eight Muse fixtures: upstream's new text (`resume it with SendMessage`, pull request tool guidance), with every `T3 Code` made `AgentD Next` as before.

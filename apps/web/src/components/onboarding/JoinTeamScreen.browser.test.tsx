@@ -15,6 +15,7 @@ vi.mock(import("../../state/environments"), async (original) => ({
 vi.mock(import("../../lib/agentdState"), async (original) => {
   const actual = await original();
   const { Atom } = await import("effect/reactivity");
+  const Effect = await import("effect/Effect");
   const allowed = Atom.make(true);
   return {
     ...actual,
@@ -23,7 +24,17 @@ vi.mock(import("../../lib/agentdState"), async (original) => {
       joinTeam: {
         ...actual.agentdEnvironment.joinTeam,
         permissionAtom: () => allowed,
-        run: (_registry, target) => runJoin(target),
+        // The command runs as an Effect; the test still settles it with an AsyncResult.
+        run: (_registry, target) =>
+          Effect.flatMap(
+            Effect.promise(
+              () => runJoin(target) as Promise<AsyncResult.AsyncResult<unknown, Error>>,
+            ),
+            (result) =>
+              result._tag === "Failure"
+                ? Effect.failCause(result.cause)
+                : Effect.succeed(result.value),
+          ),
       },
     },
   };
