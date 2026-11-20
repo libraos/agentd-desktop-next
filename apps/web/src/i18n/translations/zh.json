@@ -3166,6 +3166,7 @@
     "，它已缺失或属于旧版 AgentD Desktop。"
   ],
   "5328410a6f60d4c2": "AgentD 的 watchdog 服务运行的是此应用的 AgentD，但 systemd 尚未开启它的定时器，因此此应用关闭时 AgentD 不会跟进你的任务。修复会将其开启。",
+  "be9690d4ecd1205c": "AgentD 的 watchdog 服务运行的是此应用的 AgentD，但 systemd 尚未开启它的定时器，因此此应用关闭时 AgentD 不会跟进你的任务。请在那台机器的终端中运行 agentd install，然后运行 systemctl --user daemon-reload 和 systemctl --user enable --now agentd-watchdog.timer。",
   "6a59746b82dd08fb": "AgentD 无法读取其某个后台服务的注册信息，而 agentd install 也会重写它，因此不提供修复。请稍后重试，或在终端中用你使用的 AgentD 运行 agentd install。",
   "3d3633596c70ff27": "systemd drop-in 设置了此服务运行的程序，而 agentd install 不会修改 drop-in，因此不为它提供修复。请从 ~/.config/systemd/user 中的 drop-in 删除 ExecStart 行，并运行 systemctl --user daemon-reload。然后在使用你的 AgentD 的终端中，为 watchdog 运行 agentd install，为仪表板运行 agentd dash install。",
   "74d5bd28e284fa57": "AgentD 的一个后台服务运行的 AgentD 已缺失或属于旧版 AgentD Desktop，另一个运行的是你自己的 AgentD。此应用未改动两者：请用你使用的 AgentD 运行 agentd install。它会用运行处设置的 AGENTD_ROOT 和 AGENTD_DB 重写两个服务；如果仪表板使用自己的设置，之后请用这些设置运行 agentd dash install。",

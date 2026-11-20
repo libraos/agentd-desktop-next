@@ -454,6 +454,8 @@ export const AgentdStartTaskResult = Schema.Struct({
   started: Schema.Boolean,
   /** Why dispatch failed; the task stays offered in agentd. */
   note: Schema.NullOr(Schema.String),
+  /** The task is an earlier cloud submission agentd found; nothing from this Start was sent. */
+  earlier: Schema.optionalKey(Schema.Boolean),
 });
 export type AgentdStartTaskResult = typeof AgentdStartTaskResult.Type;
 

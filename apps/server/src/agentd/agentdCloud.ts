@@ -583,11 +583,20 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       agentd(() => agentdArgs.releaseSubmission(session, id, attempt)).pipe(Effect.ignore);
     const remember = (id: string, handoff: string) =>
       agentd(() => agentdArgs.rememberSubmission(session, id, handoff)).pipe(Effect.ignore);
-    const alreadyRecorded = (handoff: string): AgentdStartTaskResult => ({
-      id: handoff,
-      started: false,
-      note: `AgentD already recorded this Cloud Workers submission as task ${handoff}. See it in Background tasks before starting again.`,
-    });
+    // A different draft than the one recorded is not sent: that task is the earlier submission's.
+    const alreadyRecorded = (handoff: string, earlier: boolean): AgentdStartTaskResult =>
+      earlier
+        ? {
+            id: handoff,
+            started: false,
+            earlier: true,
+            note: `AgentD already recorded your earlier Cloud Workers submission for this project as task ${handoff}, so this one wasn’t sent. See it in Background tasks before starting again.`,
+          }
+        : {
+            id: handoff,
+            started: false,
+            note: `AgentD already recorded this Cloud Workers submission as task ${handoff}. See it in Background tasks before starting again.`,
+          };
 
     const current = yield* reservation;
     let submission: string;
@@ -597,7 +606,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       const handoff = yield* recorded(current.id);
       if (handoff !== null) {
         yield* remember(current.id, handoff);
-        return alreadyRecorded(handoff);
+        return alreadyRecorded(handoff, current.fingerprint !== fingerprint);
       }
       if (
         !current.released &&

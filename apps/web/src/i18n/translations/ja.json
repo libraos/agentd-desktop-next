@@ -3160,6 +3160,7 @@
     " を実行していますが、これは見つからないか旧 AgentD Desktop のものです。"
   ],
   "5328410a6f60d4c2": "AgentD の watchdog サービスはこのアプリの AgentD を実行していますが、systemd がそのタイマーを有効にしていないため、このアプリを閉じている間 AgentD はタスクを追跡しません。修復で有効にします。",
+  "be9690d4ecd1205c": "AgentD のウォッチドッグサービスはこのアプリの AgentD を実行していますが、systemd がそのタイマーを有効にしていないため、このアプリを閉じている間 AgentD はタスクを追跡しません。そのマシンのターミナルで agentd install を実行し、続けて systemctl --user daemon-reload と systemctl --user enable --now agentd-watchdog.timer を実行してください。",
   "6a59746b82dd08fb": "AgentD はバックグラウンドサービスの 1 つの登録内容を読み取れませんでした。agentd install はそれも書き換えるため、修復は提供されません。後でもう一度試すか、使用している AgentD でターミナルから agentd install を実行してください。",
   "3d3633596c70ff27": "systemd のドロップインがこのサービスで実行するプログラムを設定しており、agentd install はドロップインを変更しないため、このサービスには修復を提供しません。~/.config/systemd/user のドロップインから ExecStart 行を削除し、systemctl --user daemon-reload を実行してください。その後、使用している AgentD のターミナルで、watchdog には agentd install、ダッシュボードには agentd dash install を実行してください。",
   "74d5bd28e284fa57": "AgentD のバックグラウンドサービスの 1 つが、見つからないか旧 AgentD Desktop の AgentD を実行しており、もう 1 つはご自身の AgentD を実行しています。このアプリはどちらも変更していません。お使いの AgentD で agentd install を実行してください。実行した環境で設定されている AGENTD_ROOT と AGENTD_DB で両方のサービスが書き換えられます。ダッシュボードが独自の値を使う場合は、その後その値で agentd dash install を実行してください。",

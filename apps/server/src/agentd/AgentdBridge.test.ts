@@ -983,12 +983,17 @@ describe("AgentdBridge", () => {
         }),
       ).toMatchObject({ id: "hof-aabbcc", started: false });
       expect(new Set(keys()).size).toBe(1);
+      // The same draft again finds its own task; a different draft from another checkout of the
+      // same project finds it as the earlier submission. Neither offers anything.
+      const again = yield* bridge.startTask(other);
+      expect(again).toMatchObject({ id: "hof-aabbcc", started: false });
+      expect(again).not.toHaveProperty("earlier");
       failPinAdd = false;
-      // The next Start, from another checkout of the same project, finds that task and offers nothing.
       origin = "git@github.com:acme/app.git";
       expect(yield* bridge.startTask({ ...input, cwd: clone })).toMatchObject({
         id: "hof-aabbcc",
         started: false,
+        earlier: true,
         note: expect.stringContaining("hof-aabbcc"),
       });
       expect(offers()).toHaveLength(3);

@@ -160,10 +160,20 @@ function ServicesNotice({
       ))}
       {problem.watchdogOff === true ? (
         <p>
-          <T>
-            AgentD’s watchdog service runs this app’s AgentD, but systemd hasn’t turned on its
-            timer, so AgentD doesn’t follow your tasks while this app is closed. Repair turns it on.
-          </T>
+          {allowed ? (
+            <T>
+              AgentD’s watchdog service runs this app’s AgentD, but systemd hasn’t turned on its
+              timer, so AgentD doesn’t follow your tasks while this app is closed. Repair turns it
+              on.
+            </T>
+          ) : (
+            <T>
+              AgentD’s watchdog service runs this app’s AgentD, but systemd hasn’t turned on its
+              timer, so AgentD doesn’t follow your tasks while this app is closed. On that machine,
+              run agentd install, then systemctl --user daemon-reload and systemctl --user enable
+              --now agentd-watchdog.timer in a terminal.
+            </T>
+          )}
         </p>
       ) : null}
       {problem.unread !== undefined && problem.unread.length > 0 ? (

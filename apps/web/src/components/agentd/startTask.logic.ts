@@ -382,3 +382,14 @@ export function cloudOfferStarted(
   const state = rows?.find((row) => row.id === id)?.cloudState;
   return state !== null && state !== undefined && CLOUD_STARTED.has(state);
 }
+
+const CLOUD_ENDED = new Set(["failed", "failed_verification", "cancelled", "budget_exceeded"]);
+
+/** The cloud job of a saved offer failed or stopped before it started well. */
+export function cloudOfferEnded(
+  rows: ReadonlyArray<{ readonly id: string; readonly cloudState?: string | null }> | null,
+  id: string,
+): boolean {
+  const state = rows?.find((row) => row.id === id)?.cloudState;
+  return state !== null && state !== undefined && CLOUD_ENDED.has(state);
+}

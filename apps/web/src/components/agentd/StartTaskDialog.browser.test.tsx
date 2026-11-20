@@ -1254,7 +1254,7 @@ it("keeps Start disabled until each BYOK path is checked, and says when one can'
   await expect.element(start).toBeEnabled();
 });
 
-it("checks each BYOK key file's provider and privacy, and remembers the paths that were sent", async () => {
+it("checks each BYOK key file's provider and privacy, and remembers the paths that were sent, closed or not", async () => {
   setup("feature/export");
   state.cloud = cloudReady();
   state.keyFiles = {
@@ -1343,7 +1343,39 @@ it("checks each BYOK key file's provider and privacy, and remembers the paths th
       .element(page.getByLabelText("OpenAI key file path"))
       .toHaveValue("/home/me/openai.key");
     await expect.element(page.getByLabelText("Anthropic key file path")).toHaveValue("");
-    // One agentd saved without a receipt keeps its path once sync shows it started.
+    // An earlier submission's task agentd found isn't this draft's: never shown as its start, and
+    // its paths aren't kept.
+    state.keyFiles["/home/me/draft.key"] = {
+      provider: "openai",
+      readable: true,
+      openToOthers: false,
+    };
+    state.start.mockResolvedValue(
+      AsyncResult.success({ id: "hof-777eee", started: false, earlier: true, note: "Earlier." }),
+    );
+    await userEvent.fill(page.getByLabelText("Goal"), "Fix export");
+    await userEvent.fill(page.getByLabelText("OpenAI key file path"), "/home/me/draft.key");
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await expect.element(page.getByText("Earlier.")).toBeVisible();
+    state.rows = [{ id: "hof-777eee", cloudState: "running" }];
+    for (const listener of state.rowListeners) listener();
+    await expect
+      .element(page.getByText(/Task hof-777eee started in Cloud Workers/))
+      .not.toBeInTheDocument();
+    await expect.element(page.getByText("Earlier.")).toBeVisible();
+    await page.getByRole("button", { name: "Close" }).first().click();
+  }
+  openStartTaskDialog(threadRef);
+  {
+    await using _screen = await renderDialog();
+    await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+    await page.getByRole("combobox", { name: "Model access" }).click();
+    await page.getByRole("option", { name: "Your API key" }).click();
+    await expect
+      .element(page.getByLabelText("OpenAI key file path"))
+      .toHaveValue("/home/me/openai.key");
+    // One agentd saved without a receipt keeps its path once sync shows it started, after the
+    // dialog was closed too.
     state.keyFiles["/home/me/later.key"] = {
       provider: "openai",
       readable: true,
@@ -1356,10 +1388,10 @@ it("checks each BYOK key file's provider and privacy, and remembers the paths th
     await userEvent.fill(page.getByLabelText("OpenAI key file path"), "/home/me/later.key");
     await page.getByRole("button", { name: "Start", exact: true }).click();
     await expect.element(page.getByText("Recorded.")).toBeVisible();
+    await page.getByRole("button", { name: "Close" }).first().click();
+    await expect.element(page.getByText("Recorded.")).not.toBeInTheDocument();
     state.rows = [{ id: "hof-789aaa", cloudState: "running" }];
     for (const listener of state.rowListeners) listener();
-    await expect.element(page.getByText(/Task hof-789aaa started in Cloud Workers/)).toBeVisible();
-    await page.getByRole("button", { name: "Close" }).first().click();
   }
   openStartTaskDialog(threadRef);
   await using _screen = await renderDialog();

@@ -140,3 +140,17 @@ it("says the watchdog's timer is off and that Repair failed to turn it on", asyn
     .element(page.getByText(/Turning on AgentD’s watchdog timer failed\. Try Repair again/))
     .toBeVisible();
 });
+
+it("tells a connection that can't repair the services how to turn the timer on", async () => {
+  setup();
+  await using _screen = await render(
+    <AgentdInstallStatus
+      status={status({ services: [], agentd: NEXT, moves: ["watchdog"], watchdogOff: true })}
+      environmentId={null}
+      onRepaired={vi.fn()}
+    />,
+  );
+  await expect.element(page.getByText(/run agentd install, then systemctl/)).toBeVisible();
+  await expect.element(page.getByText(/Repair turns it on/)).not.toBeInTheDocument();
+  await expect.element(page.getByRole("button", { name: "Repair…" })).not.toBeInTheDocument();
+});

@@ -3,7 +3,6 @@ import { scopeProjectRef } from "@t3tools/client-runtime/environment";
 import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import {
   AgentdCommandError,
-  type AgentdCloudTaskInput,
   type AgentdStartTaskResult,
   type AgentdTaskDefaults,
   type EnvironmentId,
@@ -19,6 +18,7 @@ import { useProject, useQuietThreadShell } from "~/state/entities";
 import { useEnvironmentQuery } from "~/state/query";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { vcsEnvironment } from "~/state/vcs";
+import { followCloudKeyFiles } from "./PendingCloudKeyFiles";
 import type { useStartTaskCloud } from "./StartTaskCloud";
 import {
   autoBudget,
@@ -54,12 +54,7 @@ export function useTaskDefaults(
 
 export type TaskStartOutcome =
   | { readonly kind: "started"; readonly task: AgentdStartTaskResult }
-  | {
-      readonly kind: "offered";
-      readonly task: AgentdStartTaskResult;
-      /** The cloud input sent, kept until the synced list shows the task started. */
-      readonly cloud: AgentdCloudTaskInput["cloud"] | null;
-    }
+  | { readonly kind: "offered"; readonly task: AgentdStartTaskResult }
   | {
       readonly kind: "failed";
       readonly error: unknown;
@@ -322,13 +317,11 @@ export function useTaskPlan({
     }
     // A recorded task the cloud refused keeps the last paths that worked.
     if (cloud.enabled && cloud.input !== null && result.value.started) cloud.remember(cloud.input);
-    return result.value.started
-      ? { kind: "started", task: result.value }
-      : {
-          kind: "offered",
-          task: result.value,
-          cloud: cloud.enabled && cloud.input !== null ? cloud.input : null,
-        };
+    if (result.value.started) return { kind: "started", task: result.value };
+    // An earlier submission's task carries none of this Start's paths.
+    if (cloud.enabled && cloud.input !== null && result.value.earlier !== true)
+      followCloudKeyFiles(environmentId, result.value.id, cloud.input);
+    return { kind: "offered", task: result.value };
   }
 
   /** One Start at a time; null while one is running. */
