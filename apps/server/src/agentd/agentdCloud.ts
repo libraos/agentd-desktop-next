@@ -664,9 +664,12 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       }
     }
 
-    const argv = yield* args(() => agentdArgs.cloudOffer(input, project, submission));
-    // A failed join offers nothing yet keeps the reservation: another server sharing this ledger
-    // may already be offering under it.
+    // A failure before the offer runs offered nothing under this attempt, so it is closed; the
+    // reservation and its other attempts stay: another server sharing this ledger may already be
+    // offering under it.
+    const argv = yield* args(() => agentdArgs.cloudOffer(input, project, submission)).pipe(
+      Effect.tapError(() => release(submission, attempt)),
+    );
     yield* agentd(() => agentdArgs.cloudSession(input.cwd)).pipe(
       Effect.catchTags({
         AgentdCommandError: (error) =>
@@ -676,6 +679,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
               : commandError("AgentD couldn’t prepare a session for the cloud task."),
           ),
       }),
+      Effect.tapError(() => release(submission, attempt)),
     );
     // A ledger that can't be read leaves the outcome unknown, and the reservation kept.
     const reconcile = (said: string | null) =>

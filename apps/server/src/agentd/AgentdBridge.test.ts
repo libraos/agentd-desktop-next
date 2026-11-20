@@ -1207,6 +1207,15 @@ describe("AgentdBridge", () => {
       expect(keys()).toHaveLength(3);
       expect(new Set(keys()).size).toBe(1);
 
+      // A first Start whose session join fails offered nothing: a different draft just replaces it.
+      ledger = cloudLedger();
+      brokenJoin = true;
+      yield* Effect.flip(bridge.startTask(input));
+      brokenJoin = false;
+      expect(
+        yield* Effect.flip(bridge.startTask({ ...input, goal: "After a failed join" })),
+      ).not.toHaveProperty("replaceSubmission");
+
       // A refused draft retried after a top-up, whose answer is lost: the release of the refused
       // offer says nothing of the retry, so a different draft must ask before replacing it.
       ledger = cloudLedger();
