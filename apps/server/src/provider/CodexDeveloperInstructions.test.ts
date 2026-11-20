@@ -72,7 +72,7 @@ describe("Codex orchestration context", () => {
 });
 
 describe("Codex context without orchestration tools", () => {
-  // #148: told to call orchestrator_capabilities/delegate_task, which an AgentD thread does not list,
+  // Told to call orchestrator_capabilities/delegate_task, which an AgentD thread does not list,
   // Codex reported them unavailable and stopped instead of using the AgentD skill.
   it("sends no orchestration sections and points worker requests at the AgentD skill", () => {
     const context = (orchestration: boolean) =>
