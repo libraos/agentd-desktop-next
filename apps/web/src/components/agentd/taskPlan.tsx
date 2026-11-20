@@ -21,7 +21,9 @@ import { vcsEnvironment } from "~/state/vcs";
 import type { useStartTaskCloud } from "./StartTaskCloud";
 import {
   autoBudget,
-  budgetDollars,
+  budgetDollarCap,
+  budgetMinutes,
+  localBudget,
   prepareTaskFields,
   TASK_WORKERS,
   taskBranchProblem,
@@ -99,6 +101,7 @@ export function useTaskPlan({
   const workerDefaults = useWorkerDefaults();
 
   const estimate = defaults?.estimate ?? null;
+  const dollarBudgets = status.data?.dollarBudgets ?? null;
   const local = autoBudget({
     estimate,
     defaultMinutes: null,
@@ -107,10 +110,10 @@ export function useTaskPlan({
   });
   const filled: TaskFields = {
     ...fields,
-    budget: fields.budget.trim() || `${local.minutes}m,$${budgetDollars(local.dollars)}`,
+    budget: fields.budget.trim() || localBudget(local, dollarBudgets),
     check: checkEdited || fields.check.trim() !== "" ? fields.check : (defaults?.check ?? ""),
   };
-  const validation = prepareTaskFields(filled);
+  const validation = prepareTaskFields(filled, { dollarBudgets });
   const worker = filled.worker ?? status.data?.defaultWorker ?? null;
   const branch = git.data ? taskBranchProblem(git.data) : null;
 
@@ -130,6 +133,9 @@ export function useTaskPlan({
         return null;
     }
   };
+  const noPricesReason = gt(
+    "AgentD on this machine has no model prices, so it cannot hold a dollar limit. Use minutes, such as 60m.",
+  );
   const problemKind = taskStartProblem({
     cloud: cloud.enabled,
     balanceUsd: cloud.setup?.balanceUsd ?? null,
@@ -163,6 +169,7 @@ export function useTaskPlan({
       case null:
         break;
     }
+    if (!cloud.enabled && validation.budget === "no-prices") return noPricesReason;
     if (cloud.enabled && cloud.setup?.problem === "setup")
       return gt("Cloud Workers aren’t set up. Check the cloud configuration and account key file.");
     if (cloud.enabled && cloud.setup?.problem === "repository")
@@ -174,9 +181,20 @@ export function useTaskPlan({
   })();
   const checking = cloud.enabled ? cloud.checkingBalance : cwd !== null && git.data === null;
 
+  // A local dollar limit is promised only when agentd can hold it.
+  const localDollars = validation.budget === null ? budgetDollarCap(validation.input.budget) : null;
+  const localMinutes = budgetMinutes(validation.input.budget);
   const capText = cloud.enabled
     ? money(Number(cloud.dollars) || 0)
-    : money(Number(/\$([\d.]+)/.exec(validation.input.budget)?.[1] ?? 0));
+    : localDollars === null
+      ? null
+      : money(localDollars);
+  const budgetPart =
+    capText !== null
+      ? gt("budget up to {cap}", { cap: capText })
+      : localMinutes !== null
+        ? gt("time limit {minutes} min", { minutes: localMinutes })
+        : null;
   const models = cloud.enabled
     ? cloud.modelAccess === "libraos"
       ? gt("LibraOS models")
@@ -190,7 +208,7 @@ export function useTaskPlan({
       : null;
   const summary = [
     cloud.enabled ? gt("Cloud Workers") : worker === null ? null : TASK_WORKERS[worker],
-    gt("budget up to {cap}", { cap: capText }),
+    budgetPart,
     models,
     validation.input.check
       ? gt("check: {check}", { check: validation.input.check })
@@ -199,14 +217,18 @@ export function useTaskPlan({
     .filter((part) => part !== null)
     .join(" · ");
   const estimateLine =
-    estimate === null
-      ? gt("Budget up to {cap} (agentd has no estimate for similar tasks yet).", { cap: capText })
-      : gt("Budget up to {cap} (similar tasks cost {low}–{high}).", {
-          cap: capText,
-          low: money(estimate.low),
-          high: money(estimate.high),
-        }) +
-        (cloud.enabled ? ` ${gt("The estimate comes from local runs of similar tasks.")}` : "");
+    capText === null
+      ? dollarBudgets === false
+        ? gt("No dollar limit: AgentD on this machine has no model prices.")
+        : gt("No dollar limit: the budget names only minutes.")
+      : estimate === null
+        ? gt("Budget up to {cap} (agentd has no estimate for similar tasks yet).", { cap: capText })
+        : gt("Budget up to {cap} (similar tasks cost {low}–{high}).", {
+            cap: capText,
+            low: money(estimate.low),
+            high: money(estimate.high),
+          }) +
+          (cloud.enabled ? ` ${gt("The estimate comes from local runs of similar tasks.")}` : "");
 
   const ready =
     canStart &&
@@ -280,6 +302,8 @@ export function useTaskPlan({
 
   return {
     canStart,
+    dollarBudgets,
+    noPricesReason,
     filled,
     validation,
     worker,

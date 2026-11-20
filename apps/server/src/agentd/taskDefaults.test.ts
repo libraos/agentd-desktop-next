@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@effect/vitest";
 
-import { estimateType, readEstimate, suggestCheck } from "./taskDefaults.ts";
+import { estimateType, readDollarBudgets, readEstimate, suggestCheck } from "./taskDefaults.ts";
 
 // Recorded from agentd (`handoff estimate --type implement --json`), trimmed.
 const ESTIMATE = `{"bench":0,"high":4.98,"label":"implementation","low":1.78,"median":3.11,"n":846,"type":"implement","workers":846}`;
@@ -25,6 +25,18 @@ describe("readEstimate", () => {
     expect(readEstimate(`{"low":0,"median":0,"high":0,"n":3}`, "small")).toBeNull();
     expect(readEstimate(`{"low":1,"high":2,"n":4}`, "small")).toBeNull();
     expect(readEstimate("no estimate (small fix or test, 2 past jobs)", "small")).toBeNull();
+  });
+});
+
+describe("readDollarBudgets", () => {
+  it("is true only when agentd lists at least one model price", () => {
+    expect(readDollarBudgets("{}\n")).toBe(false);
+    expect(
+      readDollarBudgets(
+        `{\n "claude-sonnet-5-5": {\n  "cache_read": 0.3,\n  "cache_write": 3.75,\n  "input": 3,\n  "output": 15\n }\n}\n`,
+      ),
+    ).toBe(true);
+    expect(readDollarBudgets("error: setting is not exposed: budget.prices")).toBeNull();
   });
 });
 
