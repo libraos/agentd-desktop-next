@@ -18,11 +18,38 @@ export const AgentdSkillAgentState = Schema.Struct({
 });
 export type AgentdSkillAgentState = typeof AgentdSkillAgentState.Type;
 
+export const AgentdSkillGroup = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+});
+export type AgentdSkillGroup = typeof AgentdSkillGroup.Type;
+
+export const AgentdSkillSource = Schema.Struct({
+  /** The Skill's git repository. */
+  url: Schema.String,
+  /** The Skill's folder in that repository. */
+  path: Schema.String,
+  /** The reviewed commit; only this commit is installed. */
+  sha: Schema.String,
+  /** Licence and notice files elsewhere in the repository that are installed with the Skill. */
+  notices: Schema.optionalKey(Schema.Array(Schema.String)),
+});
+export type AgentdSkillSource = typeof AgentdSkillSource.Type;
+
 export const AgentdSkillListing = Schema.Struct({
+  /** Also the Skill's folder name in each agent's Skills folder. */
+  id: Schema.String,
   name: Schema.String,
   description: Schema.String,
-  repository: Schema.String,
-  commit: Schema.String,
+  /** A group id from `groups`. */
+  group: Schema.String,
+  author: Schema.String,
+  /** SPDX identifier of the Skill's licence at the reviewed commit. */
+  licence: Schema.String,
+  /** The date the reviewed commit was signed off, YYYY-MM-DD. */
+  reviewedAt: Schema.String,
+  source: AgentdSkillSource,
+  /** Only the agents the entry supports, each with its install state. */
   agents: Schema.Array(AgentdSkillAgentState),
 });
 export type AgentdSkillListing = typeof AgentdSkillListing.Type;
@@ -37,18 +64,19 @@ export const AgentdSkills = Schema.Struct({
   fetchedAt: Schema.optionalKey(Schema.String),
   /** The organization whose policy turned the catalogue off. */
   organization: Schema.optionalKey(Schema.String),
+  groups: Schema.Array(AgentdSkillGroup),
   skills: Schema.Array(AgentdSkillListing),
 });
 export type AgentdSkills = typeof AgentdSkills.Type;
 
 export const AgentdSkillInput = Schema.Struct({
-  name: Schema.String,
+  id: Schema.String,
   agent: AgentdSkillAgent,
 });
 export type AgentdSkillInput = typeof AgentdSkillInput.Type;
 
 export const AgentdSkillInstallInput = Schema.Struct({
-  name: Schema.String,
+  id: Schema.String,
   agent: AgentdSkillAgent,
   /** Replace a folder of the same name that the catalogue did not install. */
   replace: Schema.optionalKey(Schema.Boolean),
@@ -58,6 +86,7 @@ export type AgentdSkillInstallInput = typeof AgentdSkillInstallInput.Type;
 export const AgentdSkillErrorReason = Schema.Literals([
   "policy",
   "unknown",
+  "unsupported",
   "conflict",
   "download",
   "unsafe",

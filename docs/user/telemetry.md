@@ -6,9 +6,11 @@ PostHog and fetches nothing from upstream's servers.
 
 The app still uses the network. Some requests start on their own: it checks which
 providers are installed and signed in, and checks for provider updates unless you turn
-that setting off. The rest follow from what you do: your providers' CLIs talking to
-their vendors, source control, provider installs, speech model downloads, and similar
-actions.
+that setting off. Listing the Skills catalogue fetches `catalog.json` from the
+`libraos/skills` repository on GitHub at most once a day, and installing a Skill fetches
+its files from its source repository on GitHub. The rest follow from what you do: your
+providers' CLIs talking to their vendors, source control, provider installs, speech
+model downloads, and similar actions.
 
 ## Analytics you configure
 

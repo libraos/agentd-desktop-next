@@ -1,9 +1,10 @@
 import { describe, expect, it } from "@effect/vitest";
 
 import {
-  type CatalogEntry,
+  type PinnedSource,
   fetchDue,
   gitBlobId,
+  githubRepository,
   parseCatalog,
   planFiles,
   resolveInside,
@@ -86,27 +87,81 @@ describe("skillsDirectory", () => {
 
 describe("parseCatalog", () => {
   const entry = {
-    name: "pdf",
+    id: "pdf",
+    name: "PDF",
     description: "PDFs",
-    repository: "anthropics/skills",
-    commit: COMMIT,
-    path: "skills/pdf",
+    group: "documents",
+    author: "Anthropic",
+    source: { url: "https://github.com/anthropics/skills", path: "skills/pdf", sha: COMMIT },
+    licence: "Apache-2.0",
+    reviewedAt: "2026-11-01",
+    agents: ["claude", "codex"],
   };
-  const text = (skills: ReadonlyArray<object>) => JSON.stringify({ schemaVersion: 1, skills });
-  it("reads a valid catalogue", () => {
-    expect(parseCatalog(text([entry]))?.skills).toEqual([entry]);
+  const groups = [{ id: "documents", name: "Documents" }];
+  const text = (skills: ReadonlyArray<object>, groupList: ReadonlyArray<object> = groups) =>
+    JSON.stringify({ $schema: "./catalog.schema.json", version: 1, groups: groupList, skills });
+  it("reads a valid catalogue, with notices and an agent this build does not know", () => {
+    const withNotices = {
+      ...entry,
+      source: { ...entry.source, notices: ["THIRD_PARTY_NOTICES.md"] },
+      agents: ["claude", "opencode"],
+    };
+    expect(parseCatalog(text([withNotices]))).toEqual({
+      version: 1,
+      groups,
+      skills: [withNotices],
+    });
+  });
+  it("reads the published catalogue with no Skills yet", () => {
+    expect(parseCatalog(text([]))?.groups).toEqual(groups);
   });
   it.each([
-    ["a Skill named twice", [entry, entry]],
-    ["a path leaving the repository", [{ ...entry, path: "../pdf" }]],
-    ["a notice with an unsafe path", [{ ...entry, notices: ["/etc/passwd"] }]],
-    ["a branch instead of a commit", [{ ...entry, commit: "main" }]],
-    ["a name that is not a folder name", [{ ...entry, name: "../pdf" }]],
-  ])("refuses %s", (_label, skills) => {
-    expect(parseCatalog(text(skills))).toBeNull();
+    ["a Skill listed twice", [entry, entry], groups],
+    ["a group defined twice", [entry], [...groups, ...groups]],
+    ["a Skill in a group not defined", [{ ...entry, group: "other" }], groups],
+    [
+      "a path leaving the repository",
+      [{ ...entry, source: { ...entry.source, path: "../pdf" } }],
+      groups,
+    ],
+    [
+      "a notice with an unsafe path",
+      [{ ...entry, source: { ...entry.source, notices: ["/etc/passwd"] } }],
+      groups,
+    ],
+    [
+      "a branch instead of a commit",
+      [{ ...entry, source: { ...entry.source, sha: "main" } }],
+      groups,
+    ],
+    [
+      "a source that is not https",
+      [{ ...entry, source: { ...entry.source, url: "http://x/y" } }],
+      groups,
+    ],
+    ["an id that is not a folder name", [{ ...entry, id: "../pdf" }], groups],
+    ["no agents", [{ ...entry, agents: [] }], groups],
+    ["a missing licence", [{ ...entry, licence: undefined }], groups],
+  ])("refuses %s", (_label, skills, groupList) => {
+    expect(parseCatalog(text(skills, groupList))).toBeNull();
   });
-  it("refuses text that is not JSON", () => {
+  it("refuses another version and text that is not JSON", () => {
+    expect(parseCatalog(JSON.stringify({ version: 2, groups, skills: [] }))).toBeNull();
     expect(parseCatalog("<html>")).toBeNull();
+  });
+});
+
+describe("githubRepository", () => {
+  it.each([
+    ["https://github.com/anthropics/skills", "anthropics/skills"],
+    ["https://github.com/anthropics/skills.git", "anthropics/skills"],
+    ["https://github.com/anthropics/skills/", "anthropics/skills"],
+    ["https://gitlab.com/anthropics/skills", null],
+    ["https://github.com/anthropics/skills/tree/main", null],
+    ["https://github.com/anthropics/..", null],
+    ["https://github.com.evil.example/a/b", null],
+  ] as const)("%s", (url, repository) => {
+    expect(githubRepository(url)).toBe(repository);
   });
 });
 
@@ -123,9 +178,7 @@ describe("fetchDue", () => {
 });
 
 describe("planFiles", () => {
-  const entry: CatalogEntry = {
-    name: "demo",
-    description: "",
+  const entry: PinnedSource = {
     repository: "o/r",
     commit: COMMIT,
     path: "skills/demo",

@@ -32,11 +32,13 @@ import {
   type Catalog,
   type CatalogEntry,
   type HostPaths,
+  type PinnedSource,
   decodeCatalogCache,
   decodeGitTree,
   decodeManifest,
   fetchDue,
   gitBlobId,
+  githubRepository,
   parseCatalog,
   planFiles,
   resolveInside,
@@ -72,7 +74,9 @@ const encodeCache = Schema.encodeSync(Schema.fromJsonString(CatalogCache));
 const isSkillError = Schema.is(AgentdSkillError);
 const encodeManifest = Schema.encodeSync(Schema.fromJsonString(Manifest));
 
-type Served = Omit<AgentdSkills, "skills"> & { readonly catalog: Catalog | undefined };
+type Served = Omit<AgentdSkills, "skills" | "groups"> & { readonly catalog: Catalog | undefined };
+
+const supports = (entry: CatalogEntry, agent: AgentdSkillAgent) => entry.agents.includes(agent);
 
 const make = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
@@ -191,25 +195,25 @@ const make = Effect.gen(function* () {
     const skills = [];
     for (const entry of served.catalog?.skills ?? []) {
       const agents: AgentdSkillAgentState[] = [];
-      for (const agent of AGENTS) {
-        const found = folderFor(agent, entry.name);
+      for (const agent of AGENTS.filter((agent) => supports(entry, agent))) {
+        const found = folderFor(agent, entry.id);
         const seen =
-          found === null ? { state: "absent" as const } : yield* inspect(found.folder, entry.name);
+          found === null ? { state: "absent" as const } : yield* inspect(found.folder, entry.id);
         agents.push(
           seen.state === "managed"
             ? { agent, state: "managed", commit: seen.manifest.commit }
             : { agent, state: seen.state },
         );
       }
-      const { name, description, repository, commit } = entry;
-      skills.push({ name, description, repository, commit, agents });
+      const { id, name, description, group, author, licence, reviewedAt, source } = entry;
+      skills.push({ id, name, description, group, author, licence, reviewedAt, source, agents });
     }
     const { catalog: _catalog, ...rest } = served;
-    return { ...rest, skills } satisfies AgentdSkills;
+    return { ...rest, groups: served.catalog?.groups ?? [], skills } satisfies AgentdSkills;
   });
 
   /** Every file of the Skill, fetched and checked against the commit's ids; nothing is written. */
-  const download = Effect.fn("AgentdSkills.download")(function* (entry: CatalogEntry) {
+  const download = Effect.fn("AgentdSkills.download")(function* (entry: PinnedSource) {
     const treeUrl = `https://api.github.com/repos/${urlPath(entry.repository)}/git/trees/${entry.commit}?recursive=1`;
     const treeBytes = yield* getBytes(treeUrl).pipe(
       Effect.catch((detail) =>
@@ -242,13 +246,28 @@ const make = Effect.gen(function* () {
       return yield* fail("policy", `${organization}'s policy does not allow the Skills catalogue.`);
     }
     const served = yield* catalog();
-    const entry = served.catalog?.skills.find((skill) => skill.name === input.name);
-    if (entry === undefined)
-      return yield* fail("unknown", `${input.name} is not in the catalogue.`);
-    const found = folderFor(input.agent, entry.name);
-    if (found === null) return yield* fail("unsafe", `${entry.name} is not a safe folder name.`);
+    const entry = served.catalog?.skills.find((skill) => skill.id === input.id);
+    if (entry === undefined) return yield* fail("unknown", `${input.id} is not in the catalogue.`);
+    if (!supports(entry, input.agent)) {
+      return yield* fail(
+        "unsupported",
+        `${entry.name} is not listed for ${input.agent === "claude" ? "Claude Code" : "Codex"}.`,
+      );
+    }
+    const repository = githubRepository(entry.source.url);
+    if (repository === null) {
+      return yield* fail("download", `${entry.source.url} is not a GitHub repository.`);
+    }
+    const pinned: PinnedSource = {
+      repository,
+      commit: entry.source.sha,
+      path: entry.source.path,
+      notices: entry.source.notices,
+    };
+    const found = folderFor(input.agent, entry.id);
+    if (found === null) return yield* fail("unsafe", `${entry.id} is not a safe folder name.`);
     const { root, folder } = found;
-    const before = yield* inspect(folder, entry.name);
+    const before = yield* inspect(folder, entry.id);
     if (before.state === "manual" && input.replace !== true) {
       return yield* fail(
         "conflict",
@@ -277,17 +296,17 @@ const make = Effect.gen(function* () {
       }
     }
 
-    const files = yield* download(entry);
+    const files = yield* download(pinned);
 
     const suffix = stagingSuffix();
-    const staging = path.join(root, `.${entry.name}.agentd-staging-${suffix}`);
-    const aside = path.join(root, `.${entry.name}.agentd-old-${suffix}`);
+    const staging = path.join(root, `.${entry.id}.agentd-staging-${suffix}`);
+    const aside = path.join(root, `.${entry.id}.agentd-old-${suffix}`);
     const manifest: Manifest = {
       schemaVersion: 1,
-      name: entry.name,
-      repository: entry.repository,
-      commit: entry.commit,
-      path: entry.path,
+      name: entry.id,
+      repository: pinned.repository,
+      commit: pinned.commit,
+      path: pinned.path,
       installedAt: iso(yield* Clock.currentTimeMillis),
       files: files.map((file) => file.target),
     };
@@ -320,15 +339,15 @@ const make = Effect.gen(function* () {
   }, lock.withPermits(1));
 
   const remove = Effect.fn("AgentdSkills.remove")(function* (input: AgentdSkillInput) {
-    const found = folderFor(input.agent, input.name);
-    if (found === null) return yield* fail("unsafe", `${input.name} is not a safe folder name.`);
+    const found = folderFor(input.agent, input.id);
+    if (found === null) return yield* fail("unsafe", `${input.id} is not a safe folder name.`);
     const { folder } = found;
-    const seen = yield* inspect(folder, input.name);
+    const seen = yield* inspect(folder, input.id);
     if (seen.state !== "managed") {
       return yield* fail(
         seen.state === "absent" ? "unknown" : "conflict",
         seen.state === "absent"
-          ? `${input.name} is not installed.`
+          ? `${input.id} is not installed.`
           : `${folder} was not installed from the catalogue, so it is left alone.`,
       );
     }

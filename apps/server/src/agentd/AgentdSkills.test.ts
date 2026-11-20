@@ -24,19 +24,29 @@ const REPO_FILES: Record<string, Uint8Array> = {
   "NOTICES.md": text("notices\n"),
   "README.md": text("readme\n"),
 };
-const CATALOG = JSON.stringify({
-  schemaVersion: 1,
-  skills: [
-    {
-      name: "demo",
-      description: "A demo",
-      repository: "owner/repo",
-      commit: COMMIT,
-      path: "skills/demo",
-      notices: ["NOTICES.md"],
-    },
-  ],
-});
+const ENTRY = {
+  id: "demo",
+  name: "Demo",
+  description: "A demo",
+  group: "research",
+  author: "Owner",
+  source: {
+    url: "https://github.com/owner/repo",
+    path: "skills/demo",
+    sha: COMMIT,
+    notices: ["NOTICES.md"],
+  },
+  licence: "Apache-2.0",
+  reviewedAt: "2026-11-01",
+  agents: ["claude", "codex"],
+};
+const GROUPS = [{ id: "research", name: "Research" }];
+const catalogText = (skills: ReadonlyArray<object>) =>
+  JSON.stringify({ $schema: "./catalog.schema.json", version: 1, groups: GROUPS, skills });
+const CATALOG = catalogText([
+  ENTRY,
+  { ...ENTRY, id: "claude-only", agents: ["claude", "opencode"] },
+]);
 const TREE_URL = `https://api.github.com/repos/owner/repo/git/trees/${COMMIT}?recursive=1`;
 const rawUrl = (path: string) => `https://raw.githubusercontent.com/owner/repo/${COMMIT}/${path}`;
 const treeBody = (extra: ReadonlyArray<object> = []) =>
@@ -124,7 +134,8 @@ it.effect("fetches the catalogue at most once a day and serves the cache when a 
     const h = yield* harness();
     const first = yield* h.service.list;
     expect(first.source).toBe("fetched");
-    expect(first.skills.map((skill) => skill.name)).toEqual(["demo"]);
+    expect(first.groups).toEqual(GROUPS);
+    expect(first.skills.map((skill) => skill.id)).toEqual(["demo", "claude-only"]);
 
     expect((yield* h.service.list).source).toBe("cache");
     expect(h.requests).toEqual([CATALOG_URL]);
@@ -133,7 +144,7 @@ it.effect("fetches the catalogue at most once a day and serves the cache when a 
     h.routes.set(CATALOG_URL, { status: 503, body: "" });
     const failed = yield* h.service.list;
     expect(failed).toMatchObject({ source: "cache", fetchedAt: first.fetchedAt });
-    expect(failed.skills.map((skill) => skill.name)).toEqual(["demo"]);
+    expect(failed.skills.map((skill) => skill.id)).toEqual(["demo", "claude-only"]);
     expect(h.requests).toEqual([CATALOG_URL, CATALOG_URL]);
 
     // The failed attempt counts: no new request until another day has passed.
@@ -143,9 +154,11 @@ it.effect("fetches the catalogue at most once a day and serves the cache when a 
     yield* TestClock.adjust("25 hours");
     h.routes.set(CATALOG_URL, {
       status: 200,
-      body: JSON.stringify({ schemaVersion: 1, skills: [{}] }),
+      body: catalogText([{ ...ENTRY, group: "undefined-group" }]),
     });
-    expect((yield* h.service.list).source).toBe("cache");
+    const invalid = yield* h.service.list;
+    expect(invalid.source).toBe("cache");
+    expect(invalid.skills.map((skill) => skill.id)).toEqual(["demo", "claude-only"]);
     expect(h.requests).toHaveLength(3);
   }).pipe(Effect.provide(dependencies)),
 );
@@ -154,7 +167,7 @@ it.effect("with no cache and a failed fetch, the catalogue is empty", () =>
   Effect.gen(function* () {
     const h = yield* harness();
     h.routes.set(CATALOG_URL, { status: 500, body: "" });
-    expect(yield* h.service.list).toEqual({ source: "none", skills: [] });
+    expect(yield* h.service.list).toEqual({ source: "none", groups: [], skills: [] });
   }).pipe(Effect.provide(dependencies)),
 );
 
@@ -168,9 +181,10 @@ it.effect("a policy that turns the catalogue off makes no request", () =>
     expect(yield* h.service.list).toEqual({
       source: "off",
       organization: "Example Corp",
+      groups: [],
       skills: [],
     });
-    const refused = yield* h.service.install({ name: "demo", agent: "claude" }).pipe(Effect.flip);
+    const refused = yield* h.service.install({ id: "demo", agent: "claude" }).pipe(Effect.flip);
     expect(refused.reason).toBe("policy");
     expect(h.requests).toEqual([]);
     expect(yield* h.filesUnder(h.claude)).toEqual([]);
@@ -182,7 +196,7 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const h = yield* harness();
-      const listed = yield* h.service.install({ name: "demo", agent: "claude" });
+      const listed = yield* h.service.install({ id: "demo", agent: "claude" });
       expect(states(listed)).toEqual([
         { agent: "claude", state: "managed", commit: COMMIT },
         { agent: "codex", state: "absent" },
@@ -219,6 +233,51 @@ it.effect(
     }).pipe(Effect.provide(dependencies)),
 );
 
+it.effect("lists each entry's details and only the agents it supports", () =>
+  Effect.gen(function* () {
+    const h = yield* harness();
+    const listed = yield* h.service.list;
+    const { agents: _agents, ...entry } = ENTRY;
+    expect(listed.skills).toEqual([
+      {
+        ...entry,
+        agents: [
+          { agent: "claude", state: "absent" },
+          { agent: "codex", state: "absent" },
+        ],
+      },
+      { ...entry, id: "claude-only", agents: [{ agent: "claude", state: "absent" }] },
+    ]);
+  }).pipe(Effect.provide(dependencies)),
+);
+
+it.effect("install is refused for an agent the entry does not list, before any download", () =>
+  Effect.gen(function* () {
+    const h = yield* harness();
+    const refused = yield* h.service
+      .install({ id: "claude-only", agent: "codex", replace: true })
+      .pipe(Effect.flip);
+    expect(refused.reason).toBe("unsupported");
+    expect(h.requests).toEqual([CATALOG_URL]);
+    expect(yield* h.filesUnder(h.home)).toEqual([]);
+  }).pipe(Effect.provide(dependencies)),
+);
+
+it.effect("install is refused for a source that is not a GitHub repository", () =>
+  Effect.gen(function* () {
+    const h = yield* harness();
+    h.routes.set(CATALOG_URL, {
+      status: 200,
+      body: catalogText([
+        { ...ENTRY, source: { ...ENTRY.source, url: "https://gitlab.com/owner/repo" } },
+      ]),
+    });
+    const refused = yield* h.service.install({ id: "demo", agent: "claude" }).pipe(Effect.flip);
+    expect(refused.reason).toBe("download");
+    expect(h.requests).toEqual([CATALOG_URL]);
+  }).pipe(Effect.provide(dependencies)),
+);
+
 it.effect("a hand-installed Skill of the same name is replaced only when asked", () =>
   Effect.gen(function* () {
     const h = yield* harness();
@@ -226,12 +285,12 @@ it.effect("a hand-installed Skill of the same name is replaced only when asked",
     yield* h.fs.makeDirectory(folder, { recursive: true });
     yield* h.fs.writeFileString(h.path.join(folder, "SKILL.md"), "mine\n");
 
-    const refused = yield* h.service.install({ name: "demo", agent: "codex" }).pipe(Effect.flip);
+    const refused = yield* h.service.install({ id: "demo", agent: "codex" }).pipe(Effect.flip);
     expect(refused.reason).toBe("conflict");
     expect(yield* h.fs.readFileString(h.path.join(folder, "SKILL.md"))).toBe("mine\n");
     expect(h.requests).toEqual([CATALOG_URL]);
 
-    const replaced = yield* h.service.install({ name: "demo", agent: "codex", replace: true });
+    const replaced = yield* h.service.install({ id: "demo", agent: "codex", replace: true });
     expect(states(replaced)?.[1]).toEqual({ agent: "codex", state: "managed", commit: COMMIT });
     expect(yield* h.fs.readFileString(h.path.join(folder, "SKILL.md"))).toBe(
       "---\nname: demo\n---\n",
@@ -290,7 +349,7 @@ it.effect.each([
   Effect.gen(function* () {
     const h = yield* harness();
     breakIt(h);
-    const failed = yield* h.service.install({ name: "demo", agent: "claude" }).pipe(Effect.flip);
+    const failed = yield* h.service.install({ id: "demo", agent: "claude" }).pipe(Effect.flip);
     expect(failed.reason).toBe(reason);
     expect(yield* h.filesUnder(h.claude)).toEqual([]);
     expect(yield* h.filesUnder(h.home)).toEqual([]);
@@ -302,10 +361,10 @@ type Harness = Effect.Success<ReturnType<typeof harness>>;
 it.effect("an update keeps a managed install whole when its download fails", () =>
   Effect.gen(function* () {
     const h = yield* harness();
-    yield* h.service.install({ name: "demo", agent: "claude" });
+    yield* h.service.install({ id: "demo", agent: "claude" });
     const before = yield* h.filesUnder(h.claude);
     h.routes.set(rawUrl("skills/demo/SKILL.md"), { status: 500, body: "" });
-    yield* h.service.install({ name: "demo", agent: "claude" }).pipe(Effect.flip);
+    yield* h.service.install({ id: "demo", agent: "claude" }).pipe(Effect.flip);
     expect(yield* h.filesUnder(h.claude)).toEqual(before);
   }).pipe(Effect.provide(dependencies)),
 );
@@ -313,12 +372,12 @@ it.effect("an update keeps a managed install whole when its download fails", () 
 it.effect("an update does not drop files added to a managed install without replace", () =>
   Effect.gen(function* () {
     const h = yield* harness();
-    yield* h.service.install({ name: "demo", agent: "claude" });
+    yield* h.service.install({ id: "demo", agent: "claude" });
     // Reinstalling an untouched install is fine.
-    yield* h.service.install({ name: "demo", agent: "claude" });
+    yield* h.service.install({ id: "demo", agent: "claude" });
     const added = h.path.join(h.claude, "demo", "scripts", "notes.txt");
     yield* h.fs.writeFileString(added, "mine\n");
-    const refused = yield* h.service.install({ name: "demo", agent: "claude" }).pipe(Effect.flip);
+    const refused = yield* h.service.install({ id: "demo", agent: "claude" }).pipe(Effect.flip);
     expect(refused.reason).toBe("conflict");
     expect(yield* h.fs.readFileString(added)).toBe("mine\n");
   }).pipe(Effect.provide(dependencies)),
@@ -327,11 +386,11 @@ it.effect("an update does not drop files added to a managed install without repl
 it.effect("remove deletes only what the manifest lists", () =>
   Effect.gen(function* () {
     const h = yield* harness();
-    yield* h.service.install({ name: "demo", agent: "claude" });
+    yield* h.service.install({ id: "demo", agent: "claude" });
     const folder = h.path.join(h.claude, "demo");
     yield* h.fs.writeFileString(h.path.join(folder, "scripts", "notes.txt"), "mine\n");
 
-    const listed = yield* h.service.remove({ name: "demo", agent: "claude" });
+    const listed = yield* h.service.remove({ id: "demo", agent: "claude" });
     expect(yield* h.filesUnder(h.claude)).toEqual([
       "demo",
       "demo/scripts",
@@ -339,7 +398,7 @@ it.effect("remove deletes only what the manifest lists", () =>
     ]);
     expect(states(listed)?.[0]).toEqual({ agent: "claude", state: "manual" });
 
-    const refused = yield* h.service.remove({ name: "demo", agent: "claude" }).pipe(Effect.flip);
+    const refused = yield* h.service.remove({ id: "demo", agent: "claude" }).pipe(Effect.flip);
     expect(refused.reason).toBe("conflict");
     expect(yield* h.filesUnder(h.claude)).toEqual([
       "demo",
@@ -348,8 +407,8 @@ it.effect("remove deletes only what the manifest lists", () =>
     ]);
 
     yield* h.fs.remove(h.path.join(folder, "scripts", "notes.txt"));
-    yield* h.service.install({ name: "demo", agent: "claude", replace: true });
-    yield* h.service.remove({ name: "demo", agent: "claude" });
+    yield* h.service.install({ id: "demo", agent: "claude", replace: true });
+    yield* h.service.remove({ id: "demo", agent: "claude" });
     expect(yield* h.filesUnder(h.claude)).toEqual([]);
   }).pipe(Effect.provide(dependencies)),
 );
