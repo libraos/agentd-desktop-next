@@ -4838,6 +4838,37 @@ it.layer(
         const keyless = yield* check({}, []);
         assert.deepStrictEqual(keyless.models, []);
         assert.deepStrictEqual(asked[2], { endpoint: "https://api.libraos.com", key: undefined });
+
+        // Initialization fails, and an older CLI lacks a model the key does not allow anyway:
+        // the key still decides, the agent stays known as the Gateway's, and no update is offered.
+        const unverified = yield* checkClaudeProviderStatus(
+          defaultClaudeSettings,
+          () => Effect.succeed(undefined),
+          { ANTHROPIC_BASE_URL: "https://api.libraos.com", ANTHROPIC_API_KEY: "lk_claude_key_123" },
+          undefined,
+          {
+            models: [
+              {
+                model: { slug: "claude-now", name: "Now", isCustom: false, capabilities: null },
+                runtime: {},
+                compatibility: {},
+              },
+              {
+                model: { slug: "claude-next", name: "Next", isCustom: false, capabilities: null },
+                runtime: {},
+                compatibility: { minVersion: "1.1.0" },
+              },
+            ],
+          },
+          undefined,
+          undefined,
+          () => Effect.succeed([]),
+        );
+        assert.deepStrictEqual(unverified.models, []);
+        assert.strictEqual(unverified.status, "warning");
+        assert.strictEqual(unverified.auth.endpoint, "https://api.libraos.com");
+        assert.strictEqual(unverified.message, NO_SERVED_MODELS_MESSAGE);
+        assert.strictEqual(unverified.updateRequiredModels, undefined);
       }).pipe(
         Effect.provide(
           layerMockSpawner((args) => {

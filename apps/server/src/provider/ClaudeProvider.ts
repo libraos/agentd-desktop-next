@@ -781,9 +781,6 @@ const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(functio
     });
   }
 
-  const updateRequiredModels = resolveClaudeUpdateRequiredModels(modelCatalog, parsedVersion);
-  const versionUpgradeMessage = formatClaudeVersionUpgradeMessage(modelCatalog, parsedVersion);
-
   const probeResult = resolveCapabilities
     ? yield* resolveCapabilities(claudeSettings).pipe(Effect.result)
     : undefined;
@@ -791,23 +788,56 @@ const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(functio
     probeResult && Result.isSuccess(probeResult) ? probeResult.success : undefined;
   const probeFailure =
     probeResult && Result.isFailure(probeResult) ? probeResult.failure : undefined;
+  const settingsEnv = yield* readClaudeSettingsEnv(claudeSettings, cwd, resolvedEnvironment);
+  const baseUrl = settingsEnv.ANTHROPIC_BASE_URL ?? resolvedEnvironment.ANTHROPIC_BASE_URL;
+  const customApiEndpoint = customClaudeApiEndpointHost(baseUrl) !== undefined;
+  const endpoint = customApiEndpoint ? URL.parse(baseUrl?.trim() ?? "")?.origin : undefined;
+  // Claude lists its own catalog whatever endpoint it sends requests to; one that serves only some
+  // models for the key Claude sends (LibraOS Gateway) decides which of them work, whether or not
+  // Claude's own initialization answered.
+  const endpointKey = (
+    settingsEnv.ANTHROPIC_AUTH_TOKEN ??
+    settingsEnv.ANTHROPIC_API_KEY ??
+    resolvedEnvironment.ANTHROPIC_AUTH_TOKEN ??
+    resolvedEnvironment.ANTHROPIC_API_KEY
+  )?.trim();
+  const endpointModels =
+    endpointKeyModels && endpoint && claudeSettings.onlyCustomModels !== true
+      ? yield* endpointKeyModels({ endpoint, key: endpointKey })
+      : undefined;
+  // The Gateway key, not the CLI version, decides which models a Gateway agent lacks.
+  const keyDecides = endpointModels !== undefined || claudeSettings.onlyCustomModels === true;
+  const updateRequiredModels = keyDecides
+    ? []
+    : resolveClaudeUpdateRequiredModels(modelCatalog, parsedVersion);
+  const versionUpgradeMessage = keyDecides
+    ? undefined
+    : formatClaudeVersionUpgradeMessage(modelCatalog, parsedVersion);
   const models = capClaudeCatalogEffort(
     modelCatalog,
     claudeProviderModels(
       [
         ...resolveClaudeModelsForVersion(modelCatalog, parsedVersion),
-        ...claudeReportedModels(modelCatalog, claudeSettings.customModels, capabilities?.models),
+        ...claudeReportedModels(
+          modelCatalog,
+          endpointModels ?? claudeSettings.customModels,
+          capabilities?.models,
+        ),
       ],
-      claudeSettings,
+      endpointModels ? { customModels: endpointModels, onlyCustomModels: true } : claudeSettings,
     ),
     capabilities?.effortCapSources ?? [],
   );
+  const endpointAuth =
+    endpointModels && endpoint
+      ? { type: "customEndpoint", label: "Custom API endpoint", endpoint }
+      : {};
   const skills = yield* discoverClaudeSkills(claudeSettings, cwd, resolvedEnvironment);
   const slashCommands = [COMPACT_SLASH_COMMAND, ...(capabilities?.slashCommands ?? [])];
   const dedupedSlashCommands = dedupeSlashCommands(slashCommands);
 
   if (!capabilities) {
-    return buildServerProvider({
+    const draft = buildServerProvider({
       presentation: CLAUDE_PRESENTATION,
       enabled: claudeSettings.enabled,
       checkedAt,
@@ -819,7 +849,7 @@ const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(functio
         installed: true,
         version: parsedVersion,
         status: "warning",
-        auth: { status: "unknown" },
+        auth: { status: "unknown", ...endpointAuth },
         message: probeFailure
           ? Cause.isTimeoutError(probeFailure)
             ? `Timed out after ${resolveProviderProbeTimeoutMs("claude", CAPABILITIES_PROBE_TIMEOUT_MS, resolvedEnvironment) / 1_000}s while checking Claude account status.`
@@ -827,13 +857,10 @@ const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(functio
           : "Could not verify Claude authentication status from initialization result.",
       },
     });
+    return withNoServedModelsNotice(draft, endpointModels !== undefined);
   }
 
   // First-party account fields cannot verify custom endpoint credentials.
-  const settingsEnv = yield* readClaudeSettingsEnv(claudeSettings, cwd, resolvedEnvironment);
-  const baseUrl = settingsEnv.ANTHROPIC_BASE_URL ?? resolvedEnvironment.ANTHROPIC_BASE_URL;
-  const customApiEndpoint = customClaudeApiEndpointHost(baseUrl) !== undefined;
-  const endpoint = customApiEndpoint ? URL.parse(baseUrl?.trim() ?? "")?.origin : undefined;
   if (!customApiEndpoint && claudeAuthStatus(capabilities) === "unauthenticated") {
     const path = yield* Path.Path;
     const configDir = (yield* makeClaudeEnvironment(claudeSettings, resolvedEnvironment))
@@ -882,31 +909,6 @@ const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(functio
           response: capabilities.usage,
           checkedAt: usageCheckedAt,
         }).limits;
-  // Claude lists its own catalog whatever endpoint it sends requests to; one that serves only some
-  // models for the key Claude sends (LibraOS Gateway) decides which of them work.
-  const endpointKey = (
-    settingsEnv.ANTHROPIC_AUTH_TOKEN ??
-    settingsEnv.ANTHROPIC_API_KEY ??
-    resolvedEnvironment.ANTHROPIC_AUTH_TOKEN ??
-    resolvedEnvironment.ANTHROPIC_API_KEY
-  )?.trim();
-  const endpointModels =
-    endpointKeyModels && endpoint && claudeSettings.onlyCustomModels !== true
-      ? yield* endpointKeyModels({ endpoint, key: endpointKey })
-      : undefined;
-  const servedModels = endpointModels
-    ? capClaudeCatalogEffort(
-        modelCatalog,
-        claudeProviderModels(
-          [
-            ...resolveClaudeModelsForVersion(modelCatalog, parsedVersion),
-            ...claudeReportedModels(modelCatalog, endpointModels, capabilities.models),
-          ],
-          { customModels: endpointModels, onlyCustomModels: true },
-        ),
-        capabilities.effortCapSources ?? [],
-      )
-    : models;
   const resetCredits =
     resolveResetCredits &&
     capabilities.subscriptionType &&
@@ -918,7 +920,7 @@ const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(functio
     presentation: CLAUDE_PRESENTATION,
     enabled: claudeSettings.enabled,
     checkedAt,
-    models: servedModels,
+    models,
     updateRequiredModels,
     slashCommands: dedupedSlashCommands,
     skills,

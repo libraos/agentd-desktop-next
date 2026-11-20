@@ -12,7 +12,7 @@ Ours: `apps/server/src/gateway/gatewayKeyModels.ts` (one Gateway model request u
 - `packages/provider-core/src/server/snapshotProbe.ts` — `providerModelsFromSettings` takes `onlyCustomModels`; `withNoServedModelsNotice` says why such a list is empty; the `EndpointKeyModels` hook type.
 - `packages/provider-core/src/server/snapshotProbe.test.ts` — The replace rule and the empty-list notice.
 - `apps/server/src/provider/CodexProvider.ts` — Pass `onlyCustomModels` through and add the empty-list notice to the status check; read the route's `env_key` and, for an endpoint that serves only some models for that key, list only those.
-- `apps/server/src/provider/ClaudeProvider.ts` — The same for Claude, with the key from `ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_API_KEY`.
+- `apps/server/src/provider/ClaudeProvider.ts` — The same for Claude, with the key from `ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_API_KEY`, also when Claude's initialization fails; no update notices when the key decides the list.
 - `apps/server/src/provider/CodexProvider.test.ts` — The `env_key` a LibraOS route names.
 - `apps/server/src/provider/codexModelCatalog.ts` — No "update Codex" notice for a Gateway agent: its key decides which models it lacks.
 - `apps/server/src/provider/codexModelCatalog.test.ts` — That case.
@@ -24,7 +24,7 @@ Ours: `apps/server/src/gateway/gatewayKeyModels.ts` (one Gateway model request u
 - `apps/server/src/provider/Drivers/ClaudeDriver.ts` — The same for Claude.
 - `apps/server/src/provider/Drivers/ClaudeDriver.test.ts` — New: the first snapshot of a pre-#117 Gateway Claude agent lists only its key's models.
 - `apps/server/src/provider/ProviderRegistry.ts` — A Gateway instance, or any instance whose endpoint is the Gateway, never keeps models missing from its new snapshot.
-- `apps/server/src/provider/ProviderRegistry.test.ts` — A Gateway Codex agent lists only the key's models, or none with a warning; a dropped Gateway model is not brought back; the OpenCode 2 empty-list message.
+- `apps/server/src/provider/ProviderRegistry.test.ts` — A Gateway Codex agent lists only the key's models, or none with a warning; a dropped Gateway model is not brought back (also for hand-configured opencode); the OpenCode 2 empty-list message; a hand-configured Gateway Claude whose initialization fails.
 - `apps/server/src/provider/providerStatusCache.ts` — The boot cache names a Gateway agent's models but adds none the settings lack.
 - `apps/server/src/provider/providerStatusCache.test.ts` — That case.
 - `apps/server/src/ws.ts` — A provider refresh with `refreshModels` from a session with `providers:manage` re-reads the key's models before probing the Gateway agents. This puts a settings write in the upstream refresh RPC (read-scoped): when upstream changes refresh semantics or its authorization, carry the scope check forward.
