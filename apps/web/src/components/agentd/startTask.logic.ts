@@ -337,8 +337,7 @@ export type TaskStartProblem =
   | "worker"
   | "no-directory"
   | "not-repo"
-  | "detached"
-  | "protected";
+  | "detached";
 
 /** The first thing that stops a Start, for one line beside a disabled Start; null when none. */
 export function taskStartProblem(input: {
@@ -363,7 +362,8 @@ export function taskStartProblem(input: {
     if (input.modelAccess === "subscription" && input.planProblem !== null) return "subscription";
     return null;
   }
-  if (input.branch !== null) return input.branch;
+  // agentd gives a worker on the default branch its own worktree and branch, so that is no problem.
+  if (input.branch === "not-repo" || input.branch === "detached") return input.branch;
   if (input.worker === null) return "worker";
   return null;
 }

@@ -192,7 +192,8 @@ it("names the first problem that stops a Start", () => {
   };
   expect(taskStartProblem(ok)).toBeNull();
   expect(taskStartProblem({ ...ok, worker: null })).toBe("worker");
-  expect(taskStartProblem({ ...ok, branch: "protected" })).toBe("protected");
+  expect(taskStartProblem({ ...ok, branch: "protected" })).toBeNull();
+  expect(taskStartProblem({ ...ok, branch: "detached" })).toBe("detached");
   expect(taskStartProblem({ ...ok, branch: "not-repo" })).toBe("not-repo");
   expect(taskStartProblem({ ...ok, hasDirectory: false })).toBe("no-directory");
   const cloud = { ...ok, cloud: true, signedIn: true, branch: "protected" as const };
