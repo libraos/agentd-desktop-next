@@ -153,6 +153,8 @@ const emptySetup = {
   defaultBudget: null,
   problem: null,
 };
+const REPLACE_UNCONFIRMED =
+  "AgentD hasn’t confirmed your last cloud submission for this project, and it may still start. Replace it with this one? If it started, this one isn’t sent.";
 const originError = "Cloud Workers require a GitHub repository as the checkout’s origin.";
 const UNKNOWN_OUTCOME =
   "AgentD may have created this cloud task. Check Background tasks. Start checks whether AgentD recorded it before submitting again.";
@@ -339,19 +341,24 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       Effect.orElseSucceed(() => null),
     );
 
-  // Undefined when git didn't answer (timed out or couldn't start): the origin is unknown.
+  // Undefined when git didn't say whether there is an origin (timed out, couldn't start, or failed
+  // reading the checkout's config): the origin is unknown. Only "no such remote" (exit 2) and "not a
+  // git repository" are answers; LC_ALL=C keeps the latter in git's own words.
   const readOrigin = Effect.fn("AgentdCloud.readOrigin")(function* (cwd: string) {
     if (!isAbsolute(cwd) || cwd.includes("\0")) return null;
     const result = yield* runProcess({
       command: "git",
       args: ["remote", "get-url", "--", "origin"],
       cwd,
+      env: { LC_ALL: "C" },
       timeout: "5 seconds",
       maxOutputBytes: 4096,
     }).pipe(Effect.option);
     if (result._tag === "None") return undefined;
-    if (result.value.code !== 0) return null;
-    return githubProject(result.value.stdout);
+    const { code, stdout, stderr } = result.value;
+    if (code === 0) return githubProject(stdout);
+    if (code === 2 || /not a git repository/i.test(stderr)) return null;
+    return undefined;
   });
   const originProject = (cwd: string) =>
     readOrigin(cwd).pipe(Effect.map((project) => project ?? null));
@@ -546,13 +553,11 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
         }),
         Effect.mapError(() => unknownOutcome()),
       );
-    // agentd refused the offer before making a task: the reservation holds nothing, and the next
-    // Start must not ask about it. Set once the reservation is known to be this Start's alone.
-    let releasable = false;
+    // agentd refused the offer before making a task, so the next Start need not ask before reusing
+    // its key. The key itself is never given up: another server sharing this ledger may be offering
+    // under it right now, and only one key per reservation keeps that to one paid job.
     const release = (id: string) =>
-      releasable
-        ? agentd(() => agentdArgs.releaseSubmission(session, id)).pipe(Effect.ignore)
-        : Effect.void;
+      agentd(() => agentdArgs.releaseSubmission(session, id)).pipe(Effect.ignore);
     const remember = (id: string, handoff: string) =>
       agentd(() => agentdArgs.rememberSubmission(session, id, handoff)).pipe(Effect.ignore);
     const alreadyRecorded = (handoff: string): AgentdStartTaskResult => ({
@@ -563,20 +568,25 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
 
     const current = yield* reservation;
     let submission: string;
-    if (current !== null && current.handoff === null && !current.released) {
+    if (current !== null && current.handoff === null) {
       const handoff = yield* recorded(current.id);
       if (handoff !== null) {
         yield* remember(current.id, handoff);
         return alreadyRecorded(handoff);
       }
-      if (current.fingerprint !== fingerprint && input.cloud.replaceSubmission !== current.id) {
+      if (
+        !current.released &&
+        current.fingerprint !== fingerprint &&
+        input.cloud.replaceSubmission !== current.id
+      ) {
         return yield* new AgentdCommandError({
-          message: "Your last cloud submission didn’t finish. Replace it with this one?",
+          message: REPLACE_UNCONFIRMED,
           notSetUp: false,
           replaceSubmission: current.id,
         });
       }
-      // The same key again: agentd's --idem makes this the earlier offer, never a second one.
+      // The same key again: agentd's --idem makes this the earlier offer, never a second one; a
+      // different draft under it is refused once the earlier one made a task, and found above.
       submission = current.id;
     } else {
       if (current !== null && current.handoff !== null) {
@@ -608,8 +618,6 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
           `Another window started a Cloud Workers submission for ${project}. Press Start to check it.`,
         );
       }
-      // A reused reservation guards an earlier offer whose outcome is still unknown: never release it.
-      releasable = true;
     }
 
     const argv = yield* args(() => agentdArgs.cloudOffer(input, project, submission));

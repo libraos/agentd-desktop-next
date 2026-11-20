@@ -342,7 +342,8 @@ it("checks an unknown cloud outcome before retrying and can replace an earlier s
     outcomeUnknown?: true;
     replaceSubmission?: string;
   }) => AsyncResult.failure(Cause.fail(new AgentdCommandError({ notSetUp: false, ...fields })));
-  const unfinished = "Your last cloud submission didn’t finish. Replace it with this one?";
+  const unfinished =
+    "AgentD hasn’t confirmed your last cloud submission for this project, and it may still start. Replace it with this one? If it started, this one isn’t sent.";
   state.start
     .mockResolvedValueOnce(refused({ message: unfinished, replaceSubmission: earlier }))
     .mockResolvedValueOnce(refused({ message: unfinished, replaceSubmission: earlier }))

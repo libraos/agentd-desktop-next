@@ -715,7 +715,7 @@ describe("AgentdBridge", () => {
       const refused = yield* Effect.flip(bridge.startTask(other));
       expect(refused).toMatchObject({ replaceSubmission: keys()[0] });
       expect(refused.message).toBe(
-        "Your last cloud submission didn’t finish. Replace it with this one?",
+        "AgentD hasn’t confirmed your last cloud submission for this project, and it may still start. Replace it with this one? If it started, this one isn’t sent.",
       );
       expect(offers()).toHaveLength(2);
 
@@ -1114,20 +1114,90 @@ describe("AgentdBridge", () => {
       yield* Effect.flip(bridge.startTask(input));
       expect(new Set(keys()).size).toBe(1);
 
-      // A refusal of a reservation this Start made itself releases it.
+      // A refusal never gives the key up, even for a reservation this Start made itself: a
+      // different draft reuses it without asking, as does a Start after a failed session join.
       ledger = cloudLedger();
       runs.length = 0;
       yield* Effect.flip(bridge.startTask(input));
-      yield* Effect.flip(bridge.startTask(input));
-      expect(new Set(keys()).size).toBe(2);
-      // A fresh reservation whose session join fails is kept: the next Start reuses it.
+      const changed = yield* Effect.flip(
+        bridge.startTask({ ...input, goal: "Update the changelog" }),
+      );
+      expect(changed).not.toHaveProperty("replaceSubmission");
       brokenJoin = true;
       yield* Effect.flip(bridge.startTask(input));
       brokenJoin = false;
       yield* Effect.flip(bridge.startTask(input));
-      yield* Effect.flip(bridge.startTask(input));
-      expect(keys()).toHaveLength(4);
-      expect(new Set(keys()).size).toBe(3);
+      expect(keys()).toHaveLength(3);
+      expect(new Set(keys()).size).toBe(1);
+    }),
+  );
+
+  it.effect("keeps one cloud key while another server shares the ledger", () =>
+    Effect.gen(function* () {
+      const ledger = cloudLedger();
+      const offers: Array<string> = [];
+      const secondOffering = yield* Deferred.make<void>();
+      const secondMayFinish = yield* Deferred.make<void>();
+      let second: Fiber.Fiber<unknown, unknown> | undefined;
+      const platform = yield* HostProcess.Platform;
+      const input = {
+        cwd: platform === "win32" ? "C:\\work\\app" : "/work/app",
+        goal: "Fix the check",
+        accept: [],
+        check: "pnpm test",
+        cloud: { modelAccess: "libraos", budget: "$5" },
+      } as const;
+      const server = (
+        offer: (args: ReadonlyArray<string>) => Effect.Effect<ProcessRunner.ProcessRunOutput>,
+      ) =>
+        makeBridge({ AGENTD_BIN: process.execPath }, (run) => {
+          const recorded = ledger.answer(run.args);
+          if (recorded !== null) return Effect.succeed(recorded);
+          switch (run.args.slice(0, 2).join(" ")) {
+            case "version":
+              return Effect.succeed(output("agentd v0.1.14"));
+            case "remote get-url":
+              return Effect.succeed(output("https://github.com/acme/app.git"));
+            case "session join":
+              return Effect.succeed(output("{}"));
+            case "handoff offer":
+              if (run.args.includes("--help"))
+                return Effect.succeed(output("usage: agentd handoff offer [--cloud]"));
+              offers.push(run.args[run.args.indexOf("--idem") + 1]!);
+              return offer(run.args);
+            default:
+              return Effect.die(`unexpected agentd ${run.args.join(" ")}`);
+          }
+        });
+      // The second server's offer reaches agentd and is slow to answer; it makes a task.
+      const other = yield* server((args) =>
+        Deferred.succeed(secondOffering, undefined).pipe(
+          Effect.andThen(Deferred.await(secondMayFinish)),
+          Effect.andThen(
+            Effect.sync(() => {
+              ledger.record(args, "hof-aabbcc", "queued");
+              return output('{"handoff":"hof-aabbcc","cloud":{"state":"queued"}}');
+            }),
+          ),
+        ),
+      );
+      // The first is refused before a task; the second picks up its reservation in that window.
+      const first = yield* server(() =>
+        Effect.gen(function* () {
+          if (second === undefined) {
+            second = yield* Effect.forkChild(other.startTask(input));
+            yield* Deferred.await(secondOffering);
+          }
+          return output("error: 402: insufficient credit", 1);
+        }),
+      );
+      yield* Effect.flip(first.startTask(input));
+      // The next Start on the first server may not offer under a fresh key.
+      yield* Effect.flip(first.startTask(input));
+      yield* Deferred.succeed(secondMayFinish, undefined);
+      yield* Fiber.join(second!);
+      expect(offers).toHaveLength(3);
+      expect(new Set(offers).size).toBe(1);
     }),
   );
 
@@ -1154,7 +1224,12 @@ describe("AgentdBridge", () => {
                     timeoutMs: 5000,
                   }),
                 )
-              : Effect.succeed(output(`${origin}\n`));
+              : origin.startsWith("exit ")
+                ? Effect.succeed({
+                    ...output("", Number(origin.slice(5, 8))),
+                    stderr: origin.slice(9),
+                  })
+                : Effect.succeed(output(`${origin}\n`));
           case "session join":
             return Effect.succeed(output("{}"));
           case "handoff offer":
@@ -1187,12 +1262,27 @@ describe("AgentdBridge", () => {
           project,
         );
       }
-      // git not answering is not "no GitHub origin": the app must retry, never run it here.
-      origin = "timeout";
-      expect(yield* bridge.cloudSetup({ cwd, includeBalance: false })).toMatchObject({
-        project: null,
-        checkoutUnknown: true,
-      });
+      // git not answering, or failing to read the checkout, is not "no GitHub origin": the app
+      // must retry, never run it here.
+      for (const unknown of [
+        "timeout",
+        "exit 128 fatal: unable to access '.git/config': Permission denied",
+      ]) {
+        origin = unknown;
+        expect(yield* bridge.cloudSetup({ cwd, includeBalance: false }), unknown).toMatchObject({
+          project: null,
+          checkoutUnknown: true,
+        });
+      }
+      for (const missing of [
+        "exit 002 error: No such remote 'origin'",
+        "exit 128 fatal: not a git repository (or any of the parent directories): .git",
+      ]) {
+        origin = missing;
+        const setup = yield* bridge.cloudSetup({ cwd, includeBalance: false });
+        expect(setup.project, missing).toBeNull();
+        expect(setup.checkoutUnknown, missing).not.toBe(true);
+      }
 
       origin = "git@github.com:acme/app.git";
       const path = yield* Effect.provide(Path.Path, NodeServices.layer);
@@ -1231,10 +1321,8 @@ describe("AgentdBridge", () => {
         expect((yield* Effect.flip(bridge.startTask(input))).message, said).toBe(reason);
       }
       expect(offers.every((args) => args.includes(keyFile))).toBe(true);
-      // Each refusal made no task and released its reservation: the next Start offers afresh.
-      expect(new Set(offers.map((args) => args[args.indexOf("--idem") + 1])).size).toBe(
-        offers.length,
-      );
+      // Each refusal made no task: the next Start reuses its key without asking.
+      expect(new Set(offers.map((args) => args[args.indexOf("--idem") + 1])).size).toBe(1);
       refusal = `cloud.openai_key_file ${keyFile} can be read or written by others (mode 644)`;
       const other = { ...input, goal: "Update the changelog" };
       const shared = yield* Effect.flip(bridge.startTask(other));

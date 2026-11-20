@@ -4,10 +4,10 @@ import * as NodeCrypto from "node:crypto";
 import type { AgentdCloudTaskInput } from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
 
-// A cloud offer is paid, and its outcome can be lost (timeout, killed process). Each one is
-// reserved in agentd first, per GitHub project so every checkout and window sees it: a pin in a
-// session of its own holds `{id, after, fingerprint}`, then `{id, handoff}` once agentd names the
-// task, or `{id, released: true}` once agentd refused the offer outright. The offer carries the id as --idem and as a --state marker, so a retry can find the task.
+// A cloud offer is paid and its outcome can be lost. Each is reserved per GitHub project as pins:
+// `{id, after, fingerprint}`, then `{id, handoff}` once agentd names the task, or
+// `{id, released: true}` after a refusal. The id goes on the offer as --idem and as a --state
+// marker; a refusal keeps it, since another server may still be offering under it.
 
 const SUBMISSION_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-8[a-f0-9]{3}-8[a-f0-9]{3}-[a-f0-9]{12}$/;
 const HANDOFF_ID = /^hof-[0-9a-f]{6,32}$/;
@@ -55,7 +55,7 @@ export interface Reservation {
   readonly id: string;
   readonly fingerprint: string;
   readonly handoff: string | null;
-  /** agentd refused its offer before making a task; the next Start reserves after it. */
+  /** agentd refused an offer under it before making a task; the next Start reuses it without asking. */
   readonly released: boolean;
 }
 
