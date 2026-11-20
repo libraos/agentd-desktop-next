@@ -77,12 +77,155 @@ function installEnv(ledger: ServiceLedger): NodeJS.ProcessEnv {
   };
 }
 
-/** The ledger a LaunchAgent's EnvironmentVariables name. */
-export function plistLedger(plist: string): ServiceLedger {
-  const dict = /<key>EnvironmentVariables<\/key>\s*<dict>([\s\S]*?)<\/dict>/.exec(plist)?.[1] ?? "";
+const LEDGER_NAME = /\b(?:AGENTD|AGENTOPS)_(?:ROOT|DB)\b/;
+
+type PlistValue = string | boolean | ReadonlyArray<PlistValue> | ReadonlyMap<string, PlistValue>;
+
+const XML_ENTITIES: Readonly<Record<string, string>> = {
+  quot: '"',
+  apos: "'",
+  lt: "<",
+  gt: ">",
+  amp: "&",
+};
+
+/** XML character data with its entities read; null on one XML doesn't define. */
+function xmlText(text: string): string | null {
+  let bad = false;
+  const decoded = text.replace(
+    /&(#x[0-9a-fA-F]+|#[0-9]+|[A-Za-z]+);|&/g,
+    (whole, name?: string) => {
+      const hex = name?.startsWith("#x") ?? false;
+      const point = name?.startsWith("#")
+        ? Number.parseInt(name.slice(hex ? 2 : 1), hex ? 16 : 10)
+        : undefined;
+      const text =
+        name === undefined
+          ? undefined
+          : point === undefined
+            ? XML_ENTITIES[name]
+            : point > 0 && point <= 0x10ffff
+              ? String.fromCodePoint(point)
+              : undefined;
+      if (text === undefined) bad = true;
+      return text ?? whole;
+    },
+  );
+  return bad ? null : decoded;
+}
+
+/**
+ * An XML property list as launchd reads it: comments, the prolog and CDATA allowed, scalars as
+ * text. Undefined for anything else (a binary plist, malformed XML), which names nothing it can tell.
+ */
+function parsePlist(xml: string): PlistValue | undefined {
+  const tokens: Array<
+    | { readonly kind: "open" | "close" | "empty"; readonly name: string }
+    | { readonly kind: "text"; readonly text: string }
+  > = [];
+  const body = xml.replace(/^\uFEFF/, "");
+  const pattern =
+    /<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<!DOCTYPE[^>[]*(?:\[[\s\S]*?\])?\s*>|<!\[CDATA\[([\s\S]*?)\]\]>|<(\/?)([A-Za-z][\w.-]*)(?:\s[^<>]*?)?(\/?)>|([^<]+)|</g;
+  for (const match of body.matchAll(pattern)) {
+    const [whole, cdata, close, name, empty, text] = match;
+    if (cdata !== undefined) tokens.push({ kind: "text", text: cdata });
+    else if (name !== undefined)
+      tokens.push({ kind: close ? "close" : empty ? "empty" : "open", name });
+    else if (text !== undefined) {
+      const decoded = xmlText(text);
+      if (decoded === null) return undefined;
+      tokens.push({ kind: "text", text: decoded });
+    } else if (whole === "<") return undefined;
+  }
+  let at = 0;
+  const skipSpace = () => {
+    while (tokens[at]?.kind === "text" && /^\s*$/.test((tokens[at] as { text: string }).text)) at++;
+  };
+  const textUntil = (name: string): string | undefined => {
+    let text = "";
+    for (;;) {
+      const token = tokens[at++];
+      if (token === undefined) return undefined;
+      if (token.kind === "text") text += token.text;
+      else if (token.kind === "close" && token.name === name) return text;
+      else return undefined;
+    }
+  };
+  const value = (): PlistValue | undefined => {
+    skipSpace();
+    const token = tokens[at++];
+    if (token === undefined || token.kind === "text" || token.kind === "close") return undefined;
+    const { name } = token;
+    if (name === "true" || name === "false") {
+      if (token.kind === "open" && textUntil(name)?.trim() !== "") return undefined;
+      return name === "true";
+    }
+    if (["string", "key", "date", "integer", "real", "data"].includes(name))
+      return token.kind === "empty" ? "" : textUntil(name);
+    if (name === "array") {
+      const items: PlistValue[] = [];
+      if (token.kind === "empty") return items;
+      for (;;) {
+        skipSpace();
+        const next = tokens[at];
+        if (next?.kind === "close" && next.name === "array") {
+          at++;
+          return items;
+        }
+        const item = value();
+        if (item === undefined) return undefined;
+        items.push(item);
+      }
+    }
+    if (name === "dict") {
+      const entries = new Map<string, PlistValue>();
+      if (token.kind === "empty") return entries;
+      for (;;) {
+        skipSpace();
+        const next = tokens[at];
+        if (next?.kind === "close" && next.name === "dict") {
+          at++;
+          return entries;
+        }
+        if (next?.kind !== "open" || next.name !== "key") return undefined;
+        at++;
+        const key = textUntil("key");
+        const item = key === undefined ? undefined : value();
+        if (key === undefined || item === undefined) return undefined;
+        entries.set(key, item);
+      }
+    }
+    return undefined;
+  };
+  skipSpace();
+  const root = tokens[at++];
+  if (root?.kind !== "open" || root.name !== "plist") return undefined;
+  const plist = value();
+  skipSpace();
+  const end = tokens[at++];
+  if (end?.kind !== "close" || end.name !== "plist") return undefined;
+  skipSpace();
+  return at === tokens.length ? plist : undefined;
+}
+
+const isDict = (value: PlistValue | undefined): value is ReadonlyMap<string, PlistValue> =>
+  value instanceof Map;
+
+/**
+ * The ledger a LaunchAgent's EnvironmentVariables name; null when it can't tell: a plist it can't
+ * read, or an EnvironmentVariables or ledger setting that isn't the dictionary of text launchd uses.
+ */
+export function plistLedger(plist: string): ServiceLedger | null {
+  const parsed = parsePlist(plist);
+  if (!isDict(parsed)) return null;
+  const env = parsed.get("EnvironmentVariables");
+  if (env === undefined) return { root: null, db: null };
+  if (!isDict(env)) return null;
   const vars = new Map<string, string>();
-  for (const [, key, value] of dict.matchAll(/<key>([^<]*)<\/key>\s*<string>([^<]*)<\/string>/g))
-    vars.set(unescapeXml(key!.trim()), unescapeXml(value!.trim()));
+  for (const [key, value] of env) {
+    if (typeof value === "string") vars.set(key, value);
+    else if (LEDGER_NAME.test(key)) return null;
+  }
   return ledgerOf(vars);
 }
 
@@ -151,8 +294,6 @@ function unitWords(value: string): ReadonlyArray<string> | null {
   return words;
 }
 
-const LEDGER_NAME = /\b(?:AGENTD|AGENTOPS)_(?:ROOT|DB)\b/;
-
 /**
  * The ledger a systemd unit's Environment= lines name, as systemd reads them: several
  * assignments a line, quoted or not, a later one winning and an empty Environment= clearing all.
@@ -195,11 +336,14 @@ export function taskEnvFile(xml: string): string | null {
   return match?.[1] ?? match?.[2] ?? null;
 }
 
-/** The first ProgramArguments string of a LaunchAgent plist. */
+/** The program a LaunchAgent runs: its Program, else its first ProgramArguments string. */
 export function plistProgram(plist: string): string | null {
-  const args = /<key>ProgramArguments<\/key>\s*<array>([\s\S]*?)<\/array>/.exec(plist)?.[1];
-  const first = args === undefined ? undefined : /<string>([\s\S]*?)<\/string>/.exec(args)?.[1];
-  return first === undefined ? null : unescapeXml(first.trim());
+  const parsed = parsePlist(plist);
+  if (!isDict(parsed)) return null;
+  const program = parsed.get("Program");
+  const args = parsed.get("ProgramArguments");
+  const first = program ?? (Array.isArray(args) ? args[0] : undefined);
+  return typeof first === "string" && first.trim() !== "" ? first.trim() : null;
 }
 
 /**
@@ -217,6 +361,21 @@ export function unitProgram(unit: string, home: string): string | null {
   const quoted = /^"([^"]+)"/.exec(line)?.[1];
   const program = quoted ?? line.split(/\s+/)[0] ?? "";
   return program === "" ? null : program.replaceAll("%h", home);
+}
+
+/**
+ * The drop-in folders systemd reads for a unit, most specific first: its own, then one for each
+ * dash-ended prefix of its name (agentd-.service.d), then the one for all units of its type.
+ */
+export function dropInDirs(unit: string): ReadonlyArray<string> {
+  const dot = unit.lastIndexOf(".");
+  const [name, type] = [unit.slice(0, dot), unit.slice(dot)];
+  const dirs = [`${unit}.d`];
+  for (let dash = name.lastIndexOf("-", name.length - 2); dash > 0;) {
+    dirs.push(`${name.slice(0, dash + 1)}${type}.d`);
+    dash = name.lastIndexOf("-", dash - 1);
+  }
+  return [...dirs, `${type.slice(1)}.d`];
 }
 
 /** `schtasks /Query /XML` output as text: UTF-16 when it starts with a byte order mark or a NUL. */
@@ -313,13 +472,15 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
   const unitText = Effect.fn("AgentdServices.unit")(function* (file: string) {
     const unit = yield* read(path.join(unitDir, file));
     if (unit._tag === "None") return null;
-    const dropIns = (yield* names(path.join(unitDir, `${file}.d`)))
-      .filter((name) => name.endsWith(".conf"))
-      .toSorted();
+    // A drop-in file name taken from the most specific folder that has it, read in name order.
+    const dropIns = new Map<string, string>();
+    for (const dir of dropInDirs(file).toReversed())
+      for (const name of yield* names(path.join(unitDir, dir)))
+        if (name.endsWith(".conf")) dropIns.set(name, path.join(unitDir, dir, name));
     let text = unit.value;
     let overrides = false;
-    for (const name of dropIns) {
-      const conf = yield* read(path.join(unitDir, `${file}.d`, name));
+    for (const name of [...dropIns.keys()].toSorted()) {
+      const conf = yield* read(dropIns.get(name)!);
       // A drop-in it can't read may set anything.
       if (conf._tag === "None") return { text, readable: false, overrides };
       text += `\n${conf.value}`;
@@ -334,9 +495,10 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
       );
       if (plist._tag === "None") return null;
       const program = plistProgram(plist.value);
-      return program === null
-        ? null
-        : { program, ledger: plistLedger(plist.value), overridden: false };
+      const ledger = plistLedger(plist.value);
+      // install rewrites this plist too: one it can't read keeps its ledger unknown.
+      if (ledger === null) return { program: null, ledger, overridden: false };
+      return program === null ? null : { program, ledger, overridden: false };
     }
     if (platform === "win32") {
       const names = taskNames(name, root);
@@ -385,6 +547,7 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
     const found = yield* service(name);
     if (found === null) continue;
     ledgers.set(name, found.ledger);
+    if (found.program === null) continue;
     const exists = yield* fs.exists(found.program).pipe(Effect.orElseSucceed(() => false));
     if (isStaleProgram(found.program, exists, agentd)) {
       stale.push(name);

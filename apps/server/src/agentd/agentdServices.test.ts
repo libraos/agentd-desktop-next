@@ -7,6 +7,7 @@ import { ChildProcessSpawner } from "effect/process";
 
 import type * as ProcessRunner from "../processRunner.ts";
 import {
+  dropInDirs,
   envFileLedger,
   isStaleProgram,
   plistLedger,
@@ -80,6 +81,11 @@ describe("agentd services", () => {
       ),
     ).toBe("/gone/agentd");
     expect(unitProgram("ExecStart=/a/agentd x\nExecStart=\n", "/h")).toBe(null);
+    expect(dropInDirs("agentd-watchdog.service")).toEqual([
+      "agentd-watchdog.service.d",
+      "agentd-.service.d",
+      "service.d",
+    ]);
     expect(
       taskProgram(
         "<Actions><Exec><Command>&quot;C:\\Program Files\\AgentD Desktop\\resources\\bin\\agentd.exe&quot;</Command></Exec></Actions>",
@@ -116,6 +122,41 @@ describe("agentd services", () => {
       db: "/r/a&b.db",
     });
     expect(plistLedger(plist(OLD))).toEqual({ root: null, db: null });
+    // Read as launchd reads a plist: a comment, CDATA or entity doesn't hide a ledger.
+    const commented = plist(OLD, { AGENTD_DB: "/dash.db" }).replace(
+      "<key>EnvironmentVariables</key>",
+      "<key>EnvironmentVariables</key><!-- <dict></dict> -->",
+    );
+    expect(plistLedger(commented)).toEqual({ root: null, db: "/dash.db" });
+    expect(plistLedger(commented.replace("/dash.db", "<![CDATA[/a&b.db]]>"))).toEqual({
+      root: null,
+      db: "/a&b.db",
+    });
+    expect(plistLedger(commented.replace("/dash.db", "/d&#x41;.db"))).toEqual({
+      root: null,
+      db: "/dA.db",
+    });
+    expect(plistProgram(commented)).toBe(OLD);
+    // launchd runs Program over ProgramArguments' first string.
+    expect(
+      plistProgram(
+        plist(OLD).replace(
+          "<key>ProgramArguments</key>",
+          `<key>Program</key><string>${NEXT}</string><key>ProgramArguments</key>`,
+        ),
+      ),
+    ).toBe(NEXT);
+    // What it can't read is unknown, never "no ledger".
+    for (const unknown of [
+      plist(OLD)
+        .replace("<dict>\n  <key>PATH", "<array>\n  <key>PATH")
+        .replace("</dict>\n</dict>", "</array>\n</dict>"),
+      plist(OLD, { AGENTD_DB: "/d.db" }).replace("<string>/d.db</string>", "<array/>"),
+      plist(OLD, { AGENTD_DB: "/d.db" }).replace("/d.db", "/d&bad;.db"),
+      plist(OLD).replace("</plist>", ""),
+      "bplist00",
+    ])
+      expect(plistLedger(unknown)).toBe(null);
     expect(
       unitLedger(
         "[Service]\nEnvironment=PATH=/bin\nEnvironment=AGENTOPS_ROOT=/old\nExecStart=x\n",
@@ -263,6 +304,30 @@ describe("agentd services", () => {
       });
       expect(runs).toEqual([]);
       yield* fs.writeFileString(path.join(agents, "com.libraos.agentd.watchdog.plist"), plist(OLD));
+      // A comment before the dash's settings doesn't make them look like the default ledger.
+      yield* fs.writeFileString(
+        path.join(agents, "com.libraos.agentd.dash.plist"),
+        plist(bundled, dashLedger).replace(
+          "<key>EnvironmentVariables</key>",
+          "<key>EnvironmentVariables</key><!-- the dash's own ledger -->",
+        ),
+      );
+      expect(yield* repairServices(deps)).toEqual({
+        services: ["watchdog"],
+        ok: false,
+        reason: "ledgers",
+      });
+      // Settings it can't read name a ledger it can't tell: nothing runs.
+      yield* fs.writeFileString(
+        path.join(agents, "com.libraos.agentd.dash.plist"),
+        plist(bundled, { AGENTD_DB: "/dash.db" }).replace("/dash.db", "/dash&x;.db"),
+      );
+      expect(yield* repairServices(deps)).toEqual({
+        services: ["watchdog"],
+        ok: false,
+        reason: "unread",
+      });
+      expect(runs).toEqual([]);
 
       // A working dash on the user's own agentd: install would move it too, so nothing runs.
       const own = path.join(home, "own-agentd");
@@ -386,6 +451,31 @@ describe("agentd services", () => {
         reason: "override",
       });
       expect(runs).toEqual([]);
+      yield* fs.remove(path.join(units, "agentd-watchdog.service.d"), { recursive: true });
+      // So does one shared by every agentd- unit; the unit's own drop-in of that name wins.
+      yield* fs.makeDirectory(path.join(units, "agentd-.service.d"));
+      yield* fs.writeFileString(
+        path.join(units, "agentd-.service.d", "exec.conf"),
+        "[Service]\nExecStart=\nExecStart=/gone/agentd watchdog\n",
+      );
+      expect(yield* repairServices({ ...deps, platform: "linux", run: linuxRun })).toEqual({
+        services: ["watchdog", "dash"],
+        ok: false,
+        reason: "override",
+      });
+      yield* fs.makeDirectory(path.join(units, "agentd-watchdog.service.d"));
+      yield* fs.writeFileString(path.join(units, "agentd-watchdog.service.d", "exec.conf"), "");
+      yield* fs.writeFileString(
+        path.join(units, "agentd-dash.service"),
+        `[Service]\nExecStart=/gone/agentd dash --serve 127.0.0.1:21480\n`,
+      );
+      expect(yield* repairServices({ ...deps, platform: "linux", run: linuxRun })).toEqual({
+        services: ["dash"],
+        ok: false,
+        reason: "override",
+      });
+      expect(runs).toEqual([]);
+      yield* fs.remove(path.join(units, "agentd-.service.d"), { recursive: true });
       yield* fs.remove(path.join(units, "agentd-watchdog.service.d"), { recursive: true });
       // A stale dash whose ledger can't be told isn't moved either.
       yield* fs.writeFileString(
