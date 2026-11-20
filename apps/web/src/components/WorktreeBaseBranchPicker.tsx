@@ -7,7 +7,11 @@ import { usePaginatedBranches } from "../state/queries";
 import { useEnvironmentQuery } from "../state/query";
 import { vcsEnvironment } from "../state/vcs";
 import { BranchPicker, BranchPickerRefItem } from "./BranchPicker";
-import { resolveBranchTriggerLabel, sanitizeNewRefName } from "./BranchToolbar.logic";
+import {
+  resolveBranchTriggerLabel,
+  resolveStartFromOriginAfterBasePick,
+  sanitizeNewRefName,
+} from "./BranchToolbar.logic";
 import { MiddleTruncate } from "./ui/middle-truncate";
 import { Button } from "./ui/button";
 import { ComboboxTrigger } from "./ui/combobox";
@@ -61,6 +65,7 @@ export function WorktreeBaseBranchPicker({
       resolvedActiveBranch: value || null,
       resolvedActiveBranchIsRemote: selectedRef ? selectedRef.isRemote === true : null,
       startFromOrigin,
+      hasRemote: branches.data?.hasPrimaryRemote,
     },
     messages,
   );
@@ -86,6 +91,15 @@ export function WorktreeBaseBranchPicker({
     setOpen(next);
     if (!next) setQuery("");
   };
+  const selectBranch = (name: string) => {
+    onValueChange(name);
+    const branch = branchByName.get(name);
+    if (branch) {
+      const nextStartFromOrigin = resolveStartFromOriginAfterBasePick(branch, startFromOrigin);
+      if (nextStartFromOrigin !== startFromOrigin) onStartFromOriginChange(nextStartFromOrigin);
+    }
+    handleOpenChange(false);
+  };
   return (
     <BranchPicker
       items={items}
@@ -95,10 +109,7 @@ export function WorktreeBaseBranchPicker({
       onQueryChange={setQuery}
       open={open && !disabled}
       onOpenChange={handleOpenChange}
-      onSelectItem={(name) => {
-        onValueChange(name);
-        handleOpenChange(false);
-      }}
+      onSelectItem={selectBranch}
       hasNextPage={hasNextPage}
       isFetchingNextPage={branches.isFetchingNextPage}
       onLoadNext={branches.loadNext}
@@ -112,10 +123,7 @@ export function WorktreeBaseBranchPicker({
             branch={branch}
             projectCwd={cwd}
             index={index}
-            onClick={() => {
-              onValueChange(branch.name);
-              handleOpenChange(false);
-            }}
+            onClick={() => selectBranch(branch.name)}
           />
         ) : null;
       }}

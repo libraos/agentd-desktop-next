@@ -1598,6 +1598,7 @@
   "d14b33c2910ebacd": "Worktree anterior",
   "3f4b4e4159e06c92": "Seleccionar ref",
   "ee85c4eb37ef6637": "Desde {branch} (remota)",
+  "7e58d469e0cfe670": "Desde {branch} (local)",
   "e98c75d8cb111c2b": "Desde {branch}",
   "854ac9752dd178d6": "Copiar ruta completa",
   "4c5f99a07675c948": "La API del portapapeles no está disponible al copiar la ruta del espacio de trabajo.",
@@ -1622,6 +1623,7 @@
   "f5729e3a9c756694": "No se pudo cambiar de ref.",
   "7ea8def86795f863": "No se pudo crear la ref y cambiar a ella.",
   "282c2a1c64ead62d": "{term, select, mr {Hacer checkout de la merge request} cr {Hacer checkout de la solicitud de cambios} other {Hacer checkout de la pull request}}",
+  "1adb56a945661562": "{count, plural, one {La rama local {branch} va {count} commit por delante del remoto} other {La rama local {branch} va {count} commits por delante del remoto}}",
   "bc81dfd7ade60791": "Rama: {branch}",
   "459e639b9a89964f": [
     "Crear la ref \"",

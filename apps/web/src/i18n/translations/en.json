@@ -1598,6 +1598,7 @@
   "d14b33c2910ebacd": "Previous worktree",
   "3f4b4e4159e06c92": "Select ref",
   "ee85c4eb37ef6637": "From {branch} (remote)",
+  "7e58d469e0cfe670": "From {branch} (local)",
   "e98c75d8cb111c2b": "From {branch}",
   "854ac9752dd178d6": "Copy full path",
   "4c5f99a07675c948": "Clipboard API is unavailable while copying workspace path.",
@@ -1622,6 +1623,7 @@
   "f5729e3a9c756694": "Failed to switch ref.",
   "7ea8def86795f863": "Failed to create and switch ref.",
   "282c2a1c64ead62d": "Checkout {term, select, mr {merge request} cr {change request} other {pull request}}",
+  "1adb56a945661562": "{count, plural, one {Local {branch} is {count} commit ahead of the remote} other {Local {branch} is {count} commits ahead of the remote}}",
   "bc81dfd7ade60791": "Branch: {branch}",
   "459e639b9a89964f": [
     "Create new ref \"",

@@ -1598,6 +1598,7 @@
   "d14b33c2910ebacd": "上一个工作树",
   "3f4b4e4159e06c92": "选择引用",
   "ee85c4eb37ef6637": "基于 {branch}（远程）",
+  "7e58d469e0cfe670": "从 {branch}（本地）",
   "e98c75d8cb111c2b": "基于 {branch}",
   "854ac9752dd178d6": "复制完整路径",
   "4c5f99a07675c948": "复制工作区路径时剪贴板 API 不可用。",
@@ -1622,6 +1623,7 @@
   "f5729e3a9c756694": "切换引用失败。",
   "7ea8def86795f863": "创建并切换引用失败。",
   "282c2a1c64ead62d": "检出 {term, select, mr {MR} cr {change request} other {PR}}",
+  "1adb56a945661562": "{count, plural, other {本地 {branch} 领先远程 {count} 个提交}}",
   "bc81dfd7ade60791": "分支：{branch}",
   "459e639b9a89964f": [
     "创建新引用“",

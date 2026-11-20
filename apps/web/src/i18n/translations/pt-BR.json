@@ -1598,6 +1598,7 @@
   "d14b33c2910ebacd": "Worktree anterior",
   "3f4b4e4159e06c92": "Selecionar ref",
   "ee85c4eb37ef6637": "A partir de {branch} (remoto)",
+  "7e58d469e0cfe670": "De {branch} (local)",
   "e98c75d8cb111c2b": "A partir de {branch}",
   "854ac9752dd178d6": "Copiar caminho completo",
   "4c5f99a07675c948": "A API da área de transferência não está disponível ao copiar o caminho do workspace.",
@@ -1622,6 +1623,7 @@
   "f5729e3a9c756694": "Falha ao trocar de ref.",
   "7ea8def86795f863": "Falha ao criar e trocar de ref.",
   "282c2a1c64ead62d": "Fazer checkout {term, select, mr {do merge request} cr {da solicitação de alteração} other {do pull request}}",
+  "1adb56a945661562": "{count, plural, one {O branch local {branch} está {count} commit à frente do remoto} other {O branch local {branch} está {count} commits à frente do remoto}}",
   "bc81dfd7ade60791": "Branch: {branch}",
   "459e639b9a89964f": [
     "Criar nova ref \"",
