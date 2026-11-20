@@ -2469,6 +2469,7 @@
   "6392f9e0f61ae70c": "No projects yet",
   "19df05d390e2c3ae": "Show all projects",
   "84fa7d3765db7e84": "No threads yet",
+  "3f0c8cc7f50abc68": "Project sessions are in Code",
   "e8347ce8761562be": "{count, plural, one {{count} request} other {{count} requests}} waiting longer than {thresholdSeconds}s.",
   "16def5c06e932801": "Hide requests",
   "4d46e9446c062922": "Show requests",

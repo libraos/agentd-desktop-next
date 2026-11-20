@@ -2469,6 +2469,7 @@
   "6392f9e0f61ae70c": "Pas encore de projet",
   "19df05d390e2c3ae": "Afficher tous les projets",
   "84fa7d3765db7e84": "Aucun fil pour l’instant",
+  "3f0c8cc7f50abc68": "Les sessions de projet sont dans Code",
   "e8347ce8761562be": "{count, plural, one {{count} requête attend} other {{count} requêtes attendent}} depuis plus de {thresholdSeconds} s.",
   "16def5c06e932801": "Masquer les requêtes",
   "4d46e9446c062922": "Afficher les requêtes",
