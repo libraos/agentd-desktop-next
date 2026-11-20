@@ -21,6 +21,8 @@ const KEY_ENV = "LIBRAOS_API_KEY";
 const PROVIDER_ID = "libraos";
 const OPENCODE_CONFIG_ENV = "OPENCODE_CONFIG_CONTENT";
 const DISPLAY_SUFFIX = "LibraOS Gateway";
+/** The connected key in the server's secret store. */
+export const GATEWAY_KEY_SECRET = "libraos-gateway-key";
 
 export const GATEWAY_INSTANCE_IDS = {
   claude: ProviderInstanceId.make(LIBRAOS_GATEWAY_INSTANCE_IDS.claude),

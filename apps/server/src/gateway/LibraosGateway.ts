@@ -25,6 +25,7 @@ import { ServerSettingsService } from "../serverSettings.ts";
 import { askGatewayModels } from "./gatewayKeyModels.ts";
 import {
   GATEWAY_INSTANCE_IDS,
+  GATEWAY_KEY_SECRET,
   gatewayProviderInstances,
   readGatewayKey,
   withGatewayModels,
@@ -46,7 +47,6 @@ export class LibraosGateway extends Context.Service<
   }
 >()("t3/gateway/LibraosGateway") {}
 
-const SECRET_NAME = "libraos-gateway-key";
 const INIT_TIMEOUT = Duration.minutes(3);
 const OUTPUT_LIMIT = 8 * 1024;
 
@@ -80,7 +80,7 @@ export const make = Effect.fn("LibraosGateway.make")(function* () {
   const agentdSetup = yield* Ref.make<LibraosGatewayAgentdSetup | null>(null);
   const refusal = yield* Ref.make<string | null>(null);
   // agentd reads the key from this file, which only it and the app read.
-  const keyFile = path.join(stateDir, "agentd", SECRET_NAME);
+  const keyFile = path.join(stateDir, "agentd", GATEWAY_KEY_SECRET);
 
   const storageFailure = (what: string) => (cause: unknown) =>
     Effect.logWarning(`LibraOS Gateway: failed to ${what}`, { cause }).pipe(
@@ -88,7 +88,7 @@ export const make = Effect.fn("LibraosGateway.make")(function* () {
     );
 
   const readKey = secrets
-    .get(SECRET_NAME)
+    .get(GATEWAY_KEY_SECRET)
     .pipe(
       Effect.map(Option.map((bytes) => textDecoder.decode(bytes).trim())),
       Effect.map(Option.filter((key) => key !== "")),
@@ -210,7 +210,7 @@ export const make = Effect.fn("LibraosGateway.make")(function* () {
             Effect.catchTags({ KeyRefusedError: (error) => fail(error.message) }),
           );
           yield* secrets
-            .set(SECRET_NAME, textEncoder.encode(key))
+            .set(GATEWAY_KEY_SECRET, textEncoder.encode(key))
             .pipe(Effect.catch(storageFailure("store the LibraOS Gateway key")));
           yield* writeKeyFile(key);
           for (const { instanceId, instance } of gatewayProviderInstances(key, list)) {
@@ -242,7 +242,7 @@ export const make = Effect.fn("LibraosGateway.make")(function* () {
           .remove(keyFile, { force: true })
           .pipe(Effect.catch(storageFailure("remove agentd's key file")));
         yield* secrets
-          .remove(SECRET_NAME)
+          .remove(GATEWAY_KEY_SECRET)
           .pipe(Effect.catch(storageFailure("remove the LibraOS Gateway key")));
         yield* Ref.set(models, null);
         yield* Ref.set(refusal, null);

@@ -9,7 +9,9 @@ import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 
+import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import {
+  GATEWAY_KEY_SECRET,
   gatewayFamilyModels,
   gatewayRefusal,
   isKeyRefusal,
@@ -69,15 +71,23 @@ export const askGatewayModels = Effect.fn("LibraosGateway.askModels")(function* 
 });
 
 /**
- * For an agent configured by hand to reach the Gateway: the models the key it sends allows, of
- * `family` with the family prefix dropped, or every model by its full id. Another endpoint leaves
- * the agent's catalog as it is. Without a key, the Gateway serves nothing; when it cannot answer,
- * the key's last list stands, or `known` (none by default) if it never answered.
+ * The models of `family` (prefix dropped, else full ids) the key an agent sends to the Gateway
+ * allows; another endpoint is not asked. Down Gateway: the key's last answer (a refusal is empty),
+ * else `known` only for the connected key it was stored from, else none.
  */
 export const makeGatewayKeyModels = Effect.fn("LibraosGateway.makeGatewayKeyModels")(function* (
   family?: "anthropic" | "openai",
 ) {
   const http = yield* HttpClient.HttpClient;
+  const secrets = yield* Effect.serviceOption(ServerSecretStore.ServerSecretStore);
+  const connectedKey = Option.match(secrets, {
+    onNone: () => Effect.succeed(Option.none<string>()),
+    onSome: (store) =>
+      store.get(GATEWAY_KEY_SECRET).pipe(
+        Effect.map(Option.map((bytes) => new TextDecoder().decode(bytes).trim())),
+        Effect.orElseSucceed(() => Option.none<string>()),
+      ),
+  });
   // In memory only, beside the environment the key was read from; never written or logged.
   const lastAllowed = new Map<string, ReadonlyArray<CustomModelSetting>>();
   const keyModels: EndpointKeyModels = ({ endpoint, key, known }) => {
@@ -85,7 +95,7 @@ export const makeGatewayKeyModels = Effect.fn("LibraosGateway.makeGatewayKeyMode
     if (!key) return Effect.succeed([]);
     return askGatewayModels(key).pipe(
       Effect.provideService(HttpClient.HttpClient, http),
-      Effect.map((answer) => {
+      Effect.flatMap((answer) => {
         if (answer.kind === "models") {
           const models = family
             ? gatewayFamilyModels(answer.models, family)
@@ -94,13 +104,19 @@ export const makeGatewayKeyModels = Effect.fn("LibraosGateway.makeGatewayKeyMode
                 ...(model.name ? { name: model.name } : {}),
               }));
           lastAllowed.set(key, models);
-          return models;
+          return Effect.succeed(models);
         }
         if (answer.kind === "refused") {
-          lastAllowed.delete(key);
-          return [];
+          lastAllowed.set(key, []);
+          return Effect.succeed([]);
         }
-        return lastAllowed.get(key) ?? known ?? [];
+        const last = lastAllowed.get(key);
+        if (last !== undefined || known === undefined) return Effect.succeed(last ?? []);
+        return connectedKey.pipe(
+          Effect.map((connected) =>
+            Option.isSome(connected) && connected.value === key ? known : [],
+          ),
+        );
       }),
     );
   };
