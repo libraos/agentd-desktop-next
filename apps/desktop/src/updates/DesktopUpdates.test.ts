@@ -567,6 +567,36 @@ describe("DesktopUpdates", () => {
     ).pipe(Effect.provide(Layer.merge(TestClock.layer(), harness.layer)));
   });
 
+  it.effect("an ad-hoc signed macOS build opens the release page instead of downloading", () => {
+    const harness = makeHarness({
+      platform: "darwin",
+      files: {
+        "/repo/package.json": JSON.stringify({ agentdUpdateInstall: "release-page" }),
+        "/missing/resources/app-update.yml":
+          "provider: github\nowner: libraos\nrepo: agentd-next\n",
+      },
+      checkForUpdates: Effect.sync(() => {
+        harness.emit("update-available", { version: "1.2.4" });
+      }),
+    });
+
+    return Effect.scoped(
+      Effect.gen(function* () {
+        const updates = yield* DesktopUpdates.DesktopUpdates;
+        yield* updates.configure;
+        yield* updates.check("poll");
+        yield* flushCallbacks;
+        const result = yield* updates.download;
+        assert.isTrue(result.accepted);
+        assert.isFalse(result.completed);
+        assert.equal(harness.downloadCount(), 0);
+        assert.deepEqual(harness.openedUrls(), [
+          "https://github.com/libraos/agentd-next/releases/tag/v1.2.4",
+        ]);
+      }),
+    ).pipe(Effect.provide(Layer.merge(TestClock.layer(), harness.layer)));
+  });
+
   it.effect("downloads the known offer when the check before downloading fails", () => {
     let checks = 0;
     const harness = makeHarness({
