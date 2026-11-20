@@ -1598,6 +1598,7 @@
   "d14b33c2910ebacd": "Worktree précédent",
   "3f4b4e4159e06c92": "Sélectionner une ref",
   "ee85c4eb37ef6637": "Depuis {branch} (distante)",
+  "7e58d469e0cfe670": "Depuis {branch} (local)",
   "e98c75d8cb111c2b": "Depuis {branch}",
   "854ac9752dd178d6": "Copier le chemin complet",
   "4c5f99a07675c948": "L’API Presse-papiers n’est pas disponible pour copier le chemin de l’espace de travail.",
@@ -1622,6 +1623,7 @@
   "f5729e3a9c756694": "Échec du changement de ref.",
   "7ea8def86795f863": "Échec de la création de la ref et du basculement.",
   "282c2a1c64ead62d": "Extraire la {term, select, mr {merge request} cr {demande de modification} other {pull request}}",
+  "1adb56a945661562": "{count, plural, one {La branche locale {branch} a {count} commit d’avance sur le distant} other {La branche locale {branch} a {count} commits d’avance sur le distant}}",
   "bc81dfd7ade60791": "Branche : {branch}",
   "459e639b9a89964f": [
     "Créer la ref « ",

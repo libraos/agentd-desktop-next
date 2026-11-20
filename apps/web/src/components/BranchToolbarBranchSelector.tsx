@@ -61,6 +61,8 @@ import {
   resolveBranchToolbarValue,
   resolveConfirmedSelectedRef,
   resolveDefaultWorktreeBaseBranch,
+  resolveLocalBaseAheadCount,
+  resolveStartFromOriginAfterBasePick,
   resolveDraftEnvModeAfterBranchChange,
   resolveEffectiveEnvMode,
   sanitizeNewRefName,
@@ -465,6 +467,8 @@ export function BranchToolbarBranchSelector({
     if (isSelectingWorktreeBase) {
       if (latest.worktreePath) return;
       setThreadBranch(listedRef.name, null);
+      const nextStartFromOrigin = resolveStartFromOriginAfterBasePick(listedRef, startFromOrigin);
+      if (nextStartFromOrigin !== startFromOrigin) onStartFromOriginChange(nextStartFromOrigin);
       setIsBranchMenuOpen(false);
       onComposerFocusRequest?.();
       return;
@@ -694,9 +698,18 @@ export function BranchToolbarBranchSelector({
       resolvedActiveBranch,
       resolvedActiveBranchIsRemote,
       startFromOrigin,
+      hasRemote: branchRefState.data?.hasPrimaryRemote,
     },
     messages,
   );
+  const localBaseAheadCount = isSelectingWorktreeBase
+    ? resolveLocalBaseAheadCount({
+        startFromOrigin,
+        baseBranch: resolvedActiveBranch,
+        baseIsRemote: resolvedActiveBranchIsRemote,
+        projectStatus: projectStatusQuery.data ?? null,
+      })
+    : 0;
 
   const branchPrBranch = resolveBranchToolbarPrBranch({
     activeThreadBranch,
@@ -822,7 +835,12 @@ export function BranchToolbarBranchSelector({
       notice={
         refs.some((refName) => isWorktreeChangeBlockedForRef(refName))
           ? messages(WORKTREE_CHANGE_BLOCKED_MESSAGE)
-          : null
+          : localBaseAheadCount > 0
+            ? gt(
+                "{count, plural, one {Local {branch} is {count} commit ahead of the remote} other {Local {branch} is {count} commits ahead of the remote}}",
+                { count: localBaseAheadCount, branch: resolvedActiveBranch ?? "" },
+              )
+            : null
       }
       renderItem={renderPickerItem}
       getItemType={(item) =>

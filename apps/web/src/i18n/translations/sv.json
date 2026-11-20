@@ -1598,6 +1598,7 @@
   "d14b33c2910ebacd": "Föregående worktree",
   "3f4b4e4159e06c92": "Välj ref",
   "ee85c4eb37ef6637": "Från {branch} (fjärr)",
+  "7e58d469e0cfe670": "Från {branch} (lokal)",
   "e98c75d8cb111c2b": "Från {branch}",
   "854ac9752dd178d6": "Kopiera fullständig sökväg",
   "4c5f99a07675c948": "Urklipps-API:t är inte tillgängligt vid kopiering av arbetsytans sökväg.",
@@ -1622,6 +1623,7 @@
   "f5729e3a9c756694": "Det gick inte att byta ref.",
   "7ea8def86795f863": "Det gick inte att skapa och byta ref.",
   "282c2a1c64ead62d": "Checka ut {term, select, mr {merge request} cr {ändringsbegäran} other {pull request}}",
+  "1adb56a945661562": "{count, plural, one {Lokala {branch} ligger {count} commit före fjärren} other {Lokala {branch} ligger {count} commits före fjärren}}",
   "bc81dfd7ade60791": "Gren: {branch}",
   "459e639b9a89964f": [
     "Skapa ny ref ”",

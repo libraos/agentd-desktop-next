@@ -1597,6 +1597,7 @@
   "d14b33c2910ebacd": "Vorheriger Worktree",
   "3f4b4e4159e06c92": "Ref auswählen",
   "ee85c4eb37ef6637": "Von {branch} (Remote)",
+  "7e58d469e0cfe670": "Von {branch} (lokal)",
   "e98c75d8cb111c2b": "Von {branch}",
   "854ac9752dd178d6": "Vollständigen Pfad kopieren",
   "4c5f99a07675c948": "Die Zwischenablage-API ist beim Kopieren des Arbeitsbereichspfads nicht verfügbar.",
@@ -1621,6 +1622,7 @@
   "f5729e3a9c756694": "Ref konnte nicht gewechselt werden.",
   "7ea8def86795f863": "Ref konnte nicht erstellt und gewechselt werden.",
   "282c2a1c64ead62d": "{term, select, mr {Merge Request auschecken} cr {Änderungsanfrage auschecken} other {Pull Request auschecken}}",
+  "1adb56a945661562": "{count, plural, one {Lokaler Branch {branch} ist {count} Commit vor dem Remote} other {Lokaler Branch {branch} ist {count} Commits vor dem Remote}}",
   "bc81dfd7ade60791": "Branch: {branch}",
   "459e639b9a89964f": [
     "Neue Ref „",
