@@ -763,10 +763,16 @@ it.layer(
           );
         const served = (yield* live()).models;
         assert.deepStrictEqual(
-          served.map((model) => [model.slug, model.subProvider, model.isCustom]),
+          served.map((model) => [
+            model.slug,
+            model.subProvider,
+            model.isCustom,
+            (model.capabilities?.optionDescriptors ?? []).length > 0,
+          ]),
+          // Only Codex's own models carry its reasoning and service-tier controls.
           [
-            ["gpt-6-luna", undefined, false],
-            ["gemini/gemini-2.5-pro", "gemini", true],
+            ["gpt-6-luna", undefined, false, true],
+            ["gemini/gemini-2.5-pro", "gemini", true, false],
           ],
         );
         gatewayAnswer = () => Response.json({ error: { message: "Down" } }, { status: 503 });

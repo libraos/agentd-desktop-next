@@ -82,12 +82,12 @@ it.layer(layerTest)("ClaudeDriver", (it) => {
             ...ClaudeDriver.defaultConfig(),
             customModels: [
               { slug: "claude-opus-5-5" },
-              { slug: "gemini/gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+              { slug: "gemini/gemini-2.5-pro", name: "Gemini 2.5 Pro", subProvider: "gemini" },
             ],
           },
         }).pipe(Effect.flatMap((instance) => instance.snapshot.getSnapshot));
 
-      // Claude's own model keeps its catalog entry; another family's is labelled with its family.
+      // Claude's own model keeps its catalog entry; another family's sits under its family.
       const gateway = yield* snapshot("libraosClaude");
       expect(
         gateway.models.map((model) => [model.slug, model.isCustom, model.subProvider]),

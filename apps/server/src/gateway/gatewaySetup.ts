@@ -3,6 +3,7 @@ import {
   LIBRAOS_GATEWAY_ORIGIN,
   ProviderDriverKind,
   ProviderInstanceId,
+  type CustomModelEntry,
   type LibraosGatewayModel,
   type ProviderInstanceConfig,
   type ProviderInstanceConfigMap,
@@ -75,18 +76,26 @@ export function gatewayRefusal(status: number, body: unknown): string {
 /** A key the Gateway will not serve at all, as opposed to a Gateway that is down or busy. */
 export const isKeyRefusal = (status: number): boolean => status === 401 || status === 403;
 
-// Every model the key allows runs on both agents: the Gateway routes by the id's family. The
-// agent's own family drops its prefix (`claude-…`, `gpt-…`, as agentd's workers ask) so it keeps
-// its catalog entry and options; any other model keeps its full Gateway id.
+// The Gateway routes by the id's family. The agent's own family drops its prefix (as agentd's
+// workers ask) to keep its catalog entry and options, unless the bare name is a Gateway id too.
+// Any other model keeps its full id, its family and none of the agent's options (Codex would
+// lend it a GPT model's).
 export function gatewayAgentModels(models: ReadonlyArray<LibraosGatewayModel>, family: string) {
-  const own: Array<{ slug: string; name?: string }> = [];
-  const other: Array<{ slug: string; name?: string }> = [];
+  const ids = new Set(models.map((model) => model.id));
+  const own: Array<CustomModelEntry> = [];
+  const other: Array<CustomModelEntry> = [];
   for (const model of models) {
-    const [owner, name, ...rest] = model.id.split("/");
-    const ownModel = owner === family && name !== undefined && name !== "" && rest.length === 0;
-    (ownModel ? own : other).push({
-      slug: ownModel ? name : model.id,
-      ...(model.name ? { name: model.name } : {}),
+    const named = model.name ? { name: model.name } : {};
+    const [owner = "", name = "", ...rest] = model.id.split("/");
+    if (owner === family && name !== "" && rest.length === 0 && !ids.has(name)) {
+      own.push({ slug: name, ...named });
+      continue;
+    }
+    other.push({
+      slug: model.id,
+      ...named,
+      ...(owner !== "" && model.id.includes("/") ? { subProvider: owner } : {}),
+      capabilities: { optionDescriptors: [] },
     });
   }
   return [...own, ...other];

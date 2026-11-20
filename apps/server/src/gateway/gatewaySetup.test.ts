@@ -1,4 +1,5 @@
 import { tokenizeCliArgs } from "@t3tools/shared/cliArgs";
+import { readCustomModelEntries } from "@t3tools/shared/model";
 import { describe, expect, it } from "@effect/vitest";
 
 import {
@@ -8,6 +9,14 @@ import {
   gatewayRefusal,
   withGatewayModels,
 } from "./gatewaySetup.ts";
+
+// Another family's model keeps its Gateway id, sits under its family and has no agent options.
+const otherFamily = (slug: string, name?: string) => ({
+  slug,
+  ...(name ? { name } : {}),
+  subProvider: slug.split("/")[0],
+  capabilities: { optionDescriptors: [] },
+});
 
 describe("gatewaySetup", () => {
   it("points a Codex session at the Gateway with one -c per setting", () => {
@@ -37,20 +46,20 @@ describe("gatewaySetup", () => {
     expect(claude?.instance.config).toEqual({
       customModels: [
         { slug: "claude-opus-5-5", name: "Claude Opus 5.5" },
-        { slug: "openai/gpt-5.5" },
-        { slug: "google/gemini-3" },
-        { slug: "gemini/gemini-2.5-pro", name: "Gemini 2.5 Pro" },
-        { slug: "Qwen/Qwen3.5-Plus" },
+        otherFamily("openai/gpt-5.5"),
+        otherFamily("google/gemini-3"),
+        otherFamily("gemini/gemini-2.5-pro", "Gemini 2.5 Pro"),
+        otherFamily("Qwen/Qwen3.5-Plus"),
       ],
       onlyCustomModels: true,
     });
     expect(codex?.instance.config).toMatchObject({
       customModels: [
         { slug: "gpt-5.5" },
-        { slug: "anthropic/claude-opus-5-5", name: "Claude Opus 5.5" },
-        { slug: "google/gemini-3" },
-        { slug: "gemini/gemini-2.5-pro", name: "Gemini 2.5 Pro" },
-        { slug: "Qwen/Qwen3.5-Plus" },
+        otherFamily("anthropic/claude-opus-5-5", "Claude Opus 5.5"),
+        otherFamily("google/gemini-3"),
+        otherFamily("gemini/gemini-2.5-pro", "Gemini 2.5 Pro"),
+        otherFamily("Qwen/Qwen3.5-Plus"),
       ],
       onlyCustomModels: true,
     });
@@ -73,6 +82,31 @@ describe("gatewaySetup", () => {
         else expect(String(variable.value)).not.toContain("lk_test_key_123456");
       }
     }
+  });
+
+  it("keeps the full id of an own-family model whose bare name the Gateway also serves", () => {
+    const [claude, codex] = gatewayProviderInstances("lk_test_key_123456", [
+      { id: "openai/gpt-5.5", name: "GPT 5.5" },
+      { id: "gpt-5.5", name: "Standalone GPT route" },
+      { id: "anthropic/claude-opus-5-5" },
+      { id: "claude-opus-5-5" },
+    ]);
+    const slugs = (config: unknown) =>
+      readCustomModelEntries((config as { customModels: unknown }).customModels).map(
+        ({ slug }) => slug,
+      );
+    expect(slugs(codex?.instance.config)).toEqual([
+      "openai/gpt-5.5",
+      "gpt-5.5",
+      "anthropic/claude-opus-5-5",
+      "claude-opus-5-5",
+    ]);
+    expect(slugs(claude?.instance.config)).toEqual([
+      "openai/gpt-5.5",
+      "gpt-5.5",
+      "anthropic/claude-opus-5-5",
+      "claude-opus-5-5",
+    ]);
   });
 
   it("changes only the model lists of the Gateway agents still present", () => {
@@ -113,7 +147,7 @@ describe("gatewaySetup", () => {
       edited[GATEWAY_INSTANCE_IDS.codex]?.environment,
     );
     expect(next[GATEWAY_INSTANCE_IDS.claude]?.config).toEqual({
-      customModels: [{ slug: "openai/gpt-6-luna" }],
+      customModels: [otherFamily("openai/gpt-6-luna")],
       onlyCustomModels: true,
     });
     expect(next[GATEWAY_INSTANCE_IDS.claude]?.environment).toBe(

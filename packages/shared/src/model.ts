@@ -423,6 +423,7 @@ export function normalizeCustomModelSlug(model: string | null | undefined): stri
 export interface CustomModelDefinition {
   readonly slug: string;
   readonly name: string;
+  readonly subProvider?: string;
   readonly capabilities: ModelCapabilities | null;
 }
 
@@ -437,7 +438,12 @@ export function readCustomModelEntries(value: unknown): CustomModelDefinition[] 
       typeof raw === "string"
         ? { slug: raw }
         : raw !== null && typeof raw === "object"
-          ? (raw as { slug?: unknown; name?: unknown; capabilities?: unknown })
+          ? (raw as {
+              slug?: unknown;
+              name?: unknown;
+              subProvider?: unknown;
+              capabilities?: unknown;
+            })
           : null;
     if (!record) continue;
     const slug = normalizeCustomModelSlug(typeof record.slug === "string" ? record.slug : null);
@@ -449,9 +455,12 @@ export function readCustomModelEntries(value: unknown): CustomModelDefinition[] 
       record.capabilities === undefined || record.capabilities === null
         ? null
         : Option.getOrNull(decodeCustomModelCapabilities(record.capabilities));
+    const subProvider =
+      typeof record.subProvider === "string" ? normalizeCustomModelSlug(record.subProvider) : null;
     entries.push({
       slug,
       name,
+      ...(subProvider ? { subProvider } : {}),
       capabilities: capabilities
         ? createModelCapabilities({ optionDescriptors: capabilities.optionDescriptors ?? [] })
         : null,

@@ -10,6 +10,14 @@ import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import { askGatewayModels, makeGatewayKeyModels } from "./gatewayKeyModels.ts";
 import { GATEWAY_KEY_SECRET } from "./gatewaySetup.ts";
 
+// Another family's model keeps its Gateway id, sits under its family and has no agent options.
+const otherFamily = (slug: string, name?: string) => ({
+  slug,
+  ...(name ? { name } : {}),
+  subProvider: slug.split("/")[0],
+  capabilities: { optionDescriptors: [] },
+});
+
 const KEY = "lk_codex_key_0123456789";
 const CONNECTED = "lk_connected_key_5555";
 
@@ -47,8 +55,8 @@ it.effect("an agent's own Gateway key decides its models", () => {
 
     const allowed = [
       { slug: "gpt-6-astra" },
-      { slug: "anthropic/claude-opus-5-5" },
-      { slug: "gemini/gemini-2.5-pro" },
+      otherFamily("anthropic/claude-opus-5-5"),
+      otherFamily("gemini/gemini-2.5-pro"),
     ];
     assert.deepStrictEqual(yield* ask("https://api.libraos.com"), allowed);
     assert.deepStrictEqual(requests, [`Bearer ${KEY}`]);

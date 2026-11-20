@@ -242,14 +242,9 @@ export function providerModelsFromSettings(
   return [...resolvedBuiltInModels, ...customEntries];
 }
 
-function endpointModelFamily(slug: string): { subProvider?: string } {
-  const family = slug.slice(0, Math.max(slug.indexOf("/"), 0)).trim();
-  return family === "" ? {} : { subProvider: family };
-}
-
 // The endpoint's own list wins: a catalog entry it serves keeps its name and options, one it does
-// not serve is dropped, and a model the catalog lacks is added as a custom model, labelled with the
-// family its endpoint id names (`gemini` for `gemini/gemini-2.5-pro`).
+// not serve is dropped, and a model the catalog lacks is added as a custom model, under the family
+// its entry names.
 function onlyCustomProviderModels(
   builtInModels: ReadonlyArray<ServerProviderModel>,
   entries: ReturnType<typeof readCustomModelEntries>,
@@ -265,7 +260,7 @@ function onlyCustomProviderModels(
     added.push({
       slug: entry.slug,
       name: entry.name,
-      ...endpointModelFamily(entry.slug),
+      ...(entry.subProvider ? { subProvider: entry.subProvider } : {}),
       isCustom: true,
       capabilities: entry.capabilities ?? customModelCapabilities,
     });
