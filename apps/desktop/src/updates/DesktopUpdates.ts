@@ -33,6 +33,7 @@ import * as DesktopConfig from "../app/DesktopConfig.ts";
 import * as DesktopEnvironment from "../app/DesktopEnvironment.ts";
 import * as DesktopObservability from "../app/DesktopObservability.ts";
 import * as DesktopState from "../app/DesktopState.ts";
+import * as ElectronShell from "../electron/ElectronShell.ts";
 import * as ElectronUpdater from "../electron/ElectronUpdater.ts";
 import * as ElectronWindow from "../electron/ElectronWindow.ts";
 import * as IpcChannels from "../ipc/channels.ts";
@@ -380,6 +381,7 @@ export const make = Effect.gen(function* () {
   const desktopState = yield* DesktopState.DesktopState;
   const electronUpdater = yield* ElectronUpdater.ElectronUpdater;
   const electronWindow = yield* ElectronWindow.ElectronWindow;
+  const electronShell = yield* ElectronShell.ElectronShell;
   const environment = yield* DesktopEnvironment.DesktopEnvironment;
   const fileSystem = yield* FileSystem.FileSystem;
   const desktopSettings = yield* DesktopAppSettings.DesktopAppSettings;
@@ -463,6 +465,35 @@ export const make = Effect.gen(function* () {
             Effect.orElseSucceed(() => false),
           )
       : false;
+
+  // Squirrel.Mac installs only a build signed like the running one, so ad-hoc signed builds
+  // offer the release page instead of a download (the packager marks them).
+  const installsFromReleasePage =
+    environment.platform === "darwin" && environment.isPackaged
+      ? yield* fileSystem
+          .readFileString(environment.path.join(environment.appPath, "package.json"))
+          .pipe(
+            Effect.map(
+              (packageJson) =>
+                (JSON.parse(packageJson) as { agentdUpdateInstall?: unknown })
+                  .agentdUpdateInstall === "release-page",
+            ),
+            Effect.orElseSucceed(() => false),
+          )
+      : false;
+
+  const releasePageUrl = (version: string) =>
+    Ref.get(appUpdateYmlConfigRef).pipe(
+      Effect.map((config) => {
+        const owner = Option.getOrUndefined(config)?.owner;
+        const repo = Option.getOrUndefined(config)?.repo;
+        return owner && repo
+          ? Option.some(
+              `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/releases/tag/v${encodeURIComponent(version)}`,
+            )
+          : Option.none<string>();
+      }),
+    );
 
   const hasUpdateFeedConfig = Ref.get(appUpdateYmlConfigRef).pipe(
     Effect.map(
@@ -1423,6 +1454,12 @@ export const make = Effect.gen(function* () {
       };
     }),
     download: Effect.gen(function* () {
+      const offered = yield* Ref.get(updateStateRef);
+      if (installsFromReleasePage && offered.availableVersion !== null) {
+        const url = yield* releasePageUrl(offered.availableVersion);
+        const opened = Option.isSome(url) && (yield* electronShell.openExternal(url.value));
+        return { accepted: opened, completed: false, state: offered };
+      }
       const result = yield* downloadAvailableUpdate(true);
       return {
         accepted: result.accepted,

@@ -22,7 +22,6 @@ import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
 import {
   buildDesktopBundles,
-  resolveDesktopUpdateChannel,
   copyDesktopBuildArtifacts,
   DesktopBuildManifestRestoreError,
   BundleNotSelfContainedError,
@@ -507,7 +506,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     }),
   );
 
-  it.effect("omits update feeds for pull request preview and AgentD builds", () =>
+  it.effect("omits update feeds for pull request preview builds", () =>
     Effect.gen(function* () {
       const preview = yield* createBuildConfig(
         "mac",
@@ -538,21 +537,8 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         undefined,
       );
 
-      const agentd = yield* createBuildConfig(
-        "linux",
-        "AppImage",
-        "0.1.10-agentd.1",
-        false,
-        false,
-        undefined,
-        undefined,
-      );
-
       assert.isNull(preview.publish);
       assert.isNull(previewChannel.publish);
-      assert.isNull(agentd.publish);
-      assert.equal(resolveDesktopUpdateChannel("0.1.10-agentd.1"), "latest");
-      assert.isUndefined(agentd.appImage);
       assert.deepStrictEqual(release.publish, [
         {
           provider: "github",
@@ -561,6 +547,20 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
           releaseType: "release",
         },
       ]);
+      assert.equal(
+        (release.extraMetadata as Record<string, unknown>).agentdUpdateInstall,
+        "release-page",
+      );
+      const signedRelease = yield* createBuildConfig(
+        "mac",
+        "dmg",
+        "0.0.33",
+        true,
+        false,
+        undefined,
+        undefined,
+      );
+      assert.notProperty(signedRelease.extraMetadata, "agentdUpdateInstall");
     }).pipe(
       Effect.provide(
         ConfigProvider.layer(

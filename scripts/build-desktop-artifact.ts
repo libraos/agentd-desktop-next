@@ -43,10 +43,7 @@ import {
 import { loadRepoEnv } from "./lib/public-config.ts";
 import { selectDesktopRuntimeExternalDependencies } from "./lib/desktop-external-packages.ts";
 import { resolveCatalogDependencies } from "./lib/resolve-catalog.ts";
-import {
-  resolveAgentdDesktopVersion,
-  resolveTaggedSourceVersion,
-} from "./lib/tagged-source-version.ts";
+import { resolveTaggedSourceVersion } from "./lib/tagged-source-version.ts";
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -2877,11 +2874,6 @@ export function isDesktopPreviewVersion(version: string): boolean {
   return /-pr\./.test(version) || /-preview\.\d{8}\.\d+$/.test(version);
 }
 
-/** `<upstream>-agentd.N`: on the stable channel, but AgentD has no update feed yet. */
-export function isAgentdDesktopVersion(version: string): boolean {
-  return /^\d+\.\d+\.\d+-agentd\.\d+$/.test(version);
-}
-
 export function resolveDesktopWebAssetBrand(version: string): WebAssetBrand {
   return resolveWebAssetBrandForChannel(resolveDesktopUpdateChannel(version));
 }
@@ -2951,6 +2943,8 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       author: { name: "LibraOS" },
       homepage: "https://github.com/libraos/agentd-next",
       ...(platform === "linux" ? { desktopName: `${DESKTOP_APP_ID}.desktop` } : {}),
+      // Squirrel.Mac refuses an update to an ad-hoc signed app; the updater links the release.
+      ...(platform === "mac" && !signed ? { agentdUpdateInstall: "release-page" } : {}),
     },
     electronLanguages: [...DESKTOP_ELECTRON_LANGUAGES],
     files: [
@@ -2979,7 +2973,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
   const updateChannel = resolveDesktopUpdateChannel(version);
   // Missing publish config infers a GitHub feed from tokens; staging has no repository, so manifest generation would crash.
   buildConfig.publish = null;
-  if (!isDesktopPreviewVersion(version) && !isAgentdDesktopVersion(version)) {
+  if (!isDesktopPreviewVersion(version)) {
     const publishConfig = yield* resolveGitHubPublishConfig(updateChannel);
     if (publishConfig) {
       buildConfig.publish = [publishConfig];
@@ -3864,8 +3858,7 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
   });
 
   const appVersion =
-    options.version ??
-    resolveAgentdDesktopVersion(resolveTaggedSourceVersion(repoRoot, serverPackageJson.version));
+    options.version ?? resolveTaggedSourceVersion(repoRoot, serverPackageJson.version);
   const iconAssets = resolveDesktopBuildIconAssets(appVersion);
   const commitHash = yield* resolveGitCommitHash(repoRoot);
   const mkdir = options.keepStage ? fs.makeTempDirectory : fs.makeTempDirectoryScoped;
