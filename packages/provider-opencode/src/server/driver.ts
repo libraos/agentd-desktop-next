@@ -45,7 +45,7 @@ import {
   openCode2SkillsToServerProviderSkills,
   openCodeSkillsToServerProviderSkills,
   openCodeCommandsToServerProviderSlashCommands,
-  openCodeProviderModels,
+  openCodeEndpointModels,
   readSettledOpenCode2Catalog,
 } from "./status.ts";
 import { makeManagedServerProvider } from "@t3tools/provider-core/server/managedProvider";
@@ -568,10 +568,19 @@ export const OpenCodeDriver: ProviderDriver<
           // A project's opencode.jsonc can define its own providers.
           models: OpenCodeRuntime.loadOpenCodeProviderCatalog(client).pipe(
             Effect.timeoutOption("10 seconds"),
-            Effect.map(
-              Option.flatMapNullishOr((catalog) =>
-                openCodeProviderModels(effectiveConfig, catalog),
-              ),
+            // The machine status's Gateway check applies to the project's providers too.
+            Effect.flatMap(
+              Option.match({
+                onNone: () => Effect.succeed(Option.none<ReadonlyArray<ServerProviderModel>>()),
+                onSome: (catalog) =>
+                  openCodeEndpointModels(effectiveConfig, catalog, host.endpointKeyModels).pipe(
+                    Effect.map(({ models, fallbackModels, endpoint }) =>
+                      Option.fromNullishOr(
+                        models ?? (endpoint === undefined ? undefined : fallbackModels),
+                      ),
+                    ),
+                  ),
+              }),
             ),
             Effect.orElseSucceed(() => Option.none<ReadonlyArray<ServerProviderModel>>()),
           ),

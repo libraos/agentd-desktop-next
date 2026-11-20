@@ -21,7 +21,10 @@ import { settingsSecretLiteral } from "@t3tools/contracts";
 
 import { OpenCodeSettings } from "../settings.ts";
 import type { ProviderCompatibilityLookup } from "@t3tools/provider-core/server/compatibility";
-import type { EndpointKeyModels } from "@t3tools/provider-core/server/snapshotProbe";
+import {
+  NO_SERVED_MODELS_MESSAGE,
+  type EndpointKeyModels,
+} from "@t3tools/provider-core/server/snapshotProbe";
 import * as OpenCodeRuntime from "./OpenCodeRuntime.ts";
 import * as OpenCodeServerOwner from "./OpenCodeServerOwner.ts";
 import {
@@ -700,6 +703,42 @@ it.layer(layerTest)("checkOpenCodeProviderStatus", (it) => {
         NodeAssert.deepEqual(asked, [
           { endpoint: "https://api.libraos.com", key: "lk_opencode_key_123" },
         ]);
+        // A mixed account is not the Gateway's alone, so its list is not marked as the Gateway's.
+        NodeAssert.equal(status.auth.endpoint, undefined);
+
+        // A saved custom slug on the Gateway provider needs the key too; others are the user's.
+        const withCustom = yield* checkProvider(
+          makeOpenCodeSettings({ customModels: ["libraos/openai/gpt-5.5", "openai/gpt-x"] }),
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          () => Effect.succeed([{ slug: "openai/gpt-6-astra" }]),
+        );
+        NodeAssert.deepEqual(withCustom.models.map((entry) => entry.slug).toSorted(), [
+          "libraos/openai/gpt-6-astra",
+          "openai/gpt-5.4",
+          "openai/gpt-x",
+        ]);
+
+        // Only the Gateway is connected and the key lost its last model: the empty list is final.
+        runtimeMock.state.inventory = {
+          ...runtimeMock.state.inventory,
+          providerList: { ...runtimeMock.state.inventory.providerList, connected: ["libraos"] },
+        };
+        const revoked = yield* checkProvider(
+          makeOpenCodeSettings({ customModels: ["libraos/openai/gpt-6-astra"] }),
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          () => Effect.succeed([]),
+        );
+        NodeAssert.deepEqual(revoked.models, []);
+        NodeAssert.equal(revoked.auth.endpoint, "https://api.libraos.com");
+        NodeAssert.equal(revoked.message, NO_SERVED_MODELS_MESSAGE);
       }),
   );
 

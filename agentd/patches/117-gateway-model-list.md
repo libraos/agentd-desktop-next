@@ -18,7 +18,7 @@ Ours: `apps/server/src/gateway/gatewayKeyModels.ts` (one Gateway model request u
 - `apps/server/src/provider/codexModelCatalog.test.ts` — That case.
 - `apps/server/src/provider/ProviderHostLive.ts` — Gives drivers the hand-configured Gateway check.
 - `packages/provider-core/src/server/ProviderHost.ts` — Optional `endpointKeyModels` for a driver that cannot import the server's Gateway code (opencode).
-- `packages/provider-opencode/src/server/driver.ts` — Passes the host's Gateway check to the status check.
+- `packages/provider-opencode/src/server/driver.ts` — Passes the host's Gateway check to the status check and applies it to a project's own opencode.jsonc providers.
 - `apps/server/src/provider/Drivers/ClaudeSkills.ts` — Claude's settings `env` also yields the two key variables, for that check.
 - `apps/server/src/provider/Drivers/CodexDriver.ts` — A Gateway instance without the flag (saved before #117) is limited anyway; the status check asks the Gateway for the key Codex sends.
 - `apps/server/src/provider/Drivers/ClaudeDriver.ts` — The same for Claude.
@@ -32,8 +32,9 @@ Ours: `apps/server/src/gateway/gatewayKeyModels.ts` (one Gateway model request u
 - `apps/server/src/serverSettings.ts` — `updateProviderInstances` rewrites instances from the stored ones within one write.
 - `apps/server/src/device/DeviceService.test.ts` — Its settings mock gains `updateProviderInstances`.
 - `apps/server/src/orchestration-v2/ThreadSettlementService.test.ts` — Its settings mock gains `updateProviderInstances`.
-- `packages/provider-opencode/src/server/status.ts` — An empty model list no longer reads as a discovery delay ("yet"); a key may allow none. A provider at the Gateway lists only the models its key allows.
-- `packages/provider-opencode/src/server/status.test.ts` — The empty-list message; a hand-configured Gateway provider.
+- `packages/provider-opencode/src/server/status.ts` — An empty model list no longer reads as a discovery delay ("yet"); a key may allow none. A provider at the Gateway lists only the models its key allows, saved custom models on it included; when every connected provider is at the Gateway the status names it as the endpoint, so an empty list is final.
+- `packages/provider-opencode/src/server/status.test.ts` — The empty-list message; a hand-configured Gateway provider, its custom models, a mixed account and a revoked key.
+- `packages/provider-opencode/src/server/driver.test.ts` — A project's own Gateway provider lists only the key's models.
 - `apps/web/src/components/settings/ProviderInstanceCard.tsx` — No custom models on the Gateway agents or agents configured for the Gateway, which show the server's list; a line says where their models come from, and that a refresh without `providers:manage` does not ask the Gateway.
 - `apps/web/src/components/settings/ProviderInstanceCard.test.ts` — The server's list for an agent configured for the Gateway.
 - `apps/web/src/components/onboarding/ConnectEndpointScreen.tsx` — The Gateway's refusal, and what to do then instead of the usual guidance.

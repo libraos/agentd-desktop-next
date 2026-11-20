@@ -1436,6 +1436,7 @@ it.layer(
         // Configured by hand: its own config sends requests to the Gateway.
         ["codex", "codex", "warning", "https://api.libraos.com"],
         ["claudeAgent", "claudeAgent", "ready", "https://api.libraos.com"],
+        ["opencode", "opencode", "warning", "https://api.libraos.com"],
       ] as const) {
         const previousProvider = {
           instanceId: ProviderInstanceId.make(instanceId),
