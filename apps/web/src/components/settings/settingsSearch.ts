@@ -509,6 +509,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: [msg("beta boring sidebar folder rows multiline branch pull request details")],
   },
   {
+    id: "agent-work-panels",
+    title: msg("Open the terminal and browser as the agent uses them"),
+    to: "/settings/chat",
+    searchTerms: [msg("automatically open right panel terminal browser code layout agent command")],
+  },
+  {
     id: "tool-call-visibility",
     title: msg("Tool calls in chat"),
     to: "/settings/chat",

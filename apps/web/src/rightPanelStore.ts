@@ -128,6 +128,8 @@ export interface ThreadRightPanelState {
   dismissedDeviceSurfaceIds?: string[];
   maximized?: true;
   proactiveDiffTurnId?: RunId;
+  /** The user closed the panel, so the agent's terminal and browser use no longer opens it. */
+  agentWorkPanelsDismissed?: true;
 }
 
 export interface ThreadPanelVisibility {
@@ -153,6 +155,11 @@ interface RightPanelStoreState {
       | { kind: "diff"; turnId: RunId },
     expectedUserActionRevision: number,
     activateExisting?: boolean,
+  ) => boolean;
+  /** Shows a tab for the agent's work without moving focus; refused once the user closed the panel. */
+  openForAgentWork: (
+    ref: ScopedThreadRef,
+    target: { kind: "surface"; surfaceId: string } | { kind: "terminal"; terminalId: string },
   ) => boolean;
   open: (
     ref: ScopedThreadRef,
@@ -401,7 +408,8 @@ const updateThreadStateMap = (
     next.activeSurfaceId === null &&
     next.surfaces.length === 0 &&
     !next.dismissedDeviceSurfaceIds?.length &&
-    next.proactiveDiffTurnId === undefined
+    next.proactiveDiffTurnId === undefined &&
+    next.agentWorkPanelsDismissed === undefined
   ) {
     if (!(threadKey in byThreadKey)) return byThreadKey;
     const { [threadKey]: _removed, ...rest } = byThreadKey;
@@ -505,8 +513,12 @@ const userActionOnThread = (
   closesView: boolean,
 ): Partial<RightPanelStoreState> => ({
   ...updateThread(state, threadKey, (current) => {
-    const next = updater(current);
-    if (next === current) return current;
+    const updated = updater(current);
+    if (updated === current) return current;
+    const next =
+      current.isOpen && !updated.isOpen
+        ? { ...updated, agentWorkPanelsDismissed: true as const }
+        : updated;
     const removedDevices = current.surfaces.filter(
       (surface) =>
         surface.kind === "device" && !next.surfaces.some((entry) => entry.id === surface.id),
@@ -698,6 +710,9 @@ export function migratePersistedRightPanelState(persistedState: unknown): {
                       }
                     : {}),
                   ...(validThreadState?.maximized === true ? { maximized: true as const } : {}),
+                  ...(validThreadState?.agentWorkPanelsDismissed === true
+                    ? { agentWorkPanelsDismissed: true as const }
+                    : {}),
                 },
               ];
             }),
@@ -785,6 +800,22 @@ export const useRightPanelStore = create<RightPanelStoreState>()(
           opened = true;
           return automaticUpdate(state, threadKey, (current) => upsertSurface(current, request));
         });
+        return opened;
+      },
+      openForAgentWork: (ref, target) => {
+        let opened = false;
+        set((state) =>
+          automaticUpdate(state, scopedThreadKey(ref), (current) => {
+            if (current.agentWorkPanelsDismissed) return current;
+            if (target.kind === "terminal") {
+              opened = true;
+              return upsertSurface(current, terminalSurface(target.terminalId));
+            }
+            const next = activated(current, target.surfaceId);
+            opened = next !== current;
+            return next;
+          }),
+        );
         return opened;
       },
       open: (ref, kind) =>
