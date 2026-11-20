@@ -1,3 +1,6 @@
+// @effect-diagnostics-next-line nodeBuiltinImport:off -- mkfifo once, for a named pipe fixture.
+import * as NodeChildProcess from "node:child_process";
+
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
@@ -25,7 +28,11 @@ describe("makeCloudKeyFile", () => {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const dir = yield* fs.makeTempDirectoryScoped();
-      const check = makeCloudKeyFile({ fs, isAbsolute: path.isAbsolute, platform: "linux" });
+      const check = makeCloudKeyFile({
+        isAbsolute: path.isAbsolute,
+        platform: "linux",
+        uid: process.getuid?.(),
+      });
       const anthropic = path.join(dir, "openai.key");
       yield* fs.writeFileString(anthropic, "sk-ant-api03-secret\n");
       yield* fs.chmod(anthropic, 0o644);
@@ -47,10 +54,49 @@ describe("makeCloudKeyFile", () => {
       });
       expect(yield* check({ path: dir }, false)).toMatchObject({ readable: false });
       // Windows has no mode for agentd to refuse, so nothing is reported or changed.
-      const windows = makeCloudKeyFile({ fs, isAbsolute: path.isAbsolute, platform: "win32" });
+      const windows = makeCloudKeyFile({
+        isAbsolute: path.isAbsolute,
+        platform: "win32",
+        uid: undefined,
+      });
       yield* fs.chmod(anthropic, 0o644);
       expect(yield* windows({ path: anthropic }, true)).toMatchObject({ openToOthers: false });
       expect(((yield* fs.stat(anthropic)).mode & 0o777).toString(8)).toBe("644");
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
+  it.effect(
+    "changes nothing that is not the user's own regular file, and never waits on a pipe",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const dir = yield* fs.makeTempDirectoryScoped();
+        const uid = process.getuid?.();
+        const check = makeCloudKeyFile({ isAbsolute: path.isAbsolute, platform: "linux", uid });
+        const project = path.join(dir, "project");
+        yield* fs.makeDirectory(project);
+        yield* fs.chmod(project, 0o755);
+        const fixDir = yield* Effect.flip(check({ path: project }, true));
+        expect(fixDir.message).toContain("not a regular file");
+        expect(((yield* fs.stat(project)).mode & 0o777).toString(8)).toBe("755");
+
+        const pipe = path.join(dir, "key.fifo");
+        NodeChildProcess.execFileSync("mkfifo", [pipe]);
+        expect(yield* check({ path: pipe }, false)).toMatchObject({ readable: false });
+        yield* Effect.flip(check({ path: pipe }, true));
+
+        const theirs = path.join(dir, "theirs.key");
+        yield* fs.writeFileString(theirs, "sk-ant-api03-secret\n");
+        yield* fs.chmod(theirs, 0o644);
+        const other = makeCloudKeyFile({
+          isAbsolute: path.isAbsolute,
+          platform: "linux",
+          uid: (uid ?? 0) + 1,
+        });
+        const fixTheirs = yield* Effect.flip(other({ path: theirs }, true));
+        expect(fixTheirs.message).toContain("another user");
+        expect(((yield* fs.stat(theirs)).mode & 0o777).toString(8)).toBe("644");
+      }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );
 });

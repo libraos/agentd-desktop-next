@@ -36,6 +36,7 @@ import {
   cloudSetupProblem,
   cloudSetupReason,
   openKeyFile,
+  refusedBeforeTask,
 } from "./cloudFailure.ts";
 
 const isCloudTask = Schema.is(AgentdCloudBudget);
@@ -553,6 +554,9 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
 
     const current = yield* reservation;
     let submission: string;
+    // Only a reservation made by this Start may be released by it: a reused one guards an
+    // earlier offer whose outcome is still unknown.
+    let fresh = false;
     if (current !== null && current.handoff === null && !current.released) {
       const handoff = yield* recorded(current.id);
       if (handoff !== null) {
@@ -583,6 +587,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
         }
       }
       submission = nextSubmissionId(session, current?.id ?? null);
+      fresh = true;
       yield* agentd(() =>
         agentdArgs.reserveSubmission(session, submission, current?.id ?? null, fingerprint),
       ).pipe(
@@ -602,7 +607,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
 
     const argv = yield* args(() => agentdArgs.cloudOffer(input, project, submission));
     yield* agentd(() => agentdArgs.cloudSession(input.cwd)).pipe(
-      Effect.tapError(() => release(submission)),
+      Effect.tapError(() => (fresh ? release(submission) : Effect.void)),
       Effect.catchTags({
         AgentdCommandError: (error) =>
           Effect.fail(
@@ -612,9 +617,9 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
           ),
       }),
     );
+    // A ledger that can't be read leaves the outcome unknown, and the reservation kept.
     const reconcile = (said: string | null) =>
       recorded(submission).pipe(
-        Effect.orElseSucceed(() => null),
         Effect.flatMap((handoff) => {
           if (handoff !== null)
             return remember(submission, handoff).pipe(
@@ -627,7 +632,10 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
               } satisfies AgentdStartTaskResult),
             );
           const reason = said ? cloudReason(said) : null;
-          if (reason === null) return Effect.fail(unknownOutcome());
+          // Released only when agentd said it refused the offer before making a task; a runner or
+          // network failure may still have reached the Job API under this --idem key.
+          if (reason === null || said === null || !refusedBeforeTask(said))
+            return Effect.fail(unknownOutcome());
           const privateFile = said ? openKeyFile(said) : null;
           return release(submission).pipe(
             Effect.andThen(

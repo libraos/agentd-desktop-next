@@ -254,16 +254,47 @@ export function looksLikeKey(value: string): boolean {
   return text.startsWith("sk-") || (text.length > 30 && !/[/\\]/.test(text));
 }
 
-export type KeyFileProblem = "anthropic-key" | "openai-key" | "open-to-others";
+export type KeyFileProblem =
+  | "anthropic-key"
+  | "openai-key"
+  | "open-to-others"
+  | "unreadable"
+  | "checking"
+  | "check-failed";
 
-/** Why a BYOK key file under `field` can't be submitted, from the host's check of it. */
+/**
+ * Why a BYOK key file under `field` can't be submitted yet, from the host's check of it: null
+ * while the check is still running, "failed" when the host couldn't answer.
+ */
 export function keyFileProblem(
   field: "anthropic" | "openai",
-  check: AgentdCloudKeyFileCheck | null,
+  check: AgentdCloudKeyFileCheck | null | "failed",
 ): KeyFileProblem | null {
-  if (check === null) return null;
+  if (check === null) return "checking";
+  if (check === "failed") return "check-failed";
+  if (!check.readable) return "unreadable";
   if (check.provider !== null && check.provider !== field) return `${check.provider}-key`;
   return check.openToOthers ? "open-to-others" : null;
+}
+
+type RememberedKeyFiles = Readonly<
+  Record<string, { readonly anthropic?: string; readonly openai?: string }>
+>;
+
+/** The BYOK paths agentd accepted, merged into the latest per-environment record. */
+export function rememberKeyFiles(
+  latest: RememberedKeyFiles,
+  environmentId: string,
+  submitted: { readonly anthropicKeyFile?: string; readonly openaiKeyFile?: string },
+): RememberedKeyFiles {
+  return {
+    ...latest,
+    [environmentId]: {
+      ...latest[environmentId],
+      ...(submitted.anthropicKeyFile ? { anthropic: submitted.anthropicKeyFile } : {}),
+      ...(submitted.openaiKeyFile ? { openai: submitted.openaiKeyFile } : {}),
+    },
+  };
 }
 
 export type TaskStartProblem =

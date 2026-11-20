@@ -182,6 +182,7 @@ function StartTaskDialog({
     acceptReason !== null ||
     issueReason !== null ||
     keysMissing ||
+    (cloud.waiting && cloud.unreachable) ||
     (cloud.enabled && !cloud.budgetValid);
   const disabled = starting || drafting || offeredId !== null || !plan.ready;
   const draftDisabled =
@@ -375,7 +376,7 @@ function StartTaskDialog({
                 cloud={cloud}
                 disabled={starting || drafting || offeredId !== null || !canStart}
               />
-              {!cloud.enabled ? (
+              {!cloud.enabled && !cloud.waiting ? (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <TaskField label={gt("Worker")} id={workerProps.id}>
                     <Select
@@ -465,7 +466,7 @@ function StartTaskDialog({
                       setReplaceSubmission(null);
                     }}
                   >
-                    <T>Cancel</T>
+                    <T>Don’t replace</T>
                   </Button>
                 </div>
               ) : null}

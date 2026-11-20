@@ -3046,6 +3046,7 @@
   "2c73362a57a1dff5": "AgentD page",
   "19ccb9ca234d58ce": "Worker settings",
   "8b9fa521cecb4f8d": "Uses",
+  "3ebd358d2f3c2614": "Um dos serviços em segundo plano do AgentD executa um AgentD que está ausente ou pertence ao antigo AgentD Desktop, e outro executa o seu próprio AgentD. Este app não alterou nenhum deles: execute agentd install com o AgentD que você usa.",
   "d1934c355b387dbd": "Os serviços em segundo plano do AgentD usavam um AgentD ausente ou do antigo AgentD Desktop. Agora usam o AgentD deste app, e os resultados da nuvem voltam a sincronizar.",
   "e94ad00e323f4971": "Os serviços em segundo plano do AgentD usam um AgentD ausente ou do antigo AgentD Desktop, e não foi possível passá-los para o AgentD deste app. Execute agentd install em um terminal.",
   "803dbf99343f4441": "Installed for the terminal",
@@ -3096,6 +3097,8 @@
   "1b7c524fccf06537": "Needs you",
   "db2fec7c6c08a6b4": "Workers",
   "8921053c4410665e": "Cloud Workers",
+  "f7eb4a8dece08115": "Não foi possível acessar o AgentD.",
+  "9bbecec926c3b695": "Tentar novamente",
   "84bc880c5d7799c4": "This version of AgentD has no Cloud Workers.",
   "1df964aa41b32b25": "Cloud Workers aren’t set up on this machine.",
   "e959699c0a2955e1": [
@@ -3370,8 +3373,7 @@
   "bb58748e4b230007": "ChatGPT (Codex)",
   "4283cbba1d675ef8": "ChatGPT (Codex): needs a newer AgentD",
   "0606bddb2fb895bd": "Run in the cloud",
-  "f7eb4a8dece08115": "Não foi possível acessar o AgentD.",
-  "9bbecec926c3b695": "Tentar novamente",
+  "758710d9f0cdd0f6": "Não foi possível acessar o AgentD. Tente novamente ou desative “Run in the cloud” para executar esta tarefa aqui.",
   "e2f5cc2eeccfc92b": "Cloud Workers require a GitHub repository as the checkout’s origin.",
   "16c7fc3b7eaea196": [
     "Cloud repository: ",
@@ -3401,13 +3403,14 @@
   "256f4ab9a895674d": "Isso parece ser a própria chave. Salve-a em um arquivo e selecione esse arquivo.",
   "564377ac68a9dbc8": "Esta é uma chave da Anthropic; escolha-a em Arquivo de chave da Anthropic.",
   "3190c4c819611d04": "Esta é uma chave da OpenAI; escolha-a em Arquivo de chave da OpenAI.",
-  "26f34b3ba7aa528d": [
+  "6e09aa0bc2f5903e": [
     {
       "i": 1,
       "k": "_gt_value_1",
       "v": "v"
     },
-    " pode ser lido por outros usuários. Execute chmod 600 ",
+    " pode ser lido por outros usuários. Execute",
+    " ",
     {
       "i": 2,
       "k": "_gt_value_2",
@@ -3416,6 +3419,17 @@
     " e tente novamente."
   ],
   "5e8c89ed36b770b3": "Corrigir permissões",
+  "26870059a55a8693": [
+    "Não foi possível ler ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " na máquina deste ambiente. Verifique o caminho e se sua conta pode ler o arquivo."
+  ],
+  "cbc2d86edf351bfc": "Não foi possível verificar este arquivo de chave.",
+  "8590981f396d633b": "Verificando este arquivo de chave…",
   "0faf657712a9d10a": "Plan",
   "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
   "53150504b20565ec": "Needs a newer AgentD. Run agentd upgrade to use your Claude plan.",
@@ -3474,6 +3488,7 @@
   "f5b66c481aa3e4df": "Editar",
   "e91857c891498df2": "This connection cannot start AgentD tasks.",
   "b7088cd1c566d9c9": "Substituir",
+  "28eb5c34fe18cd54": "Não substituir",
   "cddd25f1fe0c5855": "Checking the earlier submission…",
   "81c18cf032b057e9": "Check and retry",
   "bba1e3a22505b87f": "Starting…",
@@ -3526,6 +3541,7 @@
   "c0cdda8786778243": "The working directory is not a Git repository.",
   "423f5560c920e52f": "Check out a named branch in this working directory first.",
   "a542a9e7e7d46218": "The working directory is on {branch}. Switch to a different branch first.",
+  "1abb623568c6e268": "Não foi possível acessar o AgentD para verificar o Cloud Workers. Tente novamente ou desative “Run in the cloud” para executar esta tarefa aqui.",
   "a4aff358558707df": "This session has no project working directory.",
   "cee006e381c89877": "There is not enough LibraOS credit for Cloud Workers.",
   "7e4a9f1615efb801": "Sign in to LibraOS or connect the LibraOS Gateway to use LibraOS models.",
@@ -3544,6 +3560,7 @@
   "ab91ee697b514f96": "Budget up to {cap} (agentd has no estimate for similar tasks yet).",
   "b77cf4ce030a03fd": "Budget up to {cap} (similar tasks cost {low}–{high}).",
   "1105b01379db64cd": "The estimate comes from local runs of similar tasks.",
+  "23d1644e8161e56b": "Não foi possível acessar o AgentD para verificar o Cloud Workers.",
   "87e3e1be8d076ca6": "Não foi possível acessar este ambiente. Tente novamente.",
   "74a8fc3d3e10acaf": "Este link de login está incompleto",
   "820397d04d4ea2df": "Feche esta página e inicie o login novamente pelo seu agente.",

@@ -54,6 +54,7 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
+import * as Scope from "effect/Scope";
 import * as Stream from "effect/Stream";
 
 import * as BackgroundPolicy from "../background/BackgroundPolicy.ts";
@@ -277,7 +278,11 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     platform,
   });
 
-  const cloudKeyFile = makeCloudKeyFile({ fs, isAbsolute: pathService.isAbsolute, platform });
+  const cloudKeyFile = makeCloudKeyFile({
+    isAbsolute: pathService.isAbsolute,
+    platform,
+    uid: process.getuid?.(),
+  });
 
   const readShow = (id: string) =>
     args(() => agentdArgs.show(id)).pipe(
@@ -321,15 +326,27 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
   }
 
   // Until the watchdog runs a working agentd, the listed cloud jobs are synced here, never often.
+  // One sync at a time, beside the list: a slow Job API never holds up the local tasks.
+  const bridgeScope = yield* Scope.Scope;
   let lastCloudSync = 0;
+  let syncing = false;
   const syncCloud = Effect.fn("AgentdBridge.syncCloud")(function* (
     rows: ReadonlyArray<AgentdTaskRow>,
   ) {
-    if (!hasOpenCloudJob(rows)) return;
+    if (syncing || !hasOpenCloudJob(rows)) return;
     const now = yield* Clock.currentTimeMillis;
     if (now - lastCloudSync < Duration.toMillis(CLOUD_SYNC_INTERVAL)) return;
     lastCloudSync = now;
-    yield* run(agentdArgs.cloudSync()).pipe(Effect.ignore);
+    syncing = true;
+    yield* run(agentdArgs.cloudSync()).pipe(
+      Effect.ignore,
+      Effect.ensuring(
+        Effect.sync(() => {
+          syncing = false;
+        }),
+      ),
+      Effect.forkIn(bridgeScope),
+    );
   });
 
   const readTasks = run(agentdArgs.list()).pipe(

@@ -403,6 +403,42 @@ describe("AgentdBridge", () => {
     }),
   );
 
+  it.effect("syncs open cloud jobs beside the task list, never holding it up", () =>
+    Effect.gen(function* () {
+      const row = (state: string) =>
+        JSON.stringify([
+          { id: "hof-c10d000001", goal: "Fix it", state: "claimed", cloud_state: state },
+        ]);
+      let listed = row("queued");
+      const syncStarted = yield* Deferred.make<void>();
+      const firstListed = yield* Deferred.make<void>();
+      const bridge = yield* makeBridge({ AGENTD_BIN: process.execPath }, (input) => {
+        const key = input.args.join(" ");
+        if (key === "handoff list --json") {
+          const answer = listed;
+          listed = row("running");
+          return Deferred.succeed(firstListed, undefined).pipe(Effect.as(output(answer)));
+        }
+        // A Job API that never answers.
+        if (key === "cloud sync")
+          return Deferred.succeed(syncStarted, undefined).pipe(Effect.andThen(Effect.never));
+        return Effect.die(`unexpected agentd ${key}`);
+      });
+      yield* TestClock.setTime(31_000);
+      const lists = yield* bridge.subscribeTasks.pipe(
+        Stream.take(2),
+        Stream.runCollect,
+        Effect.forkChild,
+      );
+      yield* Deferred.await(firstListed);
+      yield* TestClock.adjust("5 seconds");
+      const [first, second] = yield* Fiber.join(lists);
+      yield* Deferred.await(syncStarted);
+      expect(first?.[0]?.cloudState).toBe("queued");
+      expect(second?.[0]?.cloudState).toBe("running");
+    }),
+  );
+
   it.effect("answers every method with AgentdNotFoundError when there is no agentd", () =>
     Effect.gen(function* () {
       const bridge = yield* makeBridge({ PATH: "" }, () => Effect.die("agentd must not run"));
@@ -1011,6 +1047,72 @@ describe("AgentdBridge", () => {
           .every(({ stdin }) => stdin === undefined),
       ).toBe(true);
       expect(JSON.stringify(runs.map(({ args }) => args))).not.toContain(key);
+    }),
+  );
+
+  it.effect("keeps a cloud reservation unless agentd positively refused the offer", () =>
+    Effect.gen(function* () {
+      const runs: Array<ReadonlyArray<string>> = [];
+      const ledger = cloudLedger();
+      let offerSays = "error: runner unavailable";
+      let brokenFind = false;
+      let breakLedgerOnOffer = false;
+      let brokenJoin = false;
+      const bridge = yield* makeBridge({ AGENTD_BIN: process.execPath }, (input) => {
+        runs.push(input.args);
+        if (brokenFind && input.args[0] === "find")
+          return Effect.succeed(output("ledger locked", 1));
+        const recorded = ledger.answer(input.args);
+        if (recorded !== null) return Effect.succeed(recorded);
+        switch (input.args.slice(0, 2).join(" ")) {
+          case "version":
+            return Effect.succeed(output("agentd v0.1.14"));
+          case "remote get-url":
+            return Effect.succeed(output("https://github.com/acme/app.git"));
+          case "session join":
+            return Effect.succeed(brokenJoin ? output("ledger busy", 1) : output("{}"));
+          case "handoff offer":
+            if (input.args.includes("--help"))
+              return Effect.succeed(output("usage: agentd handoff offer [--cloud]"));
+            brokenFind = breakLedgerOnOffer;
+            return Effect.succeed(output(offerSays, 1));
+          default:
+            return Effect.die(`unexpected agentd ${input.args.join(" ")}`);
+        }
+      });
+      const platform = yield* HostProcess.Platform;
+      const input = {
+        cwd: platform === "win32" ? "C:\\work\\app" : "/work/app",
+        goal: "Fix the check",
+        accept: [],
+        check: "pnpm test",
+        cloud: { modelAccess: "libraos", budget: "$5" },
+      } as const;
+      const keys = () =>
+        runs
+          .filter((args) => args.includes("--cloud") && !args.includes("--help"))
+          .map((args) => args[args.indexOf("--idem") + 1]);
+
+      // A runner error with no task on the ledger may still have reached the Job API.
+      expect(yield* Effect.flip(bridge.startTask(input))).toMatchObject({ outcomeUnknown: true });
+      // So may one whose ledger can't be read after it.
+      breakLedgerOnOffer = true;
+      expect(yield* Effect.flip(bridge.startTask(input))).toMatchObject({ outcomeUnknown: true });
+      breakLedgerOnOffer = false;
+      brokenFind = false;
+      // A retry whose session join fails offers nothing and keeps the reservation too.
+      brokenJoin = true;
+      yield* Effect.flip(bridge.startTask(input));
+      brokenJoin = false;
+      expect(keys()).toHaveLength(2);
+      offerSays = "error: 402: insufficient credit";
+      expect((yield* Effect.flip(bridge.startTask(input))).message).toBe(
+        "There is not enough LibraOS credit for this dollar cap.",
+      );
+      expect(new Set(keys()).size).toBe(1);
+      // That refusal released it: the next Start is a new submission.
+      yield* Effect.flip(bridge.startTask(input));
+      expect(new Set(keys()).size).toBe(2);
     }),
   );
 

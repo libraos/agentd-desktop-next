@@ -2,6 +2,7 @@ import {
   AuthEnvironmentMaintainScope,
   AuthDiagnosticsReadScope,
   AuthFilesystemReadScope,
+  AuthFilesystemWriteScope,
   AuthProvidersManageScope,
   AuthSettingsWriteScope,
   AuthAccessWriteScope,
@@ -75,6 +76,13 @@ describe("RPC authorization scopes", () => {
     for (const method of [WS_METHODS.subscribeVcsBranch, WS_METHODS.vcsRefreshBranch]) {
       expect(requiredScopeForRpcMethod(method)).toBe(AuthOrchestrationReadScope);
     }
+  });
+
+  it("keeps Cloud Workers key file checks behind the filesystem permissions", () => {
+    expect(requiredScopeForRpcMethod(WS_METHODS.agentdCloudKeyFile)).toBe(AuthFilesystemReadScope);
+    expect(requiredScopeForRpcMethod(WS_METHODS.agentdCloudKeyFileFix)).toBe(
+      AuthFilesystemWriteScope,
+    );
   });
 
   it("still lets readers load settings the way installed Swift clients ask", () => {

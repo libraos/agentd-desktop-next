@@ -97,6 +97,18 @@ describe("agentd services", () => {
       expect(yield* repairServices(deps)).toEqual({ services: ["watchdog"], ok: true });
       expect(runs).toEqual([[bundled, "install"]]);
 
+      // A working dash on the user's own agentd: install would move it too, so nothing runs.
+      const own = path.join(home, "own-agentd");
+      yield* fs.writeFileString(own, "");
+      yield* fs.writeFileString(path.join(agents, "com.libraos.agentd.dash.plist"), plist(own));
+      runs.length = 0;
+      expect(yield* repairServices(deps)).toEqual({
+        services: ["watchdog"],
+        ok: false,
+        kept: ["dash"],
+      });
+      expect(runs).toEqual([]);
+
       // Linux: agentd install for the watchdog units, then what it asks systemd to do.
       const units = path.join(home, ".config", "systemd", "user");
       yield* fs.makeDirectory(units, { recursive: true });

@@ -106,16 +106,21 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
   });
 
   const stale: ServiceName[] = [];
+  // Services on another working agentd, the user's own: never moved.
+  const kept: ServiceName[] = [];
   for (const service of SERVICES) {
     const found = yield* program(service);
     if (found === null) continue;
     const exists = yield* fs.exists(found).pipe(Effect.orElseSucceed(() => false));
     if (isStaleProgram(found, exists, bundled)) stale.push(service);
+    else if (found !== bundled) kept.push(service);
   }
   if (stale.length === 0) return null;
 
   let ok = true;
   if (platform === "darwin" || platform === "win32") {
+    // install moves both services, so it would also move the one kept on the user's agentd.
+    if (kept.length > 0) return { services: stale, ok: false, kept } satisfies AgentdServicesRepair;
     // install moves both LaunchAgents or both tasks of this root to the binary that runs it.
     ok = (yield* exec(bundled, ["install"])).ok;
   } else {

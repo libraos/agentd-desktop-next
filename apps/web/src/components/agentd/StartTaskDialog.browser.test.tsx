@@ -26,6 +26,7 @@ import { AppAtomRegistryProvider } from "~/rpc/atomRegistry";
 import { makeThreadFixture } from "~/test-fixtures";
 import { render, stubGlobal } from "../../../test/render";
 import { ToastProvider } from "../ui/toast";
+import { AgentdPageCloud } from "./AgentdPageCloud";
 import { CloudWorkersSetup } from "./CloudWorkersSetup";
 import { openStartTaskDialog, StartTaskDialogHost } from "./StartTaskDialog";
 import { EMPTY_TASK_FIELDS } from "./startTask.logic";
@@ -70,6 +71,11 @@ vi.mock("~/lib/agentdState", async () => {
       refresh: () => {},
     }),
     useAgentdCommands: () => ({ cloudKeyFileFix: state.fixKeyFile }),
+    useAgentdCloudAccount: () => ({
+      data: state.cloud,
+      error: null,
+      refresh: state.cloudRefresh,
+    }),
     useAgentdTaskOthers: () => ({ data: state.others, isPending: false, isSuccess: true }),
   };
 });
@@ -270,6 +276,11 @@ it("starts a cloud task with a dollar cap and a provider key path, without the l
     expect(state.start).not.toHaveBeenCalled();
   }
   await userEvent.fill(openai, "");
+  state.keyFiles["/private/key file"] = {
+    provider: "anthropic",
+    readable: true,
+    openToOthers: false,
+  };
   await userEvent.fill(keyPath, "/private/key file");
   await expect.element(page.getByText(/Your provider bills inference separately/)).toBeVisible();
   await start.click();
@@ -343,7 +354,9 @@ it("checks an unknown cloud outcome before retrying and can replace an earlier s
   await userEvent.fill(page.getByLabelText("Goal"), "Fix export");
   await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect.element(page.getByText(unfinished)).toBeVisible();
-  await page.getByRole("button", { name: "Cancel" }).first().click();
+  // One Cancel only: the footer's, which discards the dialog.
+  await expect.element(page.getByRole("button", { name: "Cancel" })).toBeVisible();
+  await page.getByRole("button", { name: "Don’t replace" }).click();
   await expect.element(page.getByText(unfinished)).not.toBeInTheDocument();
   await page.getByRole("button", { name: "Start", exact: true }).click();
   await page.getByRole("button", { name: "Replace", exact: true }).click();
@@ -964,14 +977,77 @@ it("keeps each model access mode's key paths to itself and submits only the show
   });
 });
 
-it("offers Retry when agentd didn't answer the cloud probe, instead of hiding cloud", async () => {
-  setup("feature/export");
+it("keeps a cloud Start in the cloud while agentd doesn't answer the probe, until turned off", async () => {
+  setup("feature/export", false, { agentdRunTasksOn: "cloud" });
+  state.cloudError = new Error("agentd timed out");
+  state.start.mockResolvedValue(
+    AsyncResult.success({ id: "hof-123abc", started: true, note: null }),
+  );
+  await using _screen = await render(
+    <AppAtomRegistryProvider>
+      <ToastProvider>
+        <TaskDraftCard threadRef={threadRef} fields={drafted} />
+        <StartTaskDialogHost />
+      </ToastProvider>
+    </AppAtomRegistryProvider>,
+  );
+  const reason =
+    "Couldn’t reach AgentD to check Cloud Workers. Retry, or turn off Run in the cloud to run this task here.";
+  const card = page.getByRole("region", { name: "Drafted task" });
+  await expect.element(card.getByText(reason)).toBeVisible();
+  await expect.element(card.getByRole("button", { name: "Start" })).toBeDisabled();
+  await card.getByRole("button", { name: "Retry" }).click();
+  expect(state.cloudRefresh).toHaveBeenCalled();
+
+  openStartTaskDialog(threadRef, drafted);
+  const dialog = page.getByRole("dialog");
+  const start = dialog.getByRole("button", { name: "Start", exact: true });
+  const option = dialog.getByRole("checkbox", { name: "Run in the cloud" });
+  await expect.element(option).toBeChecked();
+  await expect.element(start).toBeDisabled();
+  await expect.element(dialog.getByLabelText("Worker")).not.toBeInTheDocument();
+  await dialog.getByRole("button", { name: "Retry" }).click();
+  // Only turning cloud off runs the task here.
+  await option.click();
+  await expect.element(start).toBeEnabled();
+  await start.click();
+  await expect.element(page.getByText("Started task hof-123abc.")).toBeVisible();
+  expect(state.start).toHaveBeenCalledExactlyOnceWith({
+    environmentId: thread.environmentId,
+    input: expect.objectContaining({ worker: "opencode" }),
+  });
+});
+
+it("offers Retry on the AgentD page when agentd didn't answer the cloud probe", async () => {
+  setup("feature/export", false);
   state.cloud = { ...cloudReady(), unreachable: true };
-  await using _screen = await renderDialog();
-  await expect.element(page.getByRole("checkbox", { name: "Run in the cloud" })).toBeDisabled();
-  await expect.element(page.getByText("Couldn’t reach AgentD.")).toBeVisible();
+  await using _screen = await render(<AgentdPageCloud environmentId={thread.environmentId} />);
+  await expect.element(page.getByText("LibraOS balance unavailable.")).not.toBeInTheDocument();
   await page.getByRole("button", { name: "Retry" }).click();
   expect(state.cloudRefresh).toHaveBeenCalled();
+});
+
+it("keeps Start disabled until each BYOK path is checked, and says when one can't be read", async () => {
+  setup("feature/export");
+  state.cloud = cloudReady();
+  await using _screen = await renderDialog();
+  await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+  await userEvent.fill(page.getByLabelText("Goal"), "Fix export");
+  await page.getByRole("combobox", { name: "Model access" }).click();
+  await page.getByRole("option", { name: "Your API key" }).click();
+  const start = page.getByRole("button", { name: "Start", exact: true });
+  const anthropic = page.getByLabelText("Anthropic key file path");
+  await userEvent.fill(anthropic, "/home/me/new.key");
+  await expect.element(page.getByText("Checking this key file…")).toBeVisible();
+  await expect.element(start).toBeDisabled();
+
+  state.keyFiles["/home/me/gone.key"] = { provider: null, readable: false, openToOthers: false };
+  await userEvent.fill(anthropic, "/home/me/gone.key");
+  await expect
+    .element(page.getByText(/Couldn’t read \/home\/me\/gone.key on this environment’s machine/))
+    .toBeVisible();
+  await expect.element(start).toBeDisabled();
+  expect(state.start).not.toHaveBeenCalled();
 });
 
 it("checks each BYOK key file's provider and privacy, and remembers the paths that were sent", async () => {
@@ -1023,6 +1099,27 @@ it("checks each BYOK key file's provider and privacy, and remembers the paths th
     await expect.element(page.getByText("Started task hof-123abc.")).toBeVisible();
   }
   // The next task starts with the path that was sent, in its own field.
+  openStartTaskDialog(threadRef);
+  {
+    // A task agentd recorded but the cloud didn't take keeps the last path that worked.
+    state.keyFiles["/home/me/other.key"] = {
+      provider: "openai",
+      readable: true,
+      openToOthers: false,
+    };
+    state.start.mockResolvedValue(
+      AsyncResult.success({ id: "hof-456def", started: false, note: "Refused." }),
+    );
+    await using _screen = await renderDialog();
+    await page.getByRole("checkbox", { name: "Run in the cloud" }).click();
+    await userEvent.fill(page.getByLabelText("Goal"), "Fix export");
+    await page.getByRole("combobox", { name: "Model access" }).click();
+    await page.getByRole("option", { name: "Your API key" }).click();
+    await userEvent.fill(page.getByLabelText("OpenAI key file path"), "/home/me/other.key");
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await expect.element(page.getByText("Refused.")).toBeVisible();
+    await page.getByRole("button", { name: "Close" }).first().click();
+  }
   openStartTaskDialog(threadRef);
   await using _screen = await renderDialog();
   await page.getByRole("checkbox", { name: "Run in the cloud" }).click();

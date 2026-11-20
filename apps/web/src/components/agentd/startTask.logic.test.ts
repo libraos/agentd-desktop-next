@@ -11,6 +11,7 @@ import {
   defaultCloudPlan,
   defaultModelAccess,
   keyFileProblem,
+  rememberKeyFiles,
   modelAccessChoices,
   EMPTY_TASK_FIELDS,
   prepareTaskFields,
@@ -242,7 +243,17 @@ it("blocks a key file under the other provider's field, then one others can read
   expect(keyFileProblem("anthropic", check("openai", true))).toBe("openai-key");
   expect(keyFileProblem("openai", check("openai", true))).toBe("open-to-others");
   expect(keyFileProblem("anthropic", check("anthropic"))).toBe(null);
-  // An unrecognised or unreadable file is left to agentd, as is a host that can't check.
-  expect(keyFileProblem("openai", check(null))).toBe(null);
-  expect(keyFileProblem("openai", null)).toBe(null);
+  // An unrecognised key is left to agentd; Start waits for the check and stops on a failed one.
+  expect(keyFileProblem("openai", { ...check(null), readable: true })).toBe(null);
+  expect(keyFileProblem("openai", check(null))).toBe("unreadable");
+  expect(keyFileProblem("openai", null)).toBe("checking");
+  expect(keyFileProblem("openai", "failed")).toBe("check-failed");
+});
+
+it("remembers accepted BYOK paths without dropping another environment's", () => {
+  const latest = { other: { openai: "/b/openai.key" }, here: { anthropic: "/a/old.key" } };
+  expect(rememberKeyFiles(latest, "here", { openaiKeyFile: "/a/openai.key" })).toEqual({
+    other: { openai: "/b/openai.key" },
+    here: { anthropic: "/a/old.key", openai: "/a/openai.key" },
+  });
 });

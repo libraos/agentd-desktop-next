@@ -145,6 +145,11 @@ export function useTaskPlan({
     branch,
   });
   const problem = (() => {
+    // Cloud was asked for: local checks such as the branch gate say nothing about it.
+    if (cloud.waiting && cloud.unreachable)
+      return gt(
+        "Couldn’t reach AgentD to check Cloud Workers. Retry, or turn off Run in the cloud to run this task here.",
+      );
     switch (problemKind) {
       case "no-directory":
         return gt("This session has no project working directory.");
@@ -174,7 +179,9 @@ export function useTaskPlan({
     if (!cloud.enabled && cwd !== null && git.error) return git.error;
     return null;
   })();
-  const checking = cloud.enabled ? cloud.checkingBalance : cwd !== null && git.data === null;
+  const checking = cloud.enabled
+    ? cloud.checkingBalance
+    : cloud.waiting || (cwd !== null && git.data === null);
 
   const capText = cloud.enabled
     ? money(Number(cloud.dollars) || 0)
@@ -191,7 +198,11 @@ export function useTaskPlan({
       ? gt("LibraOS models")
       : null;
   const summary = [
-    cloud.enabled ? gt("Cloud Workers") : worker === null ? null : TASK_WORKERS[worker],
+    cloud.enabled || cloud.waiting
+      ? gt("Cloud Workers")
+      : worker === null
+        ? null
+        : TASK_WORKERS[worker],
     gt("budget up to {cap}", { cap: capText }),
     models,
     validation.input.check
@@ -217,11 +228,14 @@ export function useTaskPlan({
     validation.goal === null &&
     (validation.check === null || (cloud.enabled && validation.check === "required")) &&
     !validation.accept &&
+    !cloud.waiting &&
     (cloud.enabled ? cloud.input !== null : validation.budget === null && !validation.issue);
 
   async function run(replacing: string | null): Promise<TaskStartOutcome> {
     if (cwd === null)
       return { kind: "refused", reason: gt("This session has no project working directory.") };
+    if (cloud.waiting)
+      return { kind: "refused", reason: gt("Couldn’t reach AgentD to check Cloud Workers.") };
     if (!cloud.enabled) {
       const current = await refreshBranch({ environmentId, input: { cwd, localOnly: true } });
       if (current._tag === "Failure") {
@@ -260,7 +274,8 @@ export function useTaskPlan({
           : {}),
       };
     }
-    if (cloud.enabled && cloud.input !== null) cloud.remember(cloud.input);
+    // A recorded task the cloud refused keeps the last paths that worked.
+    if (cloud.enabled && cloud.input !== null && result.value.started) cloud.remember(cloud.input);
     return result.value.started
       ? { kind: "started", task: result.value }
       : { kind: "offered", task: result.value };

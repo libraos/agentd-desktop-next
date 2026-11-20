@@ -2,6 +2,8 @@
 // pattern is anchored to a phrase agentd prints, so a path or project name that happens to contain
 // "byok", "cloud-key" or "[cloud]" is not read as a setup or credential problem.
 
+import { chmodPrivateCommand } from "@t3tools/contracts";
+
 export type CloudProblem = "setup" | "credit" | "repository";
 
 export const CLOUD_REASONS = {
@@ -125,7 +127,7 @@ function sharedFileReason(message: string): string {
   const path = found?.[1];
   if (path === undefined) return CLOUD_REASONS.privateFile;
   return found?.[2]?.toLowerCase().startsWith("can")
-    ? `${path} can be read by other users. Run chmod 600 ${path}, then try again.`
+    ? `${path} can be read by other users. Run ${chmodPrivateCommand(path)}, then try again.`
     : `${path} belongs to another user. Copy it to a file of your own, run chmod 600 on that copy, then choose it.`;
 }
 
@@ -149,6 +151,30 @@ function chatgptReason(message: string): string | null {
   if (/needs your (?:ChatGPT|Codex)|codex login|needs cloud\.codex_auth_file/i.test(message))
     return CLOUD_REASONS.chatgptAuth;
   return null;
+}
+
+// Refusals agentd or the Job API make before any job exists; every other reason may come from a
+// job that was created.
+const REFUSALS: ReadonlySet<string> = new Set([
+  CLOUD_REASONS.setup,
+  CLOUD_REASONS.credit,
+  CLOUD_REASONS.repository,
+  CLOUD_REASONS.keyFile,
+  CLOUD_REASONS.privateFile,
+  CLOUD_REASONS.subscriptionUnavailable,
+  CLOUD_REASONS.subscriptionToken,
+  CLOUD_REASONS.subscriptionTokenFormat,
+  CLOUD_REASONS.chatgptUnavailable,
+  CLOUD_REASONS.chatgptAuth,
+  CLOUD_REASONS.pickPlan,
+  CLOUD_REASONS.teamServer,
+]);
+
+/** agentd refused the offer outright, so it made no task and no cloud job. */
+export function refusedBeforeTask(message: string): boolean {
+  if (SHARED_FILE.test(message)) return true;
+  const reason = cloudReason(message);
+  return reason !== null && REFUSALS.has(reason);
 }
 
 /** One line for an `agentd cloud setup` refusal, from agentd's own wording; the key is never in it. */

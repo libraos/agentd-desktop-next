@@ -86,6 +86,17 @@ export function TaskDraftCard({
           >
             {plan.starting ? <T>Starting…</T> : <T>Start</T>}
           </Button>
+          {cloud.waiting && cloud.unreachable ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={plan.starting}
+              onClick={cloud.refresh}
+            >
+              <T>Retry</T>
+            </Button>
+          ) : null}
           <Button
             type="button"
             size="sm"

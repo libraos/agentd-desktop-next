@@ -1,6 +1,7 @@
 import {
   AgentdCloudBudget,
   AgentdCloudKeyFile,
+  chmodPrivateCommand,
   PRIMARY_LOCAL_ENVIRONMENT_ID,
   type AgentdCloudPlan,
   type AgentdCloudTaskInput,
@@ -12,7 +13,7 @@ import * as Schema from "effect/Schema";
 import { T, useGT, useLocale, Var } from "gt-react";
 import { useId, useState, type ReactNode } from "react";
 
-import { updateClientSettings, useClientSettings } from "~/hooks/useSettings";
+import { getClientSettings, updateClientSettings, useClientSettings } from "~/hooks/useSettings";
 import { useAgentdCloudKeyFile, useAgentdCloudSetup, useAgentdCommands } from "~/lib/agentdState";
 import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import { useEnvironment, usePrimaryEnvironmentId } from "~/state/environments";
@@ -33,6 +34,7 @@ import {
   keyFileProblem,
   looksLikeKey,
   modelAccessChoices,
+  rememberKeyFiles,
 } from "./startTask.logic";
 import { useWorkerDefaults } from "./workerSettings";
 
@@ -61,7 +63,6 @@ export function useStartTaskCloud(
   },
 ) {
   const workerDefaults = useWorkerDefaults();
-  const allRemembered = useClientSettings((settings) => settings.agentdCloudKeyFiles);
   // Settings → Workers chooses where a task starts; the checkbox still overrides it per task.
   const [requested, setRequested] = useState(workerDefaults.runTasksOn === "cloud");
   const availability = useAgentdCloudSetup(cwd, environmentId, false);
@@ -115,9 +116,11 @@ export function useStartTaskCloud(
     environmentId,
   );
   const openaiCheck = useAgentdCloudKeyFile(byok && openaiKey ? openaiKey : null, environmentId);
+  const verdict = (check: typeof anthropicCheck) =>
+    check.data ?? (check.error === null ? null : ("failed" as const));
   const keyProblems = {
-    anthropic: keyFileProblem("anthropic", anthropicKey ? (anthropicCheck.data ?? null) : null),
-    openai: keyFileProblem("openai", openaiKey ? (openaiCheck.data ?? null) : null),
+    anthropic: anthropicKey ? keyFileProblem("anthropic", verdict(anthropicCheck)) : null,
+    openai: openaiKey ? keyFileProblem("openai", verdict(openaiCheck)) : null,
   };
   const keysValid =
     modelAccess === "subscription"
@@ -130,6 +133,8 @@ export function useStartTaskCloud(
           keyProblems.openai === null);
   const unreachable = availability.error !== null || setup?.unreachable === true;
   const enabled = requested && setup?.supported === true && !unreachable && setup.project !== null;
+  // Asked for the cloud while agentd hasn't said whether it can: never fall back to a local run.
+  const waiting = requested && (unreachable || availability.data == null);
   const checkingBalance = enabled && billing.data === null && billing.error === null;
   const input: CloudInput | null =
     enabled &&
@@ -158,23 +163,22 @@ export function useStartTaskCloud(
     anthropicCheck.refresh();
     openaiCheck.refresh();
   };
-  /** After agentd took the task: the BYOK paths it was given prefill the next one. */
+  /** After a cloud worker took the task: the BYOK paths it was given prefill the next one. */
   const remember = (submitted: CloudInput) => {
     if (submitted.modelAccess !== "byok") return;
     void updateClientSettings({
-      agentdCloudKeyFiles: {
-        ...allRemembered,
-        [environmentId]: {
-          ...remembered,
-          ...(submitted.anthropicKeyFile ? { anthropic: submitted.anthropicKeyFile } : {}),
-          ...(submitted.openaiKeyFile ? { openai: submitted.openaiKeyFile } : {}),
-        },
-      },
+      agentdCloudKeyFiles: rememberKeyFiles(
+        getClientSettings().agentdCloudKeyFiles,
+        environmentId,
+        submitted,
+      ),
     });
   };
   return {
     setup,
+    requested,
     enabled,
+    waiting,
     signedIn,
     checkingBalance,
     setRequested,
@@ -218,14 +222,26 @@ export function StartTaskCloud({
     return (
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
-          <Checkbox id={`${id}-enabled`} checked={false} disabled aria-describedby={`${id}-down`} />
+          <Checkbox
+            id={`${id}-enabled`}
+            checked={cloud.requested}
+            disabled={disabled}
+            aria-describedby={`${id}-down`}
+            onCheckedChange={(checked) => cloud.setRequested(checked)}
+          />
           <Label htmlFor={`${id}-enabled`}>
             <T>Run in the cloud</T>
           </Label>
         </div>
         <div className="flex items-center gap-2">
           <p id={`${id}-down`} role="status" className="text-xs text-muted-foreground">
-            <T>Couldn’t reach AgentD.</T>
+            {cloud.requested ? (
+              <T>
+                Couldn’t reach AgentD. Retry, or turn off Run in the cloud to run this task here.
+              </T>
+            ) : (
+              <T>Couldn’t reach AgentD.</T>
+            )}
           </p>
           <Button variant="outline" size="xs" disabled={disabled} onClick={cloud.refresh}>
             <T>Retry</T>
@@ -534,7 +550,7 @@ function ByokKeyFile({
             spellCheck={false}
             maxLength={4096}
             aria-describedby={isKey || problem !== null ? helpId + " " + errorId : helpId}
-            aria-invalid={keyPath(text) === null || problem !== null}
+            aria-invalid={keyPath(text) === null || (problem !== null && problem !== "checking")}
             onChange={(event) => cloud.setKeyText(field, event.target.value)}
           />
         </div>
@@ -572,8 +588,8 @@ function ByokKeyFile({
         <div id={errorId} role="alert" className="space-y-1.5 text-xs text-destructive">
           <p>
             <T>
-              <Var>{path}</Var> can be read by other users. Run chmod 600 <Var>{path}</Var>, then
-              try again.
+              <Var>{path}</Var> can be read by other users. Run{" "}
+              <Var>{chmodPrivateCommand(path)}</Var>, then try again.
             </T>
           </p>
           <Button
@@ -586,6 +602,26 @@ function ByokKeyFile({
           </Button>
           {fixError ? <p>{fixError}</p> : null}
         </div>
+      ) : problem === "unreadable" ? (
+        <p id={errorId} role="alert" className="text-xs text-destructive">
+          <T>
+            Couldn’t read <Var>{path}</Var> on this environment’s machine. Check the path and that
+            your account can read the file.
+          </T>
+        </p>
+      ) : problem === "check-failed" ? (
+        <div id={errorId} role="alert" className="flex items-center gap-2 text-xs text-destructive">
+          <p>
+            <T>Couldn’t check this key file.</T>
+          </p>
+          <Button variant="outline" size="xs" disabled={disabled} onClick={cloud.refreshKeyFiles}>
+            <T>Retry</T>
+          </Button>
+        </div>
+      ) : problem === "checking" ? (
+        <p id={errorId} role="status" className="text-xs text-muted-foreground">
+          <T>Checking this key file…</T>
+        </p>
       ) : null}
     </div>
   );

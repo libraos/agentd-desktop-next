@@ -29,7 +29,13 @@ export function AgentdInstallStatus({ status }: { status: AgentdStatus }) {
       ) : null}
       {repair !== null ? (
         <p role="status" className={repair.ok ? "text-muted-foreground" : "text-destructive"}>
-          {repair.ok ? (
+          {repair.kept !== undefined && repair.kept.length > 0 ? (
+            <T>
+              One of AgentD’s background services runs an AgentD that is missing or belongs to the
+              old AgentD Desktop, and another runs your own AgentD. This app left both alone: run
+              agentd install with the AgentD you use.
+            </T>
+          ) : repair.ok ? (
             <T>
               AgentD’s background services ran an AgentD that is missing or belongs to the old
               AgentD Desktop. They now run this app’s AgentD, so cloud results sync again.

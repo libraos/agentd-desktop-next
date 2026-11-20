@@ -234,6 +234,8 @@ export type AgentdInstallRecord = typeof AgentdInstallRecord.Type;
 export const AgentdServicesRepair = Schema.Struct({
   services: Schema.Array(Schema.Literals(["watchdog", "dash"])),
   ok: Schema.Boolean,
+  /** Services on another working agentd that moving the stale ones would also have moved. */
+  kept: Schema.optionalKey(Schema.Array(Schema.Literals(["watchdog", "dash"]))),
 });
 export type AgentdServicesRepair = typeof AgentdServicesRepair.Type;
 
@@ -539,6 +541,12 @@ export const AgentdCloudKeyFileCheck = Schema.Struct({
   openToOthers: Schema.Boolean,
 });
 export type AgentdCloudKeyFileCheck = typeof AgentdCloudKeyFileCheck.Type;
+
+/** The terminal command that makes a key file private, its path quoted for a POSIX shell. */
+export function chmodPrivateCommand(path: string): string {
+  const word = /^[\w@%+=:,./-]+$/.test(path) ? path : `'${path.replaceAll("'", `'\\''`)}'`;
+  return `chmod 600 ${word}`;
+}
 
 /** A finished cloud task's pushed branch, compared in a checkout whose origin is its repository. */
 export const AgentdCloudReviewInput = Schema.Struct({ id: AgentdHandoffId, cwd: AbsolutePath });

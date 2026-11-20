@@ -60,11 +60,15 @@ describe("cloudReason", () => {
     ],
     [
       "--anthropic-key-file /Users/me/my keys/anthropic.key can be read or written by others (mode 644)",
-      "/Users/me/my keys/anthropic.key can be read by other users. Run chmod 600 /Users/me/my keys/anthropic.key, then try again.",
+      "/Users/me/my keys/anthropic.key can be read by other users. Run chmod 600 '/Users/me/my keys/anthropic.key', then try again.",
     ],
     [
       "cloud.openai_key_file /srv/openai.key belongs to another user (uid 501)",
       "/srv/openai.key belongs to another user. Copy it to a file of your own, run chmod 600 on that copy, then choose it.",
+    ],
+    [
+      "cloud.openai_key_file /home/me/it's;rm.key can be read or written by others (mode 644)",
+      "/home/me/it's;rm.key can be read by other users. Run chmod 600 '/home/me/it'\\''s;rm.key', then try again.",
     ],
     ["the key file can be read or written by others", CLOUD_REASONS.privateFile],
   ] as const)("%s", (message, reason) => {
