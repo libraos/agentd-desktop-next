@@ -32,6 +32,7 @@ Merges upstream T3 Code `badd5f6d18` (2026-11-19, "fix(relay): parse Hermes stac
   - `install.md` and `CONTRIBUTING.md`: ours, because we removed what upstream reworded (AUR/Nix; the model rule, #87).
   - Marketing locales: upstream's new translations, renamed.
   - `.github/triage/PLAYBOOK.md` and `triagePrompt.ts`: upstream's GraphQL template flow with our `<owner/repo>` / `<repo-url>` placeholders, kept byte-identical.
+- **Upstream's AUR packaging removed.** `packaging/aur/` and `scripts/aur-release.test.ts` are deleted: the packages' release URLs point at upstream and we do not publish to the AUR.
 - **Deleted files upstream changed.** `.github/VOUCHED.td` (#13) and `docs/user/guest-links.md` (#87) stay deleted.
 - **Translation catalogs.** For web, mobile and desktop, both sides were merged, then regenerated with `gt generate`. Seven sentences new or renamed in this sync are translated in all nine locales (the hosted-relay scope and permission sentences, and mobile's "Update AgentD Next on {environment}" pair).
 
@@ -43,7 +44,7 @@ These lines merged without a conflict but named upstream, so they were renamed b
 - Server and CLI text in `cli/auth.ts`, `cli/runningServer.ts`, `preview/PreviewTunnel.ts`, `pullRequestWatch.ts`, `AntigravityInstallation.ts`, `provider-core` `compatibility.ts` and `failure.ts`, `provider-muse` and `provider-pi` text generation.
 - Hosted relay wording in `shared/authScopeOptions.ts`, `useCloudLinkController.ts`, `SavedEnvironmentRows.tsx`, and mobile `LocalPreviewRouteScreen.tsx`.
 - `t3_*` tool names in upstream's new tests (`core.test.ts`, `project/handlers.test.ts`, `RemoteDelegation.test.ts`, `AntigravityAdapterV2.test.ts`, `SelectionRestart.integration.test.ts`), the `project_update` hint in `project/handlers.ts`, and `mcp__agentd-next__` in `evals/mcp-tool-use/run.test.ts`.
-- `SECURITY.md` is new upstream: the trust model that upstream's `AGENTS.md` now points to. It is kept, but its first paragraph no longer sends reports to upstream's address (see open questions).
+- `SECURITY.md` is new upstream: the trust model that upstream's `AGENTS.md` now points to. It is kept, but its first paragraph names our own address for private reports instead of upstream's.
 
 Kept on purpose, as before: Codex's `originator: "T3 Code"` in fixtures, `t3_session`, `<t3_code_instructions>`, `t3_code_orchestration`, the legacy `t3-code` alias cases in `runtimeModel.test.ts` and `htmlRender.test.ts`, `T3 Code · …` peer labels in test data, and `pingdotgg/…` URLs in test data.
 
@@ -72,8 +73,6 @@ After the merge these pass: `vp run typecheck`, `pnpm lint`, `node scripts/i18n-
 
 ## Open questions
 
-- `SECURITY.md` now says to report vulnerabilities privately to this repository's maintainers. Should it name a real channel (an address, or GitHub private reporting on `libraos/agentd-next`)?
 - Should the "Linked items" panel hide linked issues while `productProfile.issues` is off?
-- `packaging/aur/` (upstream's AUR packages, with release URLs pointing at upstream) was already in our tree and took upstream's changes. We do not publish to AUR. Should it be deleted, like the other `.github` release paths in #13?
 - Marketing locales still say "t3.codes is the only official download site". This was already in our tree before the sync and needs its own change.
 - `remote-access.md` still says "a machine on an older T3 Code", which was also on our side before. The new upstream docs that merged without a conflict were not swept for the product name.

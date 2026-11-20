@@ -1,7 +1,8 @@
 # Security
 
-Report AgentD Next vulnerabilities privately to this repository's maintainers,
-not to upstream T3 Code.
+Report suspected AgentD Next vulnerabilities privately by email to
+contact@libraos.com. Do not open a public issue for a vulnerability or send AgentD
+Next vulnerability reports to upstream T3 Code.
 
 The rest of this file is for agents and maintainers auditing AgentD Next or triaging
 a report. It says who is trusted with what, which boundaries a real finding
