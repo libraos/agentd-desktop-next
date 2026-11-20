@@ -168,8 +168,8 @@ describe("AgentdBridge", () => {
       const recordPath = `${yield* fs.makeTempDirectoryScoped()}/agentd-install.json`;
       yield* fs.writeFileString(
         recordPath,
-        '{"action":"installed","path":"/home/les/.local/bin/agentd","directory":"/home/les/.local/bin",' +
-          '"onPath":false,"pathLine":"export PATH=\\"/home/les/.local/bin:$PATH\\"","skills":[]}\n',
+        '{"action":"installed","path":"~/.local/bin/agentd","directory":"~/.local/bin",' +
+          '"onPath":false,"pathLine":"export PATH=\\"~/.local/bin:$PATH\\"","skills":[]}\n',
       );
       const env = { AGENTD_BIN: process.execPath, AGENTD_DESKTOP_INSTALL_RECORD: recordPath };
       const bridge = yield* makeBridge(env, (input) => {
@@ -211,10 +211,10 @@ describe("AgentdBridge", () => {
         binary: process.execPath,
         install: {
           action: "installed",
-          path: "/home/les/.local/bin/agentd",
-          directory: "/home/les/.local/bin",
+          path: "~/.local/bin/agentd",
+          directory: "~/.local/bin",
           onPath: false,
-          pathLine: 'export PATH="/home/les/.local/bin:$PATH"',
+          pathLine: 'export PATH="~/.local/bin:$PATH"',
           skills: [],
         },
       });
@@ -305,8 +305,7 @@ describe("AgentdBridge", () => {
           }),
           1,
         );
-      const neverRegistered =
-        "agentd is not registered in /home/les/.config/opencode/opencode.json";
+      const neverRegistered = "agentd is not registered in ~/.config/opencode/opencode.json";
       let claudeFixed = false;
       let doctorReads = 0;
       const calls: string[] = [];
@@ -372,13 +371,12 @@ describe("AgentdBridge", () => {
                   {
                     id: "codex-mcp",
                     status: "fail",
-                    detail: "agentd is not registered in /home/les/.codex/config.toml",
+                    detail: "agentd is not registered in ~/.codex/config.toml",
                   },
                   {
                     id: "claude-hooks",
                     status: "fail",
-                    detail:
-                      "hooks in /home/les/.claude/settings.json run /gone/agentd, which is not there",
+                    detail: "hooks in ~/.claude/settings.json run /gone/agentd, which is not there",
                   },
                 ],
               }),
