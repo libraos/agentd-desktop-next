@@ -667,6 +667,35 @@ it.layer(
         assert.strictEqual(none.status, "warning");
         assert.strictEqual(none.message, NO_SERVED_MODELS_MESSAGE);
 
+        // The user replaced the Gateway agent's key variable: the key it sends now decides, and the
+        // stored list stands only until the Gateway first answers for that key.
+        const rotated = (served: ReadonlyArray<string> | "unanswered") =>
+          checkCodexProviderStatus(
+            decodeCodexSettings({ customModels: ["gpt-6-astra"], onlyCustomModels: true }),
+            () =>
+              Effect.succeed(
+                makeCodexProbeSnapshot({
+                  models: catalog,
+                  endpoint: "https://api.libraos.com",
+                  endpointKeyEnv: "LIBRAOS_API_KEY",
+                }),
+              ),
+            { LIBRAOS_API_KEY: "lk_key_b_123456" },
+            undefined,
+            ({ key, known }) =>
+              Effect.succeed(
+                key !== "lk_key_b_123456" ? [] : served === "unanswered" ? (known ?? []) : served,
+              ),
+          );
+        assert.deepStrictEqual(
+          (yield* rotated(["gpt-6-luna"])).models.map((model) => model.slug),
+          ["gpt-6-luna"],
+        );
+        assert.deepStrictEqual(
+          (yield* rotated("unanswered")).models.map((model) => model.slug),
+          ["gpt-6-astra"],
+        );
+
         // Codex's own config routes to the Gateway: the key it sends decides, not a stored list.
         const asked: Array<{ readonly endpoint: string; readonly key: string | undefined }> = [];
         const ownConfig = (environment: NodeJS.ProcessEnv, served: ReadonlyArray<string>) =>

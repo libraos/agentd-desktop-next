@@ -273,6 +273,8 @@ function onlyCustomProviderModels(
 export type EndpointKeyModels = (input: {
   readonly endpoint: string;
   readonly key: string | undefined;
+  /** The list that stands while the endpoint has not answered for this key yet. */
+  readonly known?: ReadonlyArray<CustomModelSetting>;
 }) => Effect.Effect<ReadonlyArray<CustomModelSetting> | undefined>;
 
 export const NO_SERVED_MODELS_MESSAGE =

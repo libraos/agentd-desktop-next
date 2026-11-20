@@ -37,6 +37,15 @@ it.effect("an agent's own Gateway key decides its models", () => {
       yield* keyModels({ endpoint: "https://api.libraos.com", key: "lk_other_key_9876543210" }),
       [],
     );
+    // A Gateway agent's stored list stands for a key the Gateway has not answered for yet.
+    assert.deepStrictEqual(
+      yield* keyModels({
+        endpoint: "https://api.libraos.com",
+        key: "lk_other_key_9876543210",
+        known: [{ slug: "gpt-6-luna" }],
+      }),
+      [{ slug: "gpt-6-luna" }],
+    );
 
     answer = Response.json({ error: { message: "This API key is not valid." } }, { status: 401 });
     assert.deepStrictEqual(yield* ask("https://api.libraos.com"), []);

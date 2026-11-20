@@ -9,9 +9,9 @@ Ours: `apps/server/src/gateway/gatewayKeyModels.ts` (one Gateway model request u
 ## Upstream files changed
 
 - `packages/contracts/src/settings.ts` — Hidden `onlyCustomModels` on Codex and Claude settings: the custom models replace the catalog.
-- `packages/provider-core/src/server/snapshotProbe.ts` — `providerModelsFromSettings` takes `onlyCustomModels`; `withNoServedModelsNotice` says why such a list is empty; the `EndpointKeyModels` hook type.
+- `packages/provider-core/src/server/snapshotProbe.ts` — `providerModelsFromSettings` takes `onlyCustomModels`; `withNoServedModelsNotice` says why such a list is empty; the `EndpointKeyModels` hook type, with the `known` list that stands before the endpoint answers.
 - `packages/provider-core/src/server/snapshotProbe.test.ts` — The replace rule and the empty-list notice.
-- `apps/server/src/provider/CodexProvider.ts` — Pass `onlyCustomModels` through and add the empty-list notice to the status check; read the route's `env_key` and, for an endpoint that serves only some models for that key, list only those.
+- `apps/server/src/provider/CodexProvider.ts` — Pass `onlyCustomModels` through and add the empty-list notice to the status check; read the route's `env_key` and, for an endpoint that serves only some models for that key, list only those; an in-app Gateway agent too, so a key replaced in its variables decides its list (the stored list stands until the Gateway answers for it).
 - `apps/server/src/provider/ClaudeProvider.ts` — The same for Claude, with the key from `ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_API_KEY`, also when Claude's initialization fails; no update notices when the key decides the list.
 - `apps/server/src/provider/CodexProvider.test.ts` — The `env_key` a LibraOS route names.
 - `apps/server/src/provider/codexModelCatalog.ts` — No "update Codex" notice for a Gateway agent: its key decides which models it lacks.

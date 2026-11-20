@@ -1156,9 +1156,14 @@ const probeCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(function*
   const endpointKey = snapshot.endpointKeyEnv
     ? resolvedEnvironment[snapshot.endpointKeyEnv]?.trim()
     : undefined;
+  // A Gateway agent's stored list is the connected key's; the key it sends now may be another.
   const endpointModels =
-    endpointKeyModels && snapshot.endpoint && codexSettings.onlyCustomModels !== true
-      ? yield* endpointKeyModels({ endpoint: snapshot.endpoint, key: endpointKey })
+    endpointKeyModels && snapshot.endpoint
+      ? yield* endpointKeyModels({
+          endpoint: snapshot.endpoint,
+          key: endpointKey,
+          ...(codexSettings.onlyCustomModels === true ? { known: codexSettings.customModels } : {}),
+        })
       : undefined;
   const modelSettings = endpointModels
     ? { customModels: endpointModels, onlyCustomModels: true }

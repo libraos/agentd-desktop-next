@@ -801,9 +801,16 @@ const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(functio
     resolvedEnvironment.ANTHROPIC_AUTH_TOKEN ??
     resolvedEnvironment.ANTHROPIC_API_KEY
   )?.trim();
+  // A Gateway agent's stored list is the connected key's; the key it sends now may be another.
   const endpointModels =
-    endpointKeyModels && endpoint && claudeSettings.onlyCustomModels !== true
-      ? yield* endpointKeyModels({ endpoint, key: endpointKey })
+    endpointKeyModels && endpoint
+      ? yield* endpointKeyModels({
+          endpoint,
+          key: endpointKey,
+          ...(claudeSettings.onlyCustomModels === true
+            ? { known: claudeSettings.customModels }
+            : {}),
+        })
       : undefined;
   // The Gateway key, not the CLI version, decides which models a Gateway agent lacks.
   const keyDecides = endpointModels !== undefined || claudeSettings.onlyCustomModels === true;

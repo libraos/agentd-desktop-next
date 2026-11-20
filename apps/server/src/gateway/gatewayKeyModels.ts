@@ -72,7 +72,7 @@ export const askGatewayModels = Effect.fn("LibraosGateway.askModels")(function* 
  * For an agent configured by hand to reach the Gateway: the models the key it sends allows, of
  * `family` with the family prefix dropped, or every model by its full id. Another endpoint leaves
  * the agent's catalog as it is. Without a key, the Gateway serves nothing; when it cannot answer,
- * the key's last list stands, or none if it never answered.
+ * the key's last list stands, or `known` (none by default) if it never answered.
  */
 export const makeGatewayKeyModels = Effect.fn("LibraosGateway.makeGatewayKeyModels")(function* (
   family?: "anthropic" | "openai",
@@ -80,7 +80,7 @@ export const makeGatewayKeyModels = Effect.fn("LibraosGateway.makeGatewayKeyMode
   const http = yield* HttpClient.HttpClient;
   // In memory only, beside the environment the key was read from; never written or logged.
   const lastAllowed = new Map<string, ReadonlyArray<CustomModelSetting>>();
-  const keyModels: EndpointKeyModels = ({ endpoint, key }) => {
+  const keyModels: EndpointKeyModels = ({ endpoint, key, known }) => {
     if (endpoint !== LIBRAOS_GATEWAY_ORIGIN) return Effect.undefined;
     if (!key) return Effect.succeed([]);
     return askGatewayModels(key).pipe(
@@ -100,7 +100,7 @@ export const makeGatewayKeyModels = Effect.fn("LibraosGateway.makeGatewayKeyMode
           lastAllowed.delete(key);
           return [];
         }
-        return lastAllowed.get(key) ?? [];
+        return lastAllowed.get(key) ?? known ?? [];
       }),
     );
   };
