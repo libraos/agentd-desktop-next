@@ -47,11 +47,19 @@ use it with, then paste a **LibraOS API key** and press **Connect**. The key sta
 on that environment; **Disconnect** removes it. Claude Code and Codex on the Gateway
 each list every model the key allows, other families too: a Gemini model under
 Claude Code shows with `gemini` beside its name. An agent's own models show twice,
-by catalog name and by full Gateway id (`openai/gpt-5.5`), with the same options;
-both run that model. Claude Code leaves out the few ids
+by catalog name and by full Gateway id (`openai/gpt-5.5`), with the same options,
+except that a full Claude id has no 1M context choice; both run that model,
+unless the key also lists the bare id (`gpt-5.5`) as a route of its own: the
+catalog-named row then runs that route. Claude Code leaves out the few ids
 it would run as another model, such as `best` or a name ending in `[1m]`; Codex
-still lists them. Other gateways show **Not available
-yet** on that screen; use a provider instance's environment variables for those
+still lists them.
+
+**Custom endpoint** connects any OpenAI- or Anthropic-compatible gateway: enter its
+**Endpoint URL**, pick the **Format** (OpenAI adds Codex and opencode agents,
+Anthropic adds Claude Code and opencode agents), add a **Key** if it needs one,
+and press **Add gateway**; if its model list can't be read, list the **Model ids**
+yourself. Other options on that screen show **Not available yet**;
+use a provider instance's environment variables for those
 ([Providers](./install.md#providers)).
 
 **Join a team** takes a **Team invitation link** from your team and enrolls this

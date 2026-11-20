@@ -83,6 +83,7 @@ it.layer(layerTest)("ClaudeDriver", (it) => {
             customModels: [
               { slug: "claude-opus-5-5" },
               { slug: "gemini/gemini-2.5-pro", name: "Gemini 2.5 Pro", subProvider: "gemini" },
+              { slug: "anthropic/claude-sonnet-4-6", subProvider: "anthropic" },
             ],
           },
         }).pipe(Effect.flatMap((instance) => instance.snapshot.getSnapshot));
@@ -94,8 +95,15 @@ it.layer(layerTest)("ClaudeDriver", (it) => {
       ).toEqual([
         ["claude-opus-5-5", false, undefined],
         ["gemini/gemini-2.5-pro", true, "gemini"],
+        ["anthropic/claude-sonnet-4-6", true, "anthropic"],
       ]);
       expect(gateway.models[0]?.capabilities?.optionDescriptors?.length).toBeGreaterThan(0);
+      // A full id shows the controls its turns compile with: effort, but not the suffix-only 1M.
+      const fullIdOptions = gateway.models[2]?.capabilities?.optionDescriptors?.map(
+        (descriptor) => descriptor.id,
+      );
+      expect(fullIdOptions).toContain("effort");
+      expect(fullIdOptions).not.toContain("contextWindow");
       const own = yield* snapshot("claudeAgent");
       expect(own.models.length).toBeGreaterThan(1);
     }).pipe(Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, noSpawn)),

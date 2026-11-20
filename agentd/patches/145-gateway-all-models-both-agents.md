@@ -9,13 +9,14 @@ Ours: `apps/server/src/gateway/gatewaySetup.ts` (`gatewayAgentModels` replaces `
 - `packages/contracts/src/model.ts` — A custom model entry may name its family (`subProvider`).
 - `packages/shared/src/model.ts` — `readCustomModelEntries` keeps that family; `familyCatalogSlug` names the catalog model a family-prefixed entry without options stands for.
 - `packages/provider-core/src/server/snapshotProbe.ts` — A custom model an endpoint-limited agent lists carries the family its entry names (never guessed from the slug), which the web picker, mobile and Settings already show, and a family-prefixed catalog id gets that catalog model's options.
-- `apps/server/src/provider/ClaudeModelCatalog.ts` — Claude's runtime catalog compiles such an id with the catalog model's options, as the picker shows them.
+- `apps/server/src/provider/ClaudeModelCatalog.ts` — Claude's runtime catalog compiles such an id with the catalog model's options, effort mapping and context window, leaving out an option that works by an id suffix (`[1m]`), which Claude Code would rewrite.
+- `apps/server/src/provider/ClaudeProvider.ts` — A Claude custom model shows the options its turns compile with, from that runtime catalog.
 - `packages/provider-core/src/server/snapshotProbe.test.ts` — That label, and none for a slash id without one.
 - `apps/web/src/components/settings/ProviderModelsSection.tsx` — A model row shows its `subProvider`.
-- `apps/server/src/provider/Drivers/ClaudeDriver.test.ts` — A Gateway Claude agent lists a `gemini/*` model, labelled, beside its own catalog model.
+- `apps/server/src/provider/Drivers/ClaudeDriver.test.ts` — A Gateway Claude agent lists a `gemini/*` model, labelled, beside its own catalog model, and a full `anthropic/*` id without the suffix-only 1M control.
 - `apps/server/src/provider/ProviderRegistry.test.ts` — A Gateway Codex agent lists a `gemini/*` model, labelled and without Codex's options, and an `openai/*` full id with them.
-- `apps/server/src/claudeModelOptions.test.ts` — A `gemini/*` or `Qwen/*` id reaches Claude Code unchanged; `anthropic/claude-opus-5-5` compiles with Claude Opus 5.5's options.
+- `apps/server/src/claudeModelOptions.test.ts` — A `gemini/*` or `Qwen/*` id reaches Claude Code unchanged; `anthropic/claude-opus-5-5` compiles with Claude Opus 5.5's options; `anthropic/claude-sonnet-4-6` runs Max as high, with no 1M control and a 200k window.
 - `apps/server/src/orchestration-v2/Adapters/ClaudeAdapterV2.test.ts` — A Gateway key's bare `opus` id reaches Claude Code as `opus`, like a user-added one.
 - `apps/server/src/orchestration-v2/Adapters/CodexAdapterV2.test.ts` — A `gemini/*` id reaches Codex's `turn/start` unchanged, with no reasoning effort.
 - `apps/server/src/provider/Drivers/ClaudeDriver.ts` — A turn reads the picked id against the key's discovered models too, so a hand-configured Gateway agent with no saved list sends a bare `opus` as `opus`.
-- `docs/user/welcome-page.md` — The Gateway agents list every model the key allows; Claude Code leaves out ids it would run as another model.
+- `docs/user/welcome-page.md` — The Gateway agents list every model the key allows; Claude Code leaves out ids it would run as another model; Custom endpoint adds an OpenAI- or Anthropic-compatible gateway.

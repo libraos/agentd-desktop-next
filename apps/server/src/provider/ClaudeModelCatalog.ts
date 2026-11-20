@@ -148,17 +148,19 @@ export function scopeClaudeModelCatalog(
   const builtInSlugs = new Set(builtInModels.map((entry) => entry.model.slug));
   const customCatalogModels: Array<ClaudeCatalogModel> = [];
   for (const entry of customEntries) {
-    const capabilities =
-      entry.capabilities ??
-      builtInModels.find((built) => built.model.slug === familyCatalogSlug(entry))?.model
-        .capabilities;
-    if (!capabilities || builtInSlugs.has(entry.slug)) continue;
+    if (builtInSlugs.has(entry.slug)) continue;
+    const family = builtInModels.find((built) => built.model.slug === familyCatalogSlug(entry));
+    if (!entry.capabilities && family) {
+      customCatalogModels.push(familyIdCatalogModel(family, entry.slug, entry.name));
+      continue;
+    }
+    if (!entry.capabilities) continue;
     customCatalogModels.push({
       model: {
         slug: entry.slug,
         name: entry.name,
         isCustom: true,
-        capabilities: withUltracodeToggle(capabilities),
+        capabilities: withUltracodeToggle(entry.capabilities),
       },
       runtime: {},
       compatibility: {},
@@ -166,6 +168,47 @@ export function scopeClaudeModelCatalog(
   }
 
   return { models: [...builtInModels, ...customCatalogModels] };
+}
+
+// A Gateway's family-prefixed id (`anthropic/claude-sonnet-4-6`) runs its catalog model's effort
+// mapping and context window, but is sent as listed: an option that works by a model suffix
+// (`[1m]`) is left out, since Claude Code would rewrite the suffixed id, and the context window
+// is that option's default.
+function familyIdCatalogModel(
+  family: ClaudeCatalogModel,
+  slug: string,
+  name: string,
+): ClaudeCatalogModel {
+  const { modelSuffixes, contextWindowTokens, ...runtime } = family.runtime;
+  const suffixed = new Set(Object.keys(modelSuffixes ?? {}));
+  const descriptors = family.model.capabilities?.optionDescriptors ?? [];
+  const contextWindow = getProviderOptionCurrentValue(
+    getProviderOptionDescriptors({ caps: { optionDescriptors: descriptors } }).find(
+      (descriptor) => descriptor.id === "contextWindow",
+    ),
+  );
+  const defaultTokens =
+    typeof contextWindow === "string" ? contextWindowTokens?.[contextWindow] : undefined;
+  return {
+    model: {
+      slug,
+      name,
+      isCustom: true,
+      capabilities: {
+        optionDescriptors: descriptors.filter((descriptor) => !suffixed.has(descriptor.id)),
+      },
+    },
+    runtime: {
+      ...runtime,
+      ...(!suffixed.has("contextWindow") && contextWindowTokens ? { contextWindowTokens } : {}),
+      ...(suffixed.has("contextWindow") &&
+      runtime.fixedContextWindowTokens === undefined &&
+      defaultTokens !== undefined
+        ? { fixedContextWindowTokens: defaultTokens }
+        : {}),
+    },
+    compatibility: {},
+  };
 }
 
 const CLAUDE_EFFORT_LABELS: Readonly<Record<string, string>> = {

@@ -5,6 +5,8 @@ import { ProviderInstanceId, type ModelSelection } from "@t3tools/contracts";
 import { compileClaudeModelSelection } from "./claudeModelOptions.ts";
 import {
   BUNDLED_CLAUDE_MODEL_CATALOG,
+  getClaudeCatalogModelCapabilities,
+  resolveClaudeCatalogContextWindowTokens,
   scopeClaudeModelCatalog,
 } from "./provider/ClaudeModelCatalog.ts";
 
@@ -126,6 +128,27 @@ describe("compileClaudeModelSelection", () => {
     } = compileClaudeModelSelection(selection("claude-opus-5-5", options), catalog);
     expect(compiled).toEqual(own);
     expect(compiled.settings).not.toHaveProperty("alwaysThinkingEnabled");
+  });
+
+  it("runs a Gateway full id with its catalog model's effort mapping and context window", () => {
+    const catalog = scopeClaudeModelCatalog(BUNDLED_CLAUDE_MODEL_CATALOG, [
+      { slug: "anthropic/claude-sonnet-4-6", subProvider: "anthropic" },
+    ]);
+    const full = selection("anthropic/claude-sonnet-4-6", [
+      { id: "effort", value: "max" },
+      { id: "contextWindow", value: "1m" },
+    ]);
+    // Claude Sonnet 4.6 runs Max as high, and 1M only by an id suffix Claude Code would rewrite.
+    expect(compileClaudeModelSelection(full, catalog)).toMatchObject({
+      apiModelId: "anthropic/claude-sonnet-4-6",
+      effort: "high",
+    });
+    expect(
+      getClaudeCatalogModelCapabilities(catalog, full.model).optionDescriptors?.map(
+        (descriptor) => descriptor.id,
+      ),
+    ).not.toContain("contextWindow");
+    expect(resolveClaudeCatalogContextWindowTokens(catalog, full)).toBe(200_000);
   });
 
   it("ignores thinking for catalog models without a thinking option", () => {
