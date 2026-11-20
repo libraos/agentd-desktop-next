@@ -199,6 +199,7 @@ import * as ServiceLauncherClient from "./cloud/serviceLauncherClient.ts";
 import * as AgentdBridge from "./agentd/AgentdBridge.ts";
 import * as AgentdTeamNode from "./agentd/AgentdTeamNode.ts";
 import * as AgentdInit from "./agentd/agentdInit.ts";
+import * as AgentdSkills from "./agentd/AgentdSkills.ts";
 import * as LibraosGateway from "./gateway/LibraosGateway.ts";
 import * as ProcessDiagnostics from "./diagnostics/ProcessDiagnostics.ts";
 import * as HostResources from "./resourceTelemetry/HostResources.ts";
@@ -334,6 +335,8 @@ const layerResourceDiagnostics = Layer.mergeAll(
 const layerAgentd = Layer.mergeAll(
   AgentdTeamNode.layer,
   AgentdInit.layer,
+  // Layers memoize by reference, so this is the same policy the settings layer reads.
+  AgentdSkills.layer.pipe(Layer.provide(ManagedPolicy.layer)),
   LibraosGateway.layer.pipe(
     Layer.provide(layerServerSettings),
     Layer.provide(ServerSecretStore.layer),

@@ -89,6 +89,9 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   [WS_METHODS.agentdSetTeamNode]: AuthEnvironmentMaintainScope,
   // Setting agentd up accepts its EULA and writes its services on this host.
   [WS_METHODS.agentdSetupStart]: AuthEnvironmentMaintainScope,
+  // Skills are written into, and removed from, the agents' Skills folders on this host.
+  [WS_METHODS.agentdSkillsInstall]: AuthEnvironmentMaintainScope,
+  [WS_METHODS.agentdSkillsRemove]: AuthEnvironmentMaintainScope,
   // The Gateway key goes to this host's agentd and its agents' sessions.
   [WS_METHODS.libraosGatewayConnect]: AuthEnvironmentMaintainScope,
   [WS_METHODS.libraosGatewayDisconnect]: AuthEnvironmentMaintainScope,

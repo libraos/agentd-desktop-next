@@ -251,6 +251,8 @@ so restart AgentD Next after that.
   but do not run, and cannot be turned back on. Users can still edit or delete them.
 - `browserCookieImport: false`: users cannot import cookies from another browser into AgentD Next's
   browser.
+- `skillCatalog: false`: the Skills catalogue is never fetched, and no Skill can be installed from
+  it. Skills already installed stay where they are.
 - `telemetry: false`: the server and desktop app send no [product usage data](./telemetry.md) or
   relay connection traces. A policy cannot turn them on.
 

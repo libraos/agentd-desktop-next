@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "skills": [
+    {
+      "name": "skill-creator",
+      "description": "Create new Skills, improve existing ones and measure how well they work.",
+      "repository": "anthropics/skills",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "path": "skills/skill-creator"
+    },
+    {
+      "name": "mcp-builder",
+      "description": "Build MCP servers that let agents use external services through well-designed tools.",
+      "repository": "anthropics/skills",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "path": "skills/mcp-builder"
+    },
+    {
+      "name": "webapp-testing",
+      "description": "Test local web applications with Playwright: check behaviour, take screenshots, read browser logs.",
+      "repository": "anthropics/skills",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "path": "skills/webapp-testing"
+    },
+    {
+      "name": "frontend-design",
+      "description": "Guidance for distinctive, intentional visual design when building or reshaping a UI.",
+      "repository": "anthropics/skills",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "path": "skills/frontend-design"
+    },
+    {
+      "name": "pdf",
+      "description": "Read, merge, split, fill, create and OCR PDF files.",
+      "repository": "anthropics/skills",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "path": "skills/pdf"
+    },
+    {
+      "name": "canvas-design",
+      "description": "Create posters and other static visual art as PNG or PDF.",
+      "repository": "anthropics/skills",
+      "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "path": "skills/canvas-design",
+      "notices": ["THIRD_PARTY_NOTICES.md"]
+    }
+  ]
+}
