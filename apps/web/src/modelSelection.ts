@@ -2,6 +2,7 @@ import {
   DEFAULT_TEXT_GENERATION_MODEL,
   DEFAULT_TEXT_GENERATION_MODEL_BY_PROVIDER,
   defaultInstanceIdForDriver,
+  isEndpointDecidedModel,
   isLibraosGatewayInstanceId,
   LIBRAOS_GATEWAY_ORIGIN,
   type ModelSelection,
@@ -249,6 +250,14 @@ export function getAppModelOptionsForInstance(
     : readInstanceCustomModels(settings, entry.instanceId, entry.driverKind);
   for (const custom of normalizeCustomModelEntries(customModels, builtInModelSlugs)) {
     if (seen.has(custom.slug)) {
+      continue;
+    }
+    // A sub-provider whose key decides its list (the Gateway in a mixed OpenCode account) left
+    // this saved model out of the server's list because the key does not allow it.
+    if (
+      isEndpointDecidedModel(entry.snapshot.auth, custom.slug) &&
+      !entry.models.some((model) => model.slug === custom.slug)
+    ) {
       continue;
     }
 

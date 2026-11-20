@@ -1344,9 +1344,20 @@ const openCode1Provider = (id: string, models: ReadonlyArray<string>) => ({
 const openCode1Project = "/work/project-with-config";
 const openCode1UnreadableProject = "/work/unreadable-project";
 const openCode1GatewayProject = "/work/project-on-gateway";
+// The Gateway beside an ordinary provider that lists no models.
+const openCode1MixedGatewayProject = "/work/project-on-gateway-and-uni";
 const openCode1Providers = (directory: string) => {
   const all = [
-    { ...openCode1Provider("opencode", ["big-pickle"]), options: {} },
+    ...(directory === openCode1MixedGatewayProject
+      ? [
+          { ...openCode1Provider("uni", []), options: {} },
+          {
+            ...openCode1Provider("libraos", ["openai/gpt-6-astra"]),
+            key: "lk_project_key",
+            options: { baseURL: "https://api.libraos.com/v1" },
+          },
+        ]
+      : [{ ...openCode1Provider("opencode", ["big-pickle"]), options: {} }]),
     ...(directory === openCode1Project
       ? [{ ...openCode1Provider("uni", ["medium-gpt"]), options: {} }]
       : []),
@@ -1437,6 +1448,27 @@ it.layer(Layer.mergeAll(layer, Layer.succeed(OpenCodeRuntime.OpenCodeRuntime, op
         assert.deepStrictEqual(asked, [
           { endpoint: "https://api.libraos.com", key: "lk_project_key" },
         ]);
+      }),
+    );
+
+    it.effect("a project's Gateway list the key emptied is final, not a cold start", () =>
+      Effect.gen(function* () {
+        let served: ReadonlyArray<{ readonly slug: string }> = [{ slug: "openai/gpt-6-astra" }];
+        const instance = yield* create({}, noHttp).pipe(
+          Effect.updateService(ProviderHost.ProviderHost, (host) => ({
+            ...host,
+            endpointKeyModels: () => Effect.sync(() => served),
+          })),
+        );
+        const before = yield* instance.snapshotForCwd!(openCode1MixedGatewayProject);
+        assert.deepStrictEqual(
+          before.models.map((model) => model.slug),
+          ["libraos/openai/gpt-6-astra"],
+        );
+        served = [];
+        const revoked = yield* instance.snapshotForCwd!(openCode1MixedGatewayProject);
+        assert.deepStrictEqual(revoked.models, []);
+        assert.strictEqual(revoked.workspaceModelsPending, undefined);
       }),
     );
   },

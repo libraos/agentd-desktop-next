@@ -14,6 +14,7 @@ import type {
   ServerConfig as T3ServerConfig,
 } from "@t3tools/contracts";
 import {
+  isEndpointDecidedModel,
   isLibraosGatewayInstanceId,
   LIBRAOS_GATEWAY_ORIGIN,
   isManagedDriverAllowed,
@@ -195,7 +196,8 @@ function isDroppedGatewayModel(
   return (
     provider !== undefined &&
     (isLibraosGatewayInstanceId(selection.instanceId) ||
-      provider.auth.endpoint === LIBRAOS_GATEWAY_ORIGIN) &&
+      provider.auth.endpoint === LIBRAOS_GATEWAY_ORIGIN ||
+      isEndpointDecidedModel(provider.auth, selection.model)) &&
     !provider.models.some((model) => model.slug === selection.model)
   );
 }

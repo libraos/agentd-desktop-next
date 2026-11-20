@@ -1505,6 +1505,39 @@ it.layer(
           instanceId,
         );
       }
+
+      // An OpenCode account mixing the Gateway with another provider: only the Gateway's
+      // sub-provider list is the key's, so its lost model stays lost while the other's stays.
+      const mixed = {
+        instanceId: ProviderInstanceId.make("opencode"),
+        driver: ProviderDriverKind.make("opencode"),
+        status: "ready",
+        enabled: true,
+        installed: true,
+        auth: { status: "authenticated", endpointProviders: ["libraos"] },
+        checkedAt: "2026-04-14T00:00:00.000Z",
+        version: "1.0.0",
+        models: [
+          {
+            slug: "libraos/openai/gpt-6-astra",
+            name: "Astra",
+            isCustom: false,
+            capabilities: null,
+          },
+          { slug: "openai/gpt-5.4", name: "GPT-5.4", isCustom: false, capabilities: null },
+        ],
+        slashCommands: [],
+        skills: [],
+      } as const satisfies ServerProvider;
+      assert.deepStrictEqual(
+        ProviderRegistry.mergeProviderSnapshot(mixed, {
+          ...mixed,
+          status: "warning",
+          auth: { status: "unknown", endpointProviders: ["libraos"] },
+          models: [],
+        }).models,
+        [mixed.models[1]],
+      );
     });
 
     it("does not bring back models on a sub-provider that is now unavailable", () => {

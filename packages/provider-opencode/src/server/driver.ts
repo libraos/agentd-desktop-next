@@ -574,9 +574,10 @@ export const OpenCodeDriver: ProviderDriver<
                 onNone: () => Effect.succeed(Option.none<ReadonlyArray<ServerProviderModel>>()),
                 onSome: (catalog) =>
                   openCodeEndpointModels(effectiveConfig, catalog, host.endpointKeyModels).pipe(
-                    Effect.map(({ models, fallbackModels, endpoint }) =>
+                    // A list an endpoint decided is final even when empty, not a cold start.
+                    Effect.map(({ models, fallbackModels, endpointProviders }) =>
                       Option.fromNullishOr(
-                        models ?? (endpoint === undefined ? undefined : fallbackModels),
+                        models ?? (endpointProviders.length === 0 ? undefined : fallbackModels),
                       ),
                     ),
                   ),

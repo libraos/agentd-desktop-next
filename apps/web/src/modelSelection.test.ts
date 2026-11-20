@@ -563,6 +563,38 @@ describe("instance-scoped model selection", () => {
     ]);
   });
 
+  it("leaves out a saved Gateway model the key denies in a mixed OpenCode account", () => {
+    const instanceId = ProviderInstanceId.make("opencode");
+    const driver = ProviderDriverKind.make("opencode");
+    const [entry] = deriveProviderInstanceEntries([
+      {
+        ...provider({ provider: driver, instanceId, models: ["openai/gpt-5.4"] }),
+        auth: { status: "authenticated", endpointProviders: ["libraos"] },
+        models: [
+          { slug: "openai/gpt-5.4", name: "GPT-5.4", isCustom: false, capabilities: null },
+          { slug: "libraos/openai/gpt-6-luna", name: "Luna", isCustom: true, capabilities: null },
+        ],
+      },
+    ]);
+    const settings: UnifiedSettings = {
+      ...DEFAULT_UNIFIED_SETTINGS,
+      providerInstances: {
+        [instanceId]: {
+          driver,
+          config: {
+            customModels: ["libraos/openai/gpt-6-astra", "libraos/openai/gpt-6-luna", "uni/x"],
+          },
+        },
+      },
+    };
+
+    expect(
+      getAppModelOptionsForInstance(settings, entry!)
+        .map((o) => o.slug)
+        .toSorted(),
+    ).toEqual(["libraos/openai/gpt-6-luna", "openai/gpt-5.4", "uni/x"]);
+  });
+
   it("falls back from an explicit non-OpenCode draft with a missing model", () => {
     const instanceId = ProviderInstanceId.make("codex");
     const driver = ProviderDriverKind.make("codex");

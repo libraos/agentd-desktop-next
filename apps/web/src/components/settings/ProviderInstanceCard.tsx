@@ -19,6 +19,7 @@ import * as Result from "effect/Result";
 import { Fragment, useState, type ReactElement, type ReactNode } from "react";
 import { T, useGT, useMessages, Var } from "gt-react";
 import {
+  isEndpointDecidedModel,
   isLibraosGatewayInstanceId,
   isProviderDriverKind,
   resolveProviderInstanceEnabled,
@@ -187,6 +188,7 @@ export function deriveProviderModelsForDisplay(input: {
   readonly liveModels: ReadonlyArray<ServerProviderModel> | undefined;
   readonly customModels: ReadonlyArray<CustomModelDefinition>;
   readonly gatewayListed?: boolean;
+  readonly liveAuth?: ServerProvider["auth"] | undefined;
 }): ReadonlyArray<ServerProviderModel> {
   if (input.gatewayListed && input.liveModels) return input.liveModels;
   const liveCustomModelsBySlug = new Map(
@@ -197,7 +199,11 @@ export function deriveProviderModelsForDisplay(input: {
   const serverModels = input.liveModels?.filter((model) => !model.isCustom) ?? [];
   const serverSlugs = new Set(serverModels.map((model) => model.slug));
   const customModels = input.customModels.flatMap((entry) =>
-    serverSlugs.has(entry.slug)
+    serverSlugs.has(entry.slug) ||
+    // The server left it out: the key its sub-provider sends to the Gateway does not allow it.
+    (input.liveAuth !== undefined &&
+      isEndpointDecidedModel(input.liveAuth, entry.slug) &&
+      !liveCustomModelsBySlug.has(entry.slug))
       ? []
       : [
           {
@@ -916,6 +922,7 @@ export function ProviderInstanceCard({
     liveModels: liveProvider?.models,
     customModels,
     gatewayListed: gatewayModels,
+    liveAuth: liveProvider?.auth,
   });
   const updateDisplayName = (value: string) => {
     const trimmed = value.trim();

@@ -8,6 +8,7 @@ Ours: `apps/server/src/gateway/gatewayKeyModels.ts` (one Gateway model request u
 
 ## Upstream files changed
 
+- `packages/contracts/src/server.ts` — Optional `auth.endpointProviders`: the sub-providers whose list the key sent to an endpoint decides, for an OpenCode account that mixes the Gateway with other providers.
 - `packages/contracts/src/settings.ts` — Hidden `onlyCustomModels` on Codex and Claude settings: the custom models replace the catalog.
 - `packages/provider-core/src/server/snapshotProbe.ts` — `providerModelsFromSettings` takes `onlyCustomModels`; `withNoServedModelsNotice` says why such a list is empty; the `EndpointKeyModels` hook type, with the `known` list that stands before the endpoint answers.
 - `packages/provider-core/src/server/snapshotProbe.test.ts` — The replace rule and the empty-list notice.
@@ -18,12 +19,12 @@ Ours: `apps/server/src/gateway/gatewayKeyModels.ts` (one Gateway model request u
 - `apps/server/src/provider/codexModelCatalog.test.ts` — That case.
 - `apps/server/src/provider/ProviderHostLive.ts` — Gives drivers the hand-configured Gateway check.
 - `packages/provider-core/src/server/ProviderHost.ts` — Optional `endpointKeyModels` for a driver that cannot import the server's Gateway code (opencode).
-- `packages/provider-opencode/src/server/driver.ts` — Passes the host's Gateway check to the status check and applies it to a project's own opencode.jsonc providers.
+- `packages/provider-opencode/src/server/driver.ts` — Passes the host's Gateway check to the status check and applies it to a project's own opencode.jsonc providers; a project list the Gateway decided is final even when empty.
 - `apps/server/src/provider/Drivers/ClaudeSkills.ts` — Claude's settings `env` also yields the two key variables, for that check.
 - `apps/server/src/provider/Drivers/CodexDriver.ts` — A Gateway instance without the flag (saved before #117) is limited anyway; the status check asks the Gateway for the key Codex sends.
 - `apps/server/src/provider/Drivers/ClaudeDriver.ts` — The same for Claude.
 - `apps/server/src/provider/Drivers/ClaudeDriver.test.ts` — New: the first snapshot of a pre-#117 Gateway Claude agent lists only its key's models.
-- `apps/server/src/provider/ProviderRegistry.ts` — A Gateway instance, or any instance whose endpoint is the Gateway, never keeps models missing from its new snapshot.
+- `apps/server/src/provider/ProviderRegistry.ts` — A Gateway instance, or any instance whose endpoint is the Gateway, never keeps models missing from its new snapshot; nor does a sub-provider in `endpointProviders`.
 - `apps/server/src/provider/ProviderRegistry.test.ts` — A Gateway Codex agent lists only the key's models, or none with a warning; a dropped Gateway model is not brought back (also for hand-configured opencode); the OpenCode 2 empty-list message; a hand-configured Gateway Claude whose initialization fails.
 - `apps/server/src/provider/providerStatusCache.ts` — The boot cache names a Gateway agent's models but adds none the settings lack.
 - `apps/server/src/provider/providerStatusCache.test.ts` — That case.
@@ -32,15 +33,15 @@ Ours: `apps/server/src/gateway/gatewayKeyModels.ts` (one Gateway model request u
 - `apps/server/src/serverSettings.ts` — `updateProviderInstances` rewrites instances from the stored ones within one write.
 - `apps/server/src/device/DeviceService.test.ts` — Its settings mock gains `updateProviderInstances`.
 - `apps/server/src/orchestration-v2/ThreadSettlementService.test.ts` — Its settings mock gains `updateProviderInstances`.
-- `packages/provider-opencode/src/server/status.ts` — An empty model list no longer reads as a discovery delay ("yet"); a key may allow none. A provider at the Gateway lists only the models its key allows, saved custom models on it included; when every connected provider is at the Gateway the status names it as the endpoint, so an empty list is final.
+- `packages/provider-opencode/src/server/status.ts` — An empty model list no longer reads as a discovery delay ("yet"); a key may allow none. A provider at the Gateway lists only the models its key allows, saved custom models on it included; when every connected provider is at the Gateway the status names it as the endpoint, so an empty list is final; in a mixed account it names the Gateway's providers in `endpointProviders`.
 - `packages/provider-opencode/src/server/status.test.ts` — The empty-list message; a hand-configured Gateway provider, its custom models, a mixed account and a revoked key.
 - `packages/provider-opencode/src/server/driver.test.ts` — A project's own Gateway provider lists only the key's models.
-- `apps/web/src/components/settings/ProviderInstanceCard.tsx` — No custom models on the Gateway agents or agents configured for the Gateway, which show the server's list; a line says where their models come from, and that a refresh without `providers:manage` does not ask the Gateway.
+- `apps/web/src/components/settings/ProviderInstanceCard.tsx` — A saved custom model on a sub-provider in `endpointProviders` shows only if the server lists it. No custom models on the Gateway agents or agents configured for the Gateway, which show the server's list; a line says where their models come from, and that a refresh without `providers:manage` does not ask the Gateway.
 - `apps/web/src/components/settings/ProviderInstanceCard.test.ts` — The server's list for an agent configured for the Gateway.
 - `apps/web/src/components/onboarding/ConnectEndpointScreen.tsx` — The Gateway's refusal, and what to do then instead of the usual guidance.
-- `apps/web/src/modelSelection.ts` — A Gateway instance, or one whose endpoint is the Gateway, lists exactly the server's models and keeps a selected model it no longer lists, marked unavailable, as runtime-catalog drivers already do.
+- `apps/web/src/modelSelection.ts` — A saved custom model on a sub-provider in `endpointProviders` shows only if the server lists it. A Gateway instance, or one whose endpoint is the Gateway, lists exactly the server's models and keeps a selected model it no longer lists, marked unavailable, as runtime-catalog drivers already do.
 - `apps/web/src/modelSelection.test.ts` — A Gateway Codex agent shows a dropped model as unavailable; the agent's own instance does not.
-- `apps/mobile/src/lib/modelOptions.ts` — A model the key dropped is unavailable on a Gateway agent or one whose endpoint is the Gateway, as on web.
+- `apps/mobile/src/lib/modelOptions.ts` — A model the key dropped is unavailable on a Gateway agent, one whose endpoint is the Gateway, or a sub-provider in `endpointProviders`, as on web.
 - `apps/mobile/src/lib/modelOptions.test.ts` — That case.
 - `apps/mobile/src/state/thread-task-permissions.test.ts` — Its provider fixtures gain the schema-required `auth` the Gateway check reads.
 - `apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx` — Refresh providers asks for `refreshModels`, as web does, so a provider manager's refresh asks the Gateway again.

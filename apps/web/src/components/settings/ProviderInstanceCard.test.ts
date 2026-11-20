@@ -49,6 +49,23 @@ describe("deriveProviderModelsForDisplay", () => {
       }).map((model) => model.slug),
     ).toEqual(["gpt-7-nova"]);
   });
+
+  it("leaves out a saved model the Gateway sub-provider's key denies in a mixed account", () => {
+    expect(
+      deriveProviderModelsForDisplay({
+        liveModels: [
+          { slug: "openai/gpt-5.4", name: "GPT-5.4", isCustom: false, capabilities: null },
+          { slug: "libraos/openai/gpt-6-luna", name: "Luna", isCustom: true, capabilities: null },
+        ],
+        customModels: [
+          { slug: "libraos/openai/gpt-6-astra", name: "Astra", capabilities: null },
+          { slug: "libraos/openai/gpt-6-luna", name: "Luna", capabilities: null },
+          { slug: "uni/x", name: "x", capabilities: null },
+        ],
+        liveAuth: { status: "authenticated", endpointProviders: ["libraos"] },
+      }).map((model) => model.slug),
+    ).toEqual(["openai/gpt-5.4", "libraos/openai/gpt-6-luna", "uni/x"]);
+  });
 });
 
 describe("provider environment helpers", () => {

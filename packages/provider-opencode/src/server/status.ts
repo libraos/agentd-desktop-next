@@ -454,6 +454,8 @@ export const openCodeEndpointModels = Effect.fn("OpencodeProviderStatus.openCode
         limits,
       ),
       endpoint: endpoints.size === 1 && endpoint !== undefined ? endpoint : undefined,
+      /** Providers whose list an endpoint decided: their models are final, even when none. */
+      endpointProviders: [...limits.keys()],
     };
   },
 );
@@ -1043,6 +1045,7 @@ export const checkOpenCodeProviderStatus = Effect.fn("checkOpenCodeProviderStatu
     models: catalogModels,
     fallbackModels,
     endpoint,
+    endpointProviders,
   } = yield* openCodeEndpointModels(openCodeSettings, inventoryExit.value, endpointKeyModels);
   const models = catalogModels ?? fallbackModels;
   const skills = openCodeSkillsToServerProviderSkills(inventoryExit.value.skills);
@@ -1067,6 +1070,7 @@ export const checkOpenCodeProviderStatus = Effect.fn("checkOpenCodeProviderStatu
           status: catalogReady ? "authenticated" : "unknown",
           type: "opencode",
           ...(endpoint === undefined ? {} : { endpoint }),
+          ...(endpointProviders.length === 0 ? {} : { endpointProviders }),
         },
         message:
           endpoint !== undefined && !catalogReady

@@ -16,6 +16,15 @@ export const LIBRAOS_GATEWAY_INSTANCE_IDS = {
 export const isLibraosGatewayInstanceId = (instanceId: string): boolean =>
   Object.values(LIBRAOS_GATEWAY_INSTANCE_IDS).some((id) => id === instanceId);
 
+/** The model is one of a sub-provider whose list the key it sends to its endpoint decides. */
+export const isEndpointDecidedModel = (
+  auth: { readonly endpointProviders?: ReadonlyArray<string> | undefined },
+  slug: string,
+): boolean => {
+  const separator = slug.indexOf("/");
+  return separator > 0 && (auth.endpointProviders?.includes(slug.slice(0, separator)) ?? false);
+};
+
 export const LibraosGatewayModel = Schema.Struct({
   /** The Gateway's id, such as `anthropic/claude-opus-5-5`. */
   id: Schema.String,

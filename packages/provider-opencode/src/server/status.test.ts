@@ -704,8 +704,10 @@ it.layer(layerTest)("checkOpenCodeProviderStatus", (it) => {
         NodeAssert.deepEqual(asked, [
           { endpoint: "https://api.libraos.com", key: "lk_opencode_key_123" },
         ]);
-        // A mixed account is not the Gateway's alone, so its list is not marked as the Gateway's.
+        // A mixed account is not the Gateway's alone, so its list is not marked as the Gateway's;
+        // the Gateway's sub-provider is, so clients and the registry treat its list as final.
         NodeAssert.equal(status.auth.endpoint, undefined);
+        NodeAssert.deepEqual(status.auth.endpointProviders, ["libraos"]);
 
         // A saved custom slug on the Gateway provider needs the key too; others are the user's.
         const withCustom = yield* checkProvider(

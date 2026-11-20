@@ -1,6 +1,7 @@
 import {
   defaultInstanceIdForDriver,
   isProviderWorkspaceSnapshotCurrent,
+  isEndpointDecidedModel,
   isLibraosGatewayInstanceId,
   LIBRAOS_GATEWAY_ORIGIN,
   isProviderWorkspaceSnapshotPending,
@@ -281,6 +282,8 @@ const mergeProviderModels = (
   const retainablePreviousModels = previousModels.filter(
     (model) =>
       !model.isCustom &&
+      // An endpoint's key decided this sub-provider's list, so a model missing from it was taken.
+      !isEndpointDecidedModel(provider.auth, model.slug) &&
       !updateRequiredSlugs.has(model.slug) &&
       !unavailableSubProviders.has(model.subProvider ?? ""),
   );

@@ -470,6 +470,27 @@ describe("mobile model options", () => {
     expect(
       isModelSelectionUnavailable(ownConfig, { instanceId: codex, model: "gpt-6-astra" }, null),
     ).toBe(true);
+
+    // An OpenCode account with the Gateway beside another provider: only the Gateway's models.
+    const opencode = ProviderInstanceId.make("opencode");
+    const mixed = {
+      providers: [
+        {
+          ...config.providers[0],
+          instanceId: opencode,
+          driver: "opencode",
+          displayName: "OpenCode",
+          auth: { status: "authenticated", endpointProviders: ["libraos"] },
+          models: [
+            { slug: "openai/gpt-5.4", name: "GPT-5.4", isCustom: false, capabilities: null },
+          ],
+        },
+      ],
+    } as unknown as ServerConfig;
+    const unavailable = (model: string) =>
+      isModelSelectionUnavailable(mixed, { instanceId: opencode, model }, null);
+    expect(unavailable("libraos/openai/gpt-6-astra")).toBe(true);
+    expect(unavailable("openai/gpt-5.4")).toBe(false);
   });
 
   describe("Antigravity selections", () => {
