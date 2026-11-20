@@ -110,17 +110,32 @@ it.effect("typed ids save without asking", () => {
     const result = yield* gateways.add({
       url: URL,
       format: "anthropic",
+      key: "k1",
       models: ["a", " b ", "", "a"],
     });
     assert.strictEqual(result.kind, "added");
     if (result.kind !== "added") return;
-    assert.deepInclude(result.gateway, { hasKey: false, modelCount: 2 });
+    assert.deepInclude(result.gateway, { hasKey: true, modelCount: 2 });
     assert.strictEqual(asked.length, 0);
     const settings = yield* (yield* ServerSettingsService).getSettings;
     assert.deepStrictEqual(instance(settings, `gw-${result.gateway.id}-claude`)?.config, {
       customModels: [{ slug: "a" }, { slug: "b" }],
       onlyCustomModels: true,
     });
+  }).pipe(Effect.provide(layer));
+});
+
+it.effect("an anthropic gateway without a key is refused and nothing is saved", () => {
+  const { asked, layer } = setup(served);
+  return Effect.gen(function* () {
+    const gateways = yield* CustomGateway.CustomGateway;
+    const error = yield* Effect.flip(
+      gateways.add({ url: URL, format: "anthropic", key: "  ", models: ["a"] }),
+    );
+    assert.include(error.message, "needs a key");
+    assert.strictEqual(asked.length, 0);
+    const settings = yield* (yield* ServerSettingsService).getSettings;
+    assert.deepStrictEqual(settings.customGateways, []);
   }).pipe(Effect.provide(layer));
 });
 

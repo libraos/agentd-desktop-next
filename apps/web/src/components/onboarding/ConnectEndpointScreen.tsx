@@ -56,12 +56,7 @@ export function ConnectEndpointScreen({
   const gt = useGT();
   const m = useMessages();
   const id = useId();
-  const customEndpointDetail =
-    agent === "Claude Code"
-      ? gt("Requires Anthropic Messages or a compatible Bedrock or Vertex endpoint.")
-      : agent === "Codex"
-        ? gt("Requires the OpenAI Responses API.")
-        : gt("Supports Chat Completions, Responses, or Messages, depending on the provider.");
+  const customEndpointDetail = gt("A gateway in OpenAI or Anthropic format.");
 
   return (
     <div className="mx-auto w-full max-w-xl space-y-5">
@@ -155,7 +150,10 @@ export function ConnectEndpointScreen({
             <T>Connect to an environment first.</T>
           </p>
         ) : (
-          <CustomGatewayForm environmentId={gatewayEnvironment} />
+          <CustomGatewayForm
+            environmentId={gatewayEnvironment}
+            defaultFormat={agent === "Claude Code" ? "anthropic" : "openai"}
+          />
         )
       ) : null}
       {gatewayEnvironment === null ? null : (

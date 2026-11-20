@@ -15,13 +15,19 @@ const formats: ReadonlyArray<{ readonly id: CustomGatewayFormat; readonly label:
 ];
 
 /** Add a gateway by URL: its agents appear in the model picker under the name it is given. */
-export function CustomGatewayForm({ environmentId }: { readonly environmentId: EnvironmentId }) {
+export function CustomGatewayForm({
+  environmentId,
+  defaultFormat = "openai",
+}: {
+  readonly environmentId: EnvironmentId;
+  readonly defaultFormat?: CustomGatewayFormat;
+}) {
   const gt = useGT();
   const m = useMessages();
   const id = useId();
   const { canChange, add } = useCustomGatewayCommands(environmentId);
   const [url, setUrl] = useState("");
-  const [format, setFormat] = useState<CustomGatewayFormat>("openai");
+  const [format, setFormat] = useState<CustomGatewayFormat>(defaultFormat);
   const [key, setKey] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30,6 +36,7 @@ export function CustomGatewayForm({ environmentId }: { readonly environmentId: E
   const [modelsProblem, setModelsProblem] = useState<string | null>(null);
   const [models, setModels] = useState("");
   const disabled = busy || !canChange;
+  const keyRequired = format === "anthropic";
 
   const save = async (typed: ReadonlyArray<string> | undefined) => {
     setBusy(true);
@@ -130,7 +137,7 @@ export function CustomGatewayForm({ environmentId }: { readonly environmentId: E
       </fieldset>
       <div className="space-y-1">
         <label htmlFor={`${id}-key`} className="block font-medium text-foreground">
-          <T>Key (optional)</T>
+          {keyRequired ? <T>Key</T> : <T>Key (optional)</T>}
         </label>
         <Input
           id={`${id}-key`}
@@ -144,6 +151,7 @@ export function CustomGatewayForm({ environmentId }: { readonly environmentId: E
           data-lpignore="true"
           data-bwignore
           value={key}
+          required={keyRequired}
           disabled={disabled}
           onChange={(event) => setKey(event.currentTarget.value)}
         />
@@ -172,7 +180,11 @@ export function CustomGatewayForm({ environmentId }: { readonly environmentId: E
         </p>
       )}
       {modelsProblem === null ? (
-        <Button type="submit" size="sm" disabled={disabled || url.trim() === ""}>
+        <Button
+          type="submit"
+          size="sm"
+          disabled={disabled || url.trim() === "" || (keyRequired && key.trim() === "")}
+        >
           {busy ? <T>Checking…</T> : <T>Add gateway</T>}
         </Button>
       ) : (

@@ -126,6 +126,10 @@ export const make = Effect.fn("CustomGateway.make")(function* () {
           const url = readGatewayUrl(input.url);
           if (url === null) return yield* fail("Enter the gateway's http:// or https:// URL.");
           const key = input.key?.trim() || null;
+          // Without one, Claude Code would send the person's own Claude login to this gateway.
+          if (input.format === "anthropic" && key === null) {
+            return yield* fail("An Anthropic-format gateway needs a key.");
+          }
           const existing = (yield* readSettings).customGateways;
           let id = newCustomGatewayId();
           while (existing.some((entry) => entry.id === id)) id = newCustomGatewayId();
