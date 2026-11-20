@@ -15,15 +15,20 @@ import * as Effect from "effect/Effect";
 // only the provider's name leaves this module. agentd-core#978 adds this check to agentd itself;
 // once the bundled agentd answers it, its answer replaces this one.
 
-// A UTF-8 byte order mark and "sk-ant-": enough to tell the two prefixes apart, and no more.
-const PREFIX_BYTES = 10;
+// agentd trims leading whitespace before the key, so a little of it is read past; "sk-ant-" after
+// that is enough to tell the two prefixes apart.
+const PREFIX_BYTES = 48;
 const OPEN_TO_OTHERS = 0o077;
+const EXECUTABLE = 0o111;
+// A provider key, a Claude setup-token or Codex's auth.json is a few KiB at most.
+const MAX_CREDENTIAL_BYTES = 64 * 1024;
 const PRIVATE_MODE = 0o600;
 // Non-blocking, so a named pipe at the path cannot hold the open waiting for a writer.
 const OPEN_FLAGS = NodeFS.constants.O_RDONLY | (NodeFS.constants.O_NONBLOCK ?? 0);
 
 export function keyFileProvider(prefix: string): AgentdCloudKeyFileCheck["provider"] {
-  const text = prefix.replace(/^﻿/, "");
+  // trimStart drops a byte order mark too.
+  const text = prefix.trimStart();
   if (text.startsWith("sk-ant-")) return "anthropic";
   return text.startsWith("sk-") ? "openai" : null;
 }
@@ -56,33 +61,51 @@ export const makeCloudKeyFile = (deps: {
   const checkModes = platform !== "win32";
 
   // Everything happens on one descriptor: what is checked is what is read and what is changed.
+  // A repair that can't finish fails, so the refusal it was asked to fix stays on screen.
   const inspect = (path: string, makePrivate: boolean) =>
     Effect.acquireUseRelease(
       orNull(() => NodeFSP.open(path, OPEN_FLAGS)),
       (file) =>
         Effect.gen(function* () {
-          if (file === null) return unreadable;
+          if (file === null) {
+            if (makePrivate) return yield* notChanged(path, "it couldn’t be opened.");
+            return unreadable;
+          }
           const info = yield* orNull(() => file.stat());
           if (info === null || !info.isFile()) {
             if (makePrivate) return yield* notChanged(path, "it is not a regular file.");
             return unreadable;
           }
+          const bytes = new Uint8Array(PREFIX_BYTES);
+          const read = yield* orNull(() => file.read(bytes, 0, PREFIX_BYTES, 0));
+          if (read === null) {
+            if (makePrivate) return yield* notChanged(path, "it couldn’t be read.");
+            return unreadable;
+          }
+          const prefix = new TextDecoder().decode(bytes.subarray(0, read.bytesRead));
+          const provider = keyFileProvider(prefix);
           let mode = info.mode;
           if (makePrivate && checkModes && (mode & OPEN_TO_OTHERS) !== 0) {
             if (uid !== undefined && info.uid !== uid)
               return yield* notChanged(path, "it belongs to another user.");
+            // Only a file that looks like a credential: never a program, a document or a config.
+            const credential =
+              (mode & EXECUTABLE) === 0 &&
+              info.size <= MAX_CREDENTIAL_BYTES &&
+              (provider !== null || /^\s*\{/.test(prefix));
+            if (!credential)
+              return yield* notChanged(
+                path,
+                "it doesn’t look like a key or token file. Run chmod 600 on it in a terminal if it is one.",
+              );
             yield* Effect.tryPromise({
               try: () => file.chmod(PRIVATE_MODE),
               catch: () => notChanged(path, "run chmod 600 on it in a terminal, then try again."),
             });
             mode = PRIVATE_MODE;
           }
-          const bytes = new Uint8Array(PREFIX_BYTES);
-          const read = yield* orNull(() => file.read(bytes, 0, PREFIX_BYTES, 0));
-          if (read === null) return unreadable;
-          const prefix = new TextDecoder().decode(bytes.subarray(0, read.bytesRead));
           return {
-            provider: keyFileProvider(prefix),
+            provider,
             readable: true,
             openToOthers: checkModes && (mode & OPEN_TO_OTHERS) !== 0,
           } satisfies AgentdCloudKeyFileCheck;

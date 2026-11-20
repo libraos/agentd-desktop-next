@@ -117,7 +117,7 @@ export function WorkersSettings() {
       <SettingsSection id="workers-cloud" title={gt("Cloud Workers")}>
         <SettingsRow
           id="workers-cloud-setup"
-          title={gt("Cloud Workers")}
+          title={gt("LibraOS account")}
           description={
             linked === true ? (
               <T>Your LibraOS account is linked. Its credit and key are on the AgentD page.</T>

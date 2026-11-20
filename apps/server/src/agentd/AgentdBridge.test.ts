@@ -1053,7 +1053,7 @@ describe("AgentdBridge", () => {
   it.effect("keeps a cloud reservation unless agentd positively refused the offer", () =>
     Effect.gen(function* () {
       const runs: Array<ReadonlyArray<string>> = [];
-      const ledger = cloudLedger();
+      let ledger = cloudLedger();
       let offerSays = "error: runner unavailable";
       let brokenFind = false;
       let breakLedgerOnOffer = false;
@@ -1110,9 +1110,24 @@ describe("AgentdBridge", () => {
         "There is not enough LibraOS credit for this dollar cap.",
       );
       expect(new Set(keys()).size).toBe(1);
-      // That refusal released it: the next Start is a new submission.
+      // A refused retry says nothing of the earlier attempt: the next Start still reuses its key.
+      yield* Effect.flip(bridge.startTask(input));
+      expect(new Set(keys()).size).toBe(1);
+
+      // A refusal of a reservation this Start made itself releases it.
+      ledger = cloudLedger();
+      runs.length = 0;
+      yield* Effect.flip(bridge.startTask(input));
       yield* Effect.flip(bridge.startTask(input));
       expect(new Set(keys()).size).toBe(2);
+      // A fresh reservation whose session join fails is kept: the next Start reuses it.
+      brokenJoin = true;
+      yield* Effect.flip(bridge.startTask(input));
+      brokenJoin = false;
+      yield* Effect.flip(bridge.startTask(input));
+      yield* Effect.flip(bridge.startTask(input));
+      expect(keys()).toHaveLength(4);
+      expect(new Set(keys()).size).toBe(3);
     }),
   );
 
@@ -1131,7 +1146,15 @@ describe("AgentdBridge", () => {
           case "help cloud":
             return Effect.succeed(output("usage: agentd cloud sync | balance"));
           case "remote get-url":
-            return Effect.succeed(output(`${origin}\n`));
+            return origin === "timeout"
+              ? Effect.fail(
+                  new ProcessRunner.ProcessTimeoutError({
+                    command: "git",
+                    argumentCount: 4,
+                    timeoutMs: 5000,
+                  }),
+                )
+              : Effect.succeed(output(`${origin}\n`));
           case "session join":
             return Effect.succeed(output("{}"));
           case "handoff offer":
@@ -1164,6 +1187,12 @@ describe("AgentdBridge", () => {
           project,
         );
       }
+      // git not answering is not "no GitHub origin": the app must retry, never run it here.
+      origin = "timeout";
+      expect(yield* bridge.cloudSetup({ cwd, includeBalance: false })).toMatchObject({
+        project: null,
+        checkoutUnknown: true,
+      });
 
       origin = "git@github.com:acme/app.git";
       const path = yield* Effect.provide(Path.Path, NodeServices.layer);

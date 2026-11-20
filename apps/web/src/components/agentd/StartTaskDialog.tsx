@@ -470,7 +470,7 @@ function StartTaskDialog({
                   </Button>
                 </div>
               ) : null}
-              {cloud.enabled && privateFile !== null ? (
+              {cloud.enabled && cloud.canFixKeyFile && privateFile !== null ? (
                 <Button
                   type="button"
                   variant="outline"

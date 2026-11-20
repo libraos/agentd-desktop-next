@@ -236,6 +236,8 @@ export const AgentdServicesRepair = Schema.Struct({
   ok: Schema.Boolean,
   /** Services on another working agentd that moving the stale ones would also have moved. */
   kept: Schema.optionalKey(Schema.Array(Schema.Literals(["watchdog", "dash"]))),
+  /** What agentd install asked the user to run first, before it would enable the services. */
+  command: Schema.optionalKey(Schema.String),
 });
 export type AgentdServicesRepair = typeof AgentdServicesRepair.Type;
 
@@ -504,6 +506,8 @@ export const AgentdCloudSetup = Schema.Struct({
   supported: Schema.Boolean,
   /** agentd did not answer the cloud probe; whether it has Cloud Workers is unknown. */
   unreachable: Schema.optionalKey(Schema.Boolean),
+  /** git didn't answer for the checkout's origin (timeout, spawn error): retry, don't run here. */
+  checkoutUnknown: Schema.optionalKey(Schema.Boolean),
   /** agentd has `cloud setup`, so the app can install the account key. */
   canConfigure: Schema.optionalKey(Schema.Boolean),
   /** The Job API `cloud setup` sends the account key to; null when agentd didn't say. */

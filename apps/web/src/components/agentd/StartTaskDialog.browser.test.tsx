@@ -57,6 +57,7 @@ vi.mock("~/lib/agentdState", async () => {
     agentdEnvironment: {
       startTask: { permissionAtom: () => allowed },
       cloudConfigure: { permissionAtom: () => allowed, label: "cloud-configure" },
+      cloudKeyFileFix: { permissionAtom: () => allowed },
     },
     useAgentdStatus: () => ({ data: { defaultWorker: state.worker } }),
     useAgentdTaskDefaults: () => ({ data: state.defaults }),
@@ -977,46 +978,59 @@ it("keeps each model access mode's key paths to itself and submits only the show
   });
 });
 
-it("keeps a cloud Start in the cloud while agentd doesn't answer the probe, until turned off", async () => {
-  setup("feature/export", false, { agentdRunTasksOn: "cloud" });
-  state.cloudError = new Error("agentd timed out");
-  state.start.mockResolvedValue(
-    AsyncResult.success({ id: "hof-123abc", started: true, note: null }),
-  );
-  await using _screen = await render(
-    <AppAtomRegistryProvider>
-      <ToastProvider>
-        <TaskDraftCard threadRef={threadRef} fields={drafted} />
-        <StartTaskDialogHost />
-      </ToastProvider>
-    </AppAtomRegistryProvider>,
-  );
-  const reason =
-    "Couldn’t reach AgentD to check Cloud Workers. Retry, or turn off Run in the cloud to run this task here.";
-  const card = page.getByRole("region", { name: "Drafted task" });
-  await expect.element(card.getByText(reason)).toBeVisible();
-  await expect.element(card.getByRole("button", { name: "Start" })).toBeDisabled();
-  await card.getByRole("button", { name: "Retry" }).click();
-  expect(state.cloudRefresh).toHaveBeenCalled();
+it.each([
+  {
+    unanswered: "agentd",
+    reason:
+      "Couldn’t reach AgentD to check Cloud Workers. Retry, or turn off Run in the cloud to run this task here.",
+  },
+  {
+    unanswered: "git",
+    reason:
+      "Couldn’t read this checkout’s origin for Cloud Workers. Retry, or turn off Run in the cloud to run this task here.",
+  },
+])(
+  "keeps a cloud Start in the cloud while $unanswered doesn't answer the probe, until turned off",
+  async ({ unanswered, reason }) => {
+    setup("feature/export", false, { agentdRunTasksOn: "cloud" });
+    if (unanswered === "agentd") state.cloudError = new Error("agentd timed out");
+    else state.cloud = cloudReady({ project: null, checkoutUnknown: true });
+    state.start.mockResolvedValue(
+      AsyncResult.success({ id: "hof-123abc", started: true, note: null }),
+    );
+    await using _screen = await render(
+      <AppAtomRegistryProvider>
+        <ToastProvider>
+          <TaskDraftCard threadRef={threadRef} fields={drafted} />
+          <StartTaskDialogHost />
+        </ToastProvider>
+      </AppAtomRegistryProvider>,
+    );
+    const card = page.getByRole("region", { name: "Drafted task" });
+    await expect.element(card.getByText(reason)).toBeVisible();
+    await expect.element(card.getByRole("button", { name: "Start" })).toBeDisabled();
+    await card.getByRole("button", { name: "Retry" }).click();
+    expect(state.cloudRefresh).toHaveBeenCalled();
 
-  openStartTaskDialog(threadRef, drafted);
-  const dialog = page.getByRole("dialog");
-  const start = dialog.getByRole("button", { name: "Start", exact: true });
-  const option = dialog.getByRole("checkbox", { name: "Run in the cloud" });
-  await expect.element(option).toBeChecked();
-  await expect.element(start).toBeDisabled();
-  await expect.element(dialog.getByLabelText("Worker")).not.toBeInTheDocument();
-  await dialog.getByRole("button", { name: "Retry" }).click();
-  // Only turning cloud off runs the task here.
-  await option.click();
-  await expect.element(start).toBeEnabled();
-  await start.click();
-  await expect.element(page.getByText("Started task hof-123abc.")).toBeVisible();
-  expect(state.start).toHaveBeenCalledExactlyOnceWith({
-    environmentId: thread.environmentId,
-    input: expect.objectContaining({ worker: "opencode" }),
-  });
-});
+    openStartTaskDialog(threadRef, drafted);
+    const dialog = page.getByRole("dialog");
+    const start = dialog.getByRole("button", { name: "Start", exact: true });
+    const option = dialog.getByRole("checkbox", { name: "Run in the cloud" });
+    await expect.element(option).toBeChecked();
+    await expect.element(start).toBeDisabled();
+    await expect.element(dialog.getByLabelText("Worker")).not.toBeInTheDocument();
+    await dialog.getByRole("button", { name: "Retry" }).click();
+    // Only turning cloud off runs the task here.
+    await option.click();
+    await expect.element(start).toBeEnabled();
+    await start.click();
+    await expect.element(page.getByText("Started task hof-123abc.")).toBeVisible();
+    expect(state.start).toHaveBeenCalledExactlyOnceWith({
+      environmentId: thread.environmentId,
+      input: expect.objectContaining({ worker: "opencode" }),
+    });
+  },
+);
 
 it("offers Retry on the AgentD page when agentd didn't answer the cloud probe", async () => {
   setup("feature/export", false);

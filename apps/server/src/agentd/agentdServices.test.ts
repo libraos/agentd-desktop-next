@@ -141,6 +141,30 @@ describe("agentd services", () => {
         ["systemctl", "--user", "enable", "--now", "agentd-watchdog.timer"],
       ]);
 
+      // agentd withholds the enable step while a legacy unit is enabled: not repaired, and the
+      // step it asked for first is passed on.
+      runs.length = 0;
+      const legacyRun: ProcessRunner.ProcessRunner["Service"]["run"] = (input) => {
+        runs.push([input.command, ...input.args]);
+        return Effect.succeed(
+          output(
+            input.args[0] === "install"
+              ? `${units}: 1 unit(s) changed [enabled:agentops-watchdog.timer]\n` +
+                  "legacy units still enabled; first: systemctl --user disable --now agentops-watchdog.timer, then run agentd install again\n"
+              : "",
+          ),
+        );
+      };
+      expect(yield* repairServices({ ...deps, platform: "linux", run: legacyRun })).toEqual({
+        services: ["watchdog"],
+        ok: false,
+        command: "systemctl --user disable --now agentops-watchdog.timer",
+      });
+      expect(runs).toEqual([
+        [bundled, "install"],
+        ["systemctl", "--user", "daemon-reload"],
+      ]);
+
       // Nothing stale: nothing runs.
       runs.length = 0;
       yield* fs.writeFileString(

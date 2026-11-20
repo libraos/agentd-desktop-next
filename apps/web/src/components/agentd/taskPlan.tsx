@@ -147,9 +147,13 @@ export function useTaskPlan({
   const problem = (() => {
     // Cloud was asked for: local checks such as the branch gate say nothing about it.
     if (cloud.waiting && cloud.unreachable)
-      return gt(
-        "Couldn’t reach AgentD to check Cloud Workers. Retry, or turn off Run in the cloud to run this task here.",
-      );
+      return cloud.checkoutUnknown
+        ? gt(
+            "Couldn’t read this checkout’s origin for Cloud Workers. Retry, or turn off Run in the cloud to run this task here.",
+          )
+        : gt(
+            "Couldn’t reach AgentD to check Cloud Workers. Retry, or turn off Run in the cloud to run this task here.",
+          );
     switch (problemKind) {
       case "no-directory":
         return gt("This session has no project working directory.");

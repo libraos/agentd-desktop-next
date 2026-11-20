@@ -9,12 +9,18 @@ import {
   type EnvironmentId,
   type ExecutionEnvironmentPlatformOs,
 } from "@t3tools/contracts";
+import { useAtomValue } from "@effect/atom-react";
 import * as Schema from "effect/Schema";
 import { T, useGT, useLocale, Var } from "gt-react";
 import { useId, useState, type ReactNode } from "react";
 
-import { getClientSettings, updateClientSettings, useClientSettings } from "~/hooks/useSettings";
-import { useAgentdCloudKeyFile, useAgentdCloudSetup, useAgentdCommands } from "~/lib/agentdState";
+import { useClientSettings } from "~/hooks/useSettings";
+import {
+  agentdEnvironment,
+  useAgentdCloudKeyFile,
+  useAgentdCloudSetup,
+  useAgentdCommands,
+} from "~/lib/agentdState";
 import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import { useEnvironment, usePrimaryEnvironmentId } from "~/state/environments";
 import { CommandBlock } from "../CommandBlock";
@@ -24,6 +30,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { CloudWorkersSetup } from "./CloudWorkersSetup";
+import { persistRememberedKeyFiles } from "./rememberKeyFiles";
 import {
   autoBudget,
   budgetDollars,
@@ -34,7 +41,6 @@ import {
   keyFileProblem,
   looksLikeKey,
   modelAccessChoices,
-  rememberKeyFiles,
 } from "./startTask.logic";
 import { useWorkerDefaults } from "./workerSettings";
 
@@ -63,6 +69,9 @@ export function useStartTaskCloud(
   },
 ) {
   const workerDefaults = useWorkerDefaults();
+  const canFixKeyFile = useAtomValue(
+    agentdEnvironment.cloudKeyFileFix.permissionAtom(environmentId),
+  );
   // Settings → Workers chooses where a task starts; the checkbox still overrides it per task.
   const [requested, setRequested] = useState(workerDefaults.runTasksOn === "cloud");
   const availability = useAgentdCloudSetup(cwd, environmentId, false);
@@ -131,7 +140,9 @@ export function useStartTaskCloud(
           Boolean(anthropicKey || openaiKey) &&
           keyProblems.anthropic === null &&
           keyProblems.openai === null);
-  const unreachable = availability.error !== null || setup?.unreachable === true;
+  // git didn't answer for the origin: as unknown as agentd not answering, never "no GitHub".
+  const checkoutUnknown = availability.error === null && setup?.checkoutUnknown === true;
+  const unreachable = availability.error !== null || setup?.unreachable === true || checkoutUnknown;
   const enabled = requested && setup?.supported === true && !unreachable && setup.project !== null;
   // Asked for the cloud while agentd hasn't said whether it can: never fall back to a local run.
   const waiting = requested && (unreachable || availability.data == null);
@@ -166,13 +177,8 @@ export function useStartTaskCloud(
   /** After a cloud worker took the task: the BYOK paths it was given prefill the next one. */
   const remember = (submitted: CloudInput) => {
     if (submitted.modelAccess !== "byok") return;
-    void updateClientSettings({
-      agentdCloudKeyFiles: rememberKeyFiles(
-        getClientSettings().agentdCloudKeyFiles,
-        environmentId,
-        submitted,
-      ),
-    });
+    // A path not remembered is typed again next time; the task already started.
+    void persistRememberedKeyFiles(environmentId, submitted).catch(() => undefined);
   };
   return {
     setup,
@@ -194,8 +200,10 @@ export function useStartTaskCloud(
     setKeyText,
     keyProblems,
     refreshKeyFiles,
+    canFixKeyFile,
     remember,
     unreachable,
+    checkoutUnknown,
     subscription,
     plan,
     setPlan,
@@ -235,7 +243,16 @@ export function StartTaskCloud({
         </div>
         <div className="flex items-center gap-2">
           <p id={`${id}-down`} role="status" className="text-xs text-muted-foreground">
-            {cloud.requested ? (
+            {cloud.checkoutUnknown ? (
+              cloud.requested ? (
+                <T>
+                  Couldn’t read this checkout’s origin. Retry, or turn off Run in the cloud to run
+                  this task here.
+                </T>
+              ) : (
+                <T>Couldn’t read this checkout’s origin.</T>
+              )
+            ) : cloud.requested ? (
               <T>
                 Couldn’t reach AgentD. Retry, or turn off Run in the cloud to run this task here.
               </T>
@@ -592,14 +609,16 @@ function ByokKeyFile({
               <Var>{chmodPrivateCommand(path)}</Var>, then try again.
             </T>
           </p>
-          <Button
-            variant="outline"
-            size="xs"
-            disabled={disabled || fixing}
-            onClick={fixPermissions}
-          >
-            <T>Fix permissions</T>
-          </Button>
+          {cloud.canFixKeyFile ? (
+            <Button
+              variant="outline"
+              size="xs"
+              disabled={disabled || fixing}
+              onClick={fixPermissions}
+            >
+              <T>Fix permissions</T>
+            </Button>
+          ) : null}
           {fixError ? <p>{fixError}</p> : null}
         </div>
       ) : problem === "unreadable" ? (

@@ -2,7 +2,6 @@ import {
   AuthEnvironmentMaintainScope,
   AuthDiagnosticsReadScope,
   AuthFilesystemReadScope,
-  AuthFilesystemWriteScope,
   AuthProvidersManageScope,
   AuthSettingsWriteScope,
   AuthAccessWriteScope,
@@ -78,10 +77,11 @@ describe("RPC authorization scopes", () => {
     }
   });
 
-  it("keeps Cloud Workers key file checks behind the filesystem permissions", () => {
+  it("keeps Cloud Workers key file checks behind the filesystem read and host permissions", () => {
     expect(requiredScopeForRpcMethod(WS_METHODS.agentdCloudKeyFile)).toBe(AuthFilesystemReadScope);
+    // Workspace write grants don't reach host files outside the workspaces.
     expect(requiredScopeForRpcMethod(WS_METHODS.agentdCloudKeyFileFix)).toBe(
-      AuthFilesystemWriteScope,
+      AuthEnvironmentMaintainScope,
     );
   });
 

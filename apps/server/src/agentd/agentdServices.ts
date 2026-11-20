@@ -68,6 +68,13 @@ export function unitsToEnable(installOutput: string): ReadonlyArray<string> {
   return line.split(/\s+/).filter((unit) => /^agentd-[\w-]+\.(?:service|timer)$/.test(unit));
 }
 
+/** The step `agentd install` asks for before it enables anything: disabling still-enabled legacy units. */
+function legacyDisableCommand(installOutput: string): string | null {
+  const units = /first: systemctl --user disable --now ([^,\n]+)/.exec(installOutput)?.[1] ?? "";
+  const names = units.split(/\s+/).filter((unit) => /^[\w.@-]+\.(?:service|timer)$/.test(unit));
+  return names.length === 0 ? null : `systemctl --user disable --now ${names.join(" ")}`;
+}
+
 export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps: {
   readonly bundled: string;
   readonly platform: string;
@@ -118,6 +125,7 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
   if (stale.length === 0) return null;
 
   let ok = true;
+  let command: string | null = null;
   if (platform === "darwin" || platform === "win32") {
     // install moves both services, so it would also move the one kept on the user's agentd.
     if (kept.length > 0) return { services: stale, ok: false, kept } satisfies AgentdServicesRepair;
@@ -130,11 +138,17 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
       if (ok) {
         ok = (yield* exec("systemctl", ["--user", "daemon-reload"])).ok;
         const units = unitsToEnable(installed.text);
-        if (ok && units.length > 0)
-          ok = (yield* exec("systemctl", ["--user", "enable", "--now", ...units])).ok;
+        // No enable step: agentd withheld it (legacy units still enabled), so nothing runs yet.
+        command = legacyDisableCommand(installed.text);
+        if (units.length === 0) ok = false;
+        else if (ok) ok = (yield* exec("systemctl", ["--user", "enable", "--now", ...units])).ok;
       }
     }
     if (stale.includes("dash")) ok = (yield* exec(bundled, ["dash", "install"])).ok && ok;
   }
-  return { services: stale, ok } satisfies AgentdServicesRepair;
+  return {
+    services: stale,
+    ok,
+    ...(command === null ? {} : { command }),
+  } satisfies AgentdServicesRepair;
 });

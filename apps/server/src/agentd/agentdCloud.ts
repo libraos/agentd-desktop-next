@@ -339,7 +339,8 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       Effect.orElseSucceed(() => null),
     );
 
-  const originProject = Effect.fn("AgentdCloud.originProject")(function* (cwd: string) {
+  // Undefined when git didn't answer (timed out or couldn't start): the origin is unknown.
+  const readOrigin = Effect.fn("AgentdCloud.readOrigin")(function* (cwd: string) {
     if (!isAbsolute(cwd) || cwd.includes("\0")) return null;
     const result = yield* runProcess({
       command: "git",
@@ -348,9 +349,12 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       timeout: "5 seconds",
       maxOutputBytes: 4096,
     }).pipe(Effect.option);
-    if (result._tag === "None" || result.value.code !== 0) return null;
+    if (result._tag === "None") return undefined;
+    if (result.value.code !== 0) return null;
     return githubProject(result.value.stdout);
   });
+  const originProject = (cwd: string) =>
+    readOrigin(cwd).pipe(Effect.map((project) => project ?? null));
 
   const cloudSetup = Effect.fn("AgentdCloud.setup")(function* ({
     cwd,
@@ -362,7 +366,8 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
     const found = probed.success;
     if (found === null) return { ...emptySetup, supported: false };
     const { command, version, features } = found;
-    const project = cwd === null ? null : yield* originProject(cwd);
+    const origin = cwd === null ? null : yield* readOrigin(cwd);
+    const project = origin ?? null;
     const canConfigure = yield* Cache.get(setupCommand, [command, version]);
     const base = {
       supported: true,
@@ -370,6 +375,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       setupUrl: canConfigure ? yield* setupDestination(command) : null,
       subscription: null,
     };
+    if (origin === undefined) return { ...emptySetup, ...base, checkoutUnknown: true };
     if ((cwd !== null && project === null) || !includeBalance)
       return { ...emptySetup, ...base, project };
     const readAccount = run(agentdArgs.cloudBalance(), { command }).pipe(
@@ -541,9 +547,12 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
         Effect.mapError(() => unknownOutcome()),
       );
     // agentd refused the offer before making a task: the reservation holds nothing, and the next
-    // Start must not ask about it.
+    // Start must not ask about it. Set once the reservation is known to be this Start's alone.
+    let releasable = false;
     const release = (id: string) =>
-      agentd(() => agentdArgs.releaseSubmission(session, id)).pipe(Effect.ignore);
+      releasable
+        ? agentd(() => agentdArgs.releaseSubmission(session, id)).pipe(Effect.ignore)
+        : Effect.void;
     const remember = (id: string, handoff: string) =>
       agentd(() => agentdArgs.rememberSubmission(session, id, handoff)).pipe(Effect.ignore);
     const alreadyRecorded = (handoff: string): AgentdStartTaskResult => ({
@@ -554,9 +563,6 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
 
     const current = yield* reservation;
     let submission: string;
-    // Only a reservation made by this Start may be released by it: a reused one guards an
-    // earlier offer whose outcome is still unknown.
-    let fresh = false;
     if (current !== null && current.handoff === null && !current.released) {
       const handoff = yield* recorded(current.id);
       if (handoff !== null) {
@@ -587,7 +593,6 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
         }
       }
       submission = nextSubmissionId(session, current?.id ?? null);
-      fresh = true;
       yield* agentd(() =>
         agentdArgs.reserveSubmission(session, submission, current?.id ?? null, fingerprint),
       ).pipe(
@@ -603,11 +608,14 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
           `Another window started a Cloud Workers submission for ${project}. Press Start to check it.`,
         );
       }
+      // A reused reservation guards an earlier offer whose outcome is still unknown: never release it.
+      releasable = true;
     }
 
     const argv = yield* args(() => agentdArgs.cloudOffer(input, project, submission));
+    // A failed join offers nothing yet keeps the reservation: another server sharing this ledger
+    // may already be offering under it.
     yield* agentd(() => agentdArgs.cloudSession(input.cwd)).pipe(
-      Effect.tapError(() => (fresh ? release(submission) : Effect.void)),
       Effect.catchTags({
         AgentdCommandError: (error) =>
           Effect.fail(

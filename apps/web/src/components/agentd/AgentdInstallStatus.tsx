@@ -35,6 +35,17 @@ export function AgentdInstallStatus({ status }: { status: AgentdStatus }) {
               old AgentD Desktop, and another runs your own AgentD. This app left both alone: run
               agentd install with the AgentD you use.
             </T>
+          ) : repair.command !== undefined ? (
+            <>
+              <T>
+                AgentD’s background services run an AgentD that is missing or belongs to the old
+                AgentD Desktop. AgentD won’t start them while older AgentD services are on: run
+                this, then agentd install, in a terminal.
+              </T>
+              <code className="mt-1 block whitespace-pre-wrap break-words rounded-md bg-muted px-2 py-1 text-xs text-foreground">
+                {repair.command}
+              </code>
+            </>
           ) : repair.ok ? (
             <T>
               AgentD’s background services ran an AgentD that is missing or belongs to the old

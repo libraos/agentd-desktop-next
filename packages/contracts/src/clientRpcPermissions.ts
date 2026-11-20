@@ -3,7 +3,6 @@ import { GitPreparePullRequestThreadInput, GitRunStackedActionInput } from "./gi
 import {
   AuthAccessWriteScope,
   AuthEnvironmentMaintainScope,
-  AuthFilesystemWriteScope,
   AuthOrchestrationOperateScope,
   AuthOrchestrationReadScope,
   AuthPreviewOperateScope,
@@ -86,8 +85,8 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   [WS_METHODS.agentdJoinTeam]: AuthEnvironmentMaintainScope,
   // Cloud setup writes agentd's account key and [cloud] settings on this host.
   [WS_METHODS.agentdCloudConfigure]: AuthEnvironmentMaintainScope,
-  // Making a chosen key file private changes its mode on this host, as writing a file would.
-  [WS_METHODS.agentdCloudKeyFileFix]: AuthFilesystemWriteScope,
+  // Making a key file private changes a mode anywhere the server user can, not only in a workspace.
+  [WS_METHODS.agentdCloudKeyFileFix]: AuthEnvironmentMaintainScope,
   // Working for the team runs agents on this host for the team server.
   [WS_METHODS.agentdSetTeamNode]: AuthEnvironmentMaintainScope,
   // Setting agentd up accepts its EULA and writes its services on this host.

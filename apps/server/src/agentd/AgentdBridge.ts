@@ -316,7 +316,12 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
       Effect.tap((repair) =>
         repair === null
           ? Effect.void
-          : Effect.logInfo("agentd services moved to the bundled agentd", repair),
+          : repair.ok
+            ? Effect.logInfo("agentd services moved to the bundled agentd", repair)
+            : Effect.logWarning(
+                "agentd services on a missing or old agentd were not moved",
+                repair,
+              ),
       ),
       Effect.provideService(FileSystem.FileSystem, fs),
       Effect.provideService(Path.Path, pathService),
