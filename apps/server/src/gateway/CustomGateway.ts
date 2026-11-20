@@ -46,8 +46,19 @@ export class CustomGateway extends Context.Service<
     readonly remove: (id: string) => Effect.Effect<CustomGatewayList, CustomGatewayError>;
     /** Gives the agents the gateway's current list; one it cannot read leaves the last one. */
     readonly refreshModels: (id: string) => Effect.Effect<CustomGatewayList, CustomGatewayError>;
+    /** Where to send requests and with which key; for the server only, never a client. */
+    readonly connection: (
+      id: string,
+    ) => Effect.Effect<CustomGatewayConnection, CustomGatewayError>;
   }
 >()("t3/gateway/CustomGateway") {}
+
+export interface CustomGatewayConnection {
+  readonly id: string;
+  readonly name: string;
+  readonly base: string;
+  readonly key: string | null;
+}
 
 const fail = (message: string) => new CustomGatewayError({ message });
 const textEncoder = new TextEncoder();
@@ -243,7 +254,14 @@ export const make = Effect.fn("CustomGateway.make")(function* () {
       )
       .pipe(Effect.andThen(list), Effect.withSpan("CustomGateway.refreshModels"));
 
-  return CustomGateway.of({ list, add, rename, remove, refreshModels });
+  const connection: CustomGateway["Service"]["connection"] = Effect.fn(
+    "CustomGateway.connection",
+  )(function* (id) {
+    const gateway = yield* find(id);
+    return { id, name: gateway.name, base: baseOf(gateway.url), key: yield* readKey(id) };
+  });
+
+  return CustomGateway.of({ list, add, rename, remove, refreshModels, connection });
 });
 
 export const layer = Layer.effect(CustomGateway, make()).pipe(Layer.provide(FetchHttpClient.layer));
