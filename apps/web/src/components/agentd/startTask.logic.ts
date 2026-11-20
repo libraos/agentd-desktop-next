@@ -340,11 +340,17 @@ export function taskStartProblem(input: {
   return null;
 }
 
-/** The cloud job of a task agentd saved without confirming it is under way, by the synced list. */
+/** Job states of a cloud task that is under way or done; a failed or stopped one never started well. */
+const CLOUD_STARTED = new Set(["queued", "running", "settling", "completed"]);
+
+/**
+ * The cloud job of a task agentd saved without confirming it is under way, by the synced list. A
+ * job that failed or stopped isn't: the dialog keeps the reason agentd gave.
+ */
 export function cloudOfferStarted(
   rows: ReadonlyArray<{ readonly id: string; readonly cloudState?: string | null }> | null,
   id: string,
 ): boolean {
   const state = rows?.find((row) => row.id === id)?.cloudState;
-  return state !== null && state !== undefined && state !== "submitting";
+  return state !== null && state !== undefined && CLOUD_STARTED.has(state);
 }

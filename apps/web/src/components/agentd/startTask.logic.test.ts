@@ -267,4 +267,7 @@ it("reads an offered cloud task as started once its job is past submitting", () 
   expect(cloudOfferStarted([{ id: "hof-aa", cloudState: null }], "hof-aa")).toBe(false);
   expect(cloudOfferStarted([{ id: "hof-bb", cloudState: "running" }], "hof-aa")).toBe(false);
   expect(cloudOfferStarted([{ id: "hof-aa", cloudState: "queued" }], "hof-aa")).toBe(true);
+  expect(cloudOfferStarted([{ id: "hof-aa", cloudState: "completed" }], "hof-aa")).toBe(true);
+  for (const ended of ["failed", "failed_verification", "cancelled", "budget_exceeded"])
+    expect(cloudOfferStarted([{ id: "hof-aa", cloudState: ended }], "hof-aa")).toBe(false);
 });
