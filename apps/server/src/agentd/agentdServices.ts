@@ -1,5 +1,7 @@
 // @effect-diagnostics-next-line nodeBuiltinImport:off -- A sync digest names the Windows tasks.
 import * as NodeCrypto from "node:crypto";
+// @effect-diagnostics-next-line nodeBuiltinImport:off -- agentd cleans Windows roots as POSIX paths.
+import * as NodePathPosix from "node:path/posix";
 
 import type { AgentdServicesRepair } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
@@ -10,7 +12,8 @@ import type { ProcessRunner } from "../processRunner.ts";
 
 // agentd's services run the binary their LaunchAgent, systemd unit or task names; after the old
 // AgentD Desktop is removed that binary is gone. A service on a missing or the old app's agentd is
-// re-registered by the bundled agentd's own `install` (and `dash install` for a Linux dash).
+// re-registered by the bundled agentd's own `install` (and `dash install` for a Linux dash), with
+// the root and ledger the service itself names: install writes the ones in its own environment.
 
 export type ServiceName = "watchdog" | "dash";
 const SERVICES: ReadonlyArray<ServiceName> = ["watchdog", "dash"];
@@ -29,6 +32,59 @@ function unescapeXml(text: string): string {
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&amp;/g, "&");
+}
+
+/** The root and ledger a service names; null where it names none and agentd's default applies. */
+interface ServiceLedger {
+  readonly root: string | null;
+  readonly db: string | null;
+}
+
+function ledgerOf(vars: ReadonlyMap<string, string>): ServiceLedger {
+  const pick = (name: string) => vars.get(`AGENTD_${name}`) || vars.get(`AGENTOPS_${name}`) || null;
+  return { root: pick("ROOT"), db: pick("DB") };
+}
+
+/** install's environment for a ledger: an unset name is cleared, never inherited from this server. */
+function installEnv(ledger: ServiceLedger): NodeJS.ProcessEnv {
+  return {
+    AGENTD_ROOT: ledger.root ?? "",
+    AGENTD_DB: ledger.db ?? "",
+    AGENTOPS_ROOT: "",
+    AGENTOPS_DB: "",
+  };
+}
+
+/** The ledger a LaunchAgent's EnvironmentVariables name. */
+export function plistLedger(plist: string): ServiceLedger {
+  const dict = /<key>EnvironmentVariables<\/key>\s*<dict>([\s\S]*?)<\/dict>/.exec(plist)?.[1] ?? "";
+  const vars = new Map<string, string>();
+  for (const [, key, value] of dict.matchAll(/<key>([^<]*)<\/key>\s*<string>([^<]*)<\/string>/g))
+    vars.set(unescapeXml(key!.trim()), unescapeXml(value!.trim()));
+  return ledgerOf(vars);
+}
+
+/** The ledger a systemd unit's Environment= lines name. */
+export function unitLedger(unit: string): ServiceLedger {
+  const vars = new Map<string, string>();
+  for (const [, key, value] of unit.matchAll(/^Environment="?([A-Z_]+)=([^"\n]*)"?\s*$/gm))
+    vars.set(key!, value!.trim());
+  return ledgerOf(vars);
+}
+
+/** The ledger an agentd task's env file (KEY=VALUE lines) names. */
+export function envFileLedger(text: string): ServiceLedger {
+  const vars = new Map<string, string>();
+  for (const [, key, value] of text.matchAll(/^([A-Z_]+)=(.*?)\r?$/gm)) vars.set(key!, value!);
+  return ledgerOf(vars);
+}
+
+/** The env file an agentd task runs with: its `service-run --env FILE`, ROOT\services\NAME.env. */
+export function taskEnvFile(xml: string): string | null {
+  const args = /<Arguments>([\s\S]*?)<\/Arguments>/.exec(xml.replaceAll("\0", ""))?.[1];
+  if (args === undefined) return null;
+  const match = /(?:^|\s)--env\s+(?:"([^"]*)"|(\S+))/.exec(unescapeXml(args));
+  return match?.[1] ?? match?.[2] ?? null;
 }
 
 /** The first ProgramArguments string of a LaunchAgent plist. */
@@ -53,12 +109,20 @@ export function taskProgram(xml: string): string | null {
   return command === undefined ? null : unescapeXml(command.trim()).replace(/^"(.*)"$/, "$1");
 }
 
+/** A Windows root as agentd's task names compare it (schtasksRootKey): cleaned, lower case. */
+function windowsRootKey(root: string): string {
+  const cleaned = NodePathPosix.normalize(root.replaceAll("\\", "/"));
+  return (cleaned.length > 1 ? cleaned.replace(/\/+$/, "") : cleaned).toLowerCase();
+}
+
 /** agentd's task names for a root (schtasksTaskName): plain for the default root. */
 export function taskNames(service: ServiceName, root: string | undefined): ReadonlyArray<string> {
   const plain = `\\LibraOS\\agentd-${service}`;
   if (root === undefined || root.trim() === "") return [plain];
-  const key = root.replaceAll("\\", "/").replace(/\/+$/, "").toLowerCase();
-  const hash = NodeCrypto.createHash("sha256").update(key).digest("hex").slice(0, 8);
+  const hash = NodeCrypto.createHash("sha256")
+    .update(windowsRootKey(root))
+    .digest("hex")
+    .slice(0, 8);
   return [`${plain}-${hash}`, plain];
 }
 
@@ -86,54 +150,83 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const read = (file: string) => fs.readFileString(file).pipe(Effect.option);
-  const exec = (command: string, args: ReadonlyArray<string>) =>
-    run({ command, args, timeout: "2 minutes", maxOutputBytes: 256 * 1024 }).pipe(
+  const exec = (command: string, args: ReadonlyArray<string>, env?: NodeJS.ProcessEnv) =>
+    run({ command, args, env, timeout: "2 minutes", maxOutputBytes: 256 * 1024 }).pipe(
       Effect.map((output) => ({ ok: output.code === 0, text: output.stdout + output.stderr })),
       Effect.orElseSucceed(() => ({ ok: false, text: "" })),
     );
 
-  const program = Effect.fn("AgentdServices.program")(function* (service: ServiceName) {
+  const noLedger: ServiceLedger = { root: null, db: null };
+  const service = Effect.fn("AgentdServices.program")(function* (name: ServiceName) {
     if (platform === "darwin") {
       const plist = yield* read(
-        path.join(home, "Library", "LaunchAgents", `com.libraos.agentd.${service}.plist`),
+        path.join(home, "Library", "LaunchAgents", `com.libraos.agentd.${name}.plist`),
       );
-      return plist._tag === "Some" ? plistProgram(plist.value) : null;
+      if (plist._tag === "None") return null;
+      const program = plistProgram(plist.value);
+      return program === null ? null : { program, ledger: plistLedger(plist.value) };
     }
     if (platform === "win32") {
-      for (const name of taskNames(service, root)) {
-        const query = yield* exec("schtasks", ["/Query", "/TN", name, "/XML"]);
-        if (query.ok) return taskProgram(query.text);
+      const names = taskNames(name, root);
+      const legacy = names[1];
+      for (const task of names) {
+        const query = yield* exec("schtasks", ["/Query", "/TN", task, "/XML"]);
+        if (!query.ok) continue;
+        const program = taskProgram(query.text);
+        const envFile = taskEnvFile(query.text);
+        // The plain legacy name may be another root's task: only one whose env file is this root's.
+        const owner =
+          envFile === null
+            ? null
+            : NodePathPosix.dirname(NodePathPosix.dirname(envFile.replaceAll("\\", "/")));
+        if (
+          task === legacy &&
+          (owner === null || windowsRootKey(owner) !== windowsRootKey(root ?? ""))
+        )
+          continue;
+        if (program === null) return null;
+        const env = envFile === null ? null : yield* read(envFile);
+        return { program, ledger: env?._tag === "Some" ? envFileLedger(env.value) : noLedger };
       }
       return null;
     }
     const unit = yield* read(
-      path.join(home, ".config", "systemd", "user", `agentd-${service}.service`),
+      path.join(home, ".config", "systemd", "user", `agentd-${name}.service`),
     );
-    return unit._tag === "Some" ? unitProgram(unit.value, home) : null;
+    if (unit._tag === "None") return null;
+    const program = unitProgram(unit.value, home);
+    return program === null ? null : { program, ledger: unitLedger(unit.value) };
   });
 
   const stale: ServiceName[] = [];
   // Services on another working agentd, the user's own: never moved.
   const kept: ServiceName[] = [];
-  for (const service of SERVICES) {
-    const found = yield* program(service);
+  const ledgers = new Map<ServiceName, ServiceLedger>();
+  for (const name of SERVICES) {
+    const found = yield* service(name);
     if (found === null) continue;
-    const exists = yield* fs.exists(found).pipe(Effect.orElseSucceed(() => false));
-    if (isStaleProgram(found, exists, bundled)) stale.push(service);
-    else if (found !== bundled) kept.push(service);
+    ledgers.set(name, found.ledger);
+    const exists = yield* fs.exists(found.program).pipe(Effect.orElseSucceed(() => false));
+    if (isStaleProgram(found.program, exists, bundled)) stale.push(name);
+    else if (found.program !== bundled) kept.push(name);
   }
   if (stale.length === 0) return null;
+  const ledgerEnv = (name: ServiceName) => installEnv(ledgers.get(name) ?? noLedger);
 
   let ok = true;
   let command: string | null = null;
   if (platform === "darwin" || platform === "win32") {
     // install moves both services, so it would also move the one kept on the user's agentd.
     if (kept.length > 0) return { services: stale, ok: false, kept } satisfies AgentdServicesRepair;
-    // install moves both LaunchAgents or both tasks of this root to the binary that runs it.
-    ok = (yield* exec(bundled, ["install"])).ok;
+    // install moves both LaunchAgents or both tasks of one root and ledger: services on two of
+    // them can't be moved by one install without one changing ledger.
+    const [first, ...rest] = [...ledgers.values()];
+    if (rest.some((ledger) => ledger.root !== first?.root || ledger.db !== first?.db))
+      return { services: stale, ok: false } satisfies AgentdServicesRepair;
+    ok = (yield* exec(bundled, ["install"], installEnv(first ?? noLedger))).ok;
   } else {
     if (stale.includes("watchdog")) {
-      const installed = yield* exec(bundled, ["install"]);
+      const installed = yield* exec(bundled, ["install"], ledgerEnv("watchdog"));
       ok = installed.ok;
       if (ok) {
         ok = (yield* exec("systemctl", ["--user", "daemon-reload"])).ok;
@@ -144,7 +237,8 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
         else if (ok) ok = (yield* exec("systemctl", ["--user", "enable", "--now", ...units])).ok;
       }
     }
-    if (stale.includes("dash")) ok = (yield* exec(bundled, ["dash", "install"])).ok && ok;
+    if (stale.includes("dash"))
+      ok = (yield* exec(bundled, ["dash", "install"], ledgerEnv("dash"))).ok && ok;
   }
   return {
     services: stale,
