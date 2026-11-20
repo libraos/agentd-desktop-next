@@ -6593,7 +6593,37 @@
   "a0477f9b76b7c129": "Requires a LibraOS account.",
   "560b12dcbd292d26": "Not available yet",
   "afe41e4541b9846e": "Connect to an environment first.",
+  "3f6b4559d7d4dee2": "Sign in or create a LibraOS account in your browser, then approve this code:",
+  "2fc60a0937f5a274": "To revoke the key in LibraOS, sign in in your browser and approve this code:",
+  "64da476e68e83a8a": "Open the LibraOS sign-in page",
+  "1d489e6296d9c42a": "Waiting for approval…",
+  "8ce883f5f230a34d": "Remove here only",
   "76b6067a87335bac": "LibraOS Gateway connected.",
+  "59fbf11096d89276": [
+    "Signed in as ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ", workspace",
+    " ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    },
+    "."
+  ],
+  "cd496126bb3cd6ea": [
+    "Signed in as ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "."
+  ],
   "4f0f4f5c393e4a73": [
     "Models: ",
     {
@@ -6606,6 +6636,9 @@
   "0ab50b1db2e5e363": "agentd is set up to use the Gateway.",
   "aa6af95ccd8de74d": "agentd did not take the key. What it said:",
   "d356add77d113720": "연결 끊기",
+  "1a4cf344e8734873": "Sign in, or create a LibraOS account, in your browser. The app then makes a key for this environment. Use is billed pay as you go.",
+  "557f0b0d046d2ca9": "Sign in with LibraOS",
+  "8eaf3aa64d26241f": "Use an API key instead",
   "44f19854f4f017e2": "LibraOS API key",
   "794958206cd1fa96": [
     "Create a key on",
@@ -6619,6 +6652,7 @@
   ],
   "fc05a3512bf05489": "확인 중…",
   "90f46dbf8782cfde": "연결",
+  "0decc23255be18b4": "Sign in with LibraOS instead",
   "26dca8ee72dc5d74": "설정을 읽을 수 없습니다",
   "52e7a660ce883609": "아직 연결하는 중",
   "9a50b20569f2c9e7": "저장된 설정을 불러올 수 없습니다.",

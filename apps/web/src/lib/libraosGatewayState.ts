@@ -45,6 +45,23 @@ const libraosGatewayEnvironment = {
     scheduler,
     onSettled: refreshStatus,
   }),
+  signInStart: createEnvironmentRpcCommand(connectionAtomRuntime, {
+    label: "environment-data:libraos-gateway:sign-in-start",
+    tag: WS_METHODS.libraosGatewaySignInStart,
+    scheduler,
+    onSettled: refreshStatus,
+  }),
+  // Not on the scheduler: it stays open until the sign-in ends, and Cancel must not queue behind it.
+  signInWait: createEnvironmentRpcCommand(connectionAtomRuntime, {
+    label: "environment-data:libraos-gateway:sign-in-wait",
+    tag: WS_METHODS.libraosGatewaySignInWait,
+    onSettled: refreshStatus,
+  }),
+  signInCancel: createEnvironmentRpcCommand(connectionAtomRuntime, {
+    label: "environment-data:libraos-gateway:sign-in-cancel",
+    tag: WS_METHODS.libraosGatewaySignInCancel,
+    onSettled: refreshStatus,
+  }),
 };
 
 function useGatewayEnvironment(target: EnvironmentId | null | undefined): EnvironmentId | null {
@@ -82,5 +99,8 @@ export function useLibraosGatewayCommands(environmentId: EnvironmentId | null) {
     canChange,
     connect: useAtomCommand(libraosGatewayEnvironment.connect, options),
     disconnect: useAtomCommand(libraosGatewayEnvironment.disconnect, options),
+    signInStart: useAtomCommand(libraosGatewayEnvironment.signInStart, options),
+    signInWait: useAtomCommand(libraosGatewayEnvironment.signInWait, options),
+    signInCancel: useAtomCommand(libraosGatewayEnvironment.signInCancel, options),
   };
 }

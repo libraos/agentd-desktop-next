@@ -419,6 +419,8 @@ import {
 import {
   LibraosGatewayConnectInput,
   LibraosGatewayError,
+  LibraosGatewaySignIn,
+  LibraosGatewaySignInStartInput,
   LibraosGatewayStatus,
 } from "./libraosGateway.ts";
 import {
@@ -745,6 +747,9 @@ export const WS_METHODS = {
   libraosGatewayStatus: "libraosGateway.status",
   libraosGatewayConnect: "libraosGateway.connect",
   libraosGatewayDisconnect: "libraosGateway.disconnect",
+  libraosGatewaySignInStart: "libraosGateway.signInStart",
+  libraosGatewaySignInWait: "libraosGateway.signInWait",
+  libraosGatewaySignInCancel: "libraosGateway.signInCancel",
 } as const;
 
 const WsServerUpsertKeybindingRpc = Rpc.make(WS_METHODS.serverUpsertKeybinding, {
@@ -2501,6 +2506,25 @@ const WsLibraosGatewayDisconnectRpc = Rpc.make(WS_METHODS.libraosGatewayDisconne
   error: LibraosGatewayRpcError,
 });
 
+const WsLibraosGatewaySignInStartRpc = Rpc.make(WS_METHODS.libraosGatewaySignInStart, {
+  payload: LibraosGatewaySignInStartInput,
+  success: LibraosGatewaySignIn,
+  error: LibraosGatewayRpcError,
+});
+
+// Answers when the waiting sign-in ends: the status after it, or why it ended.
+const WsLibraosGatewaySignInWaitRpc = Rpc.make(WS_METHODS.libraosGatewaySignInWait, {
+  payload: Schema.Struct({}),
+  success: LibraosGatewayStatus,
+  error: LibraosGatewayRpcError,
+});
+
+const WsLibraosGatewaySignInCancelRpc = Rpc.make(WS_METHODS.libraosGatewaySignInCancel, {
+  payload: Schema.Struct({}),
+  success: LibraosGatewayStatus,
+  error: LibraosGatewayRpcError,
+});
+
 export class RpcScopeAuthorization extends RpcMiddleware.Service<RpcScopeAuthorization>()(
   "t3/contracts/RpcScopeAuthorization",
   { error: EnvironmentAuthorizationError },
@@ -2747,6 +2771,9 @@ export const WsRpcGroup = RpcGroup.make(
   WsLibraosGatewayStatusRpc,
   WsLibraosGatewayConnectRpc,
   WsLibraosGatewayDisconnectRpc,
+  WsLibraosGatewaySignInStartRpc,
+  WsLibraosGatewaySignInWaitRpc,
+  WsLibraosGatewaySignInCancelRpc,
   WsOrchestrationV2DispatchCommandRpc,
   WsOrchestrationV2GetWorkflowScriptRpc,
   WsOrchestrationV2GetNativeChildWorkRpc,
