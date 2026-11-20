@@ -17,6 +17,18 @@ and modes you choose in a draft keep their permissions.
 | **Auto**              | Uses the provider's automatic review to approve routine actions and ask about others. |
 | **Full access**       | Allows commands and edits without approval prompts.                                   |
 
+### What Full access covers
+
+**Full access** covers what the agent itself does: commands, file edits, and confirmation requests
+from tools it has connected, such as an MCP server that asks before each action (Computer Use is
+one). On Claude and Codex those requests are approved without a card in **Full access**. In every
+other mode they show a card; where the card offers **Always allow this session**, choosing it
+stops the same request from asking again until the session restarts.
+
+It does not cover prompts from outside the agent. Your operating system can still ask, for example
+for screen recording or accessibility access on macOS, and a tool can still open its own sign-in
+or consent page. Approve those where they appear.
+
 An administrator can cap the modes available on a machine with a
 [managed policy](./managed-policy.md#permission-modes); modes above the cap show who manages them.
 
