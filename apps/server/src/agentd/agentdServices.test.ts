@@ -269,6 +269,13 @@ describe("agentd services", () => {
         path.join(units, "agentd-dash.service"),
         `[Service]\nExecStart=${bundled} dash --serve 127.0.0.1:21480\n`,
       );
+      // A working watchdog's timer is written and enabled.
+      yield* fs.writeFileString(path.join(units, "agentd-watchdog.timer"), "[Timer]\n");
+      yield* fs.makeDirectory(path.join(units, "timers.target.wants"));
+      yield* fs.writeFileString(
+        path.join(units, "timers.target.wants", "agentd-watchdog.timer"),
+        "",
+      );
       expect(yield* detectServices(linux)).toBe(null);
       // A drop-in shared by every agentd- unit can set a stale program; the unit's own drop-in of
       // the same name wins over it.
@@ -300,6 +307,7 @@ describe("agentd services", () => {
         moves: ["watchdog"],
       });
       yield* fs.writeFileString(dashUnit, `[Service]\nExecStart=${bundled} dash\n`);
+      runs.length = 0;
       const watchdog = yield* detectServices(linux);
       expect(watchdog).toEqual({
         services: [{ name: "watchdog", program: "/gone/agentd" }],
@@ -327,7 +335,10 @@ describe("agentd services", () => {
       const dash = yield* detectServices(linux);
       expect(dash).toMatchObject({ moves: ["dash"] });
       expect(yield* repairServices(linux, dash!)).toEqual({ ok: true });
-      expect(runs).toEqual([[bundled, "dash", "install"]]);
+      expect(runs).toEqual([
+        ["systemctl", "--user", "is-active", "agentd-watchdog.timer"],
+        [bundled, "dash", "install"],
+      ]);
       yield* fs.writeFileString(
         path.join(units, "agentd-dash.service"),
         `[Service]\nExecStart=${bundled} dash --serve 127.0.0.1:21480\n`,
@@ -335,6 +346,8 @@ describe("agentd services", () => {
 
       // agentd withholds the enable step while a legacy unit is enabled: the step it asked for
       // first is passed on, and still shown until the timer is on.
+      yield* fs.remove(path.join(units, "timers.target.wants"), { recursive: true });
+      yield* fs.remove(path.join(units, "agentd-watchdog.timer"));
       runs.length = 0;
       const legacyRun: ProcessRunner.ProcessRunner["Service"]["run"] = (input) => {
         runs.push([input.command, ...input.args]);
@@ -386,14 +399,17 @@ describe("agentd services", () => {
       // still reported, and Repair enables it again.
       yield* fs.remove(path.join(units, "timers.target.wants"), { recursive: true });
       yield* fs.remove(path.join(units, "agentops-watchdog.timer"));
-      expect(yield* detectServices(linux)).toBe(null);
-      yield* fs.writeFileString(path.join(units, "agentd-watchdog.timer"), "[Timer]\n");
-      expect(yield* detectServices(linux)).toEqual({
-        services: [],
-        agentd: bundled,
-        moves: ["watchdog"],
-        watchdogOff: true,
-      });
+      // Install wrote the service and failed before the timer: off too, Repair writes it.
+      for (const written of [false, true]) {
+        if (written)
+          yield* fs.writeFileString(path.join(units, "agentd-watchdog.timer"), "[Timer]\n");
+        expect(yield* detectServices(linux)).toEqual({
+          services: [],
+          agentd: bundled,
+          moves: ["watchdog"],
+          watchdogOff: true,
+        });
+      }
       expect(runs).toEqual([]);
 
       // An AppImage with no lasting agentd to register: reported, with no Repair.

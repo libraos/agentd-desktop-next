@@ -456,11 +456,9 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
       )
         legacy.push(unit);
     if (!enabled.has("agentd-watchdog.timer")) {
+      // A timer never written (install wrote the service, then failed) is off just the same.
       if (legacy.length > 0) command = `systemctl --user disable --now ${legacy.join(" ")}`;
-      else
-        watchdogOff = yield* fs
-          .exists(path.join(unitDir, "agentd-watchdog.timer"))
-          .pipe(Effect.orElseSucceed(() => false));
+      else watchdogOff = true;
     } else {
       // enable --now links the timer before it starts it, so a failed start leaves it enabled
       // but stopped. A manager that doesn't answer prints no state: not taken as off.
