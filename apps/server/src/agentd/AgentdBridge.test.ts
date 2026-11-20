@@ -657,7 +657,80 @@ describe("AgentdBridge", () => {
       expect(runs).toContain("systemctl --user enable --now agentd-watchdog.timer");
       runs.length = 0;
       expect(yield* bridge.repairServices({ moves: ["watchdog"] })).toEqual({ ok: true });
-      expect(runs).toEqual(["systemctl --user is-active agentd-watchdog.timer"]);
+      expect(runs.filter((run) => !run.startsWith("systemctl --user show"))).toEqual([
+        "systemctl --user is-active agentd-watchdog.timer",
+      ]);
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
+  it.effect("keeps Repair while systemd still runs the stale service a failed reload kept", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const home = yield* fs.makeTempDirectoryScoped();
+      const units = path.join(home, ".config", "systemd", "user");
+      const wants = path.join(units, "timers.target.wants");
+      yield* fs.makeDirectory(wants, { recursive: true });
+      const unit = path.join(units, "agentd-watchdog.service");
+      yield* fs.writeFileString(unit, "[Service]\nExecStart=/gone/agentd watchdog\n");
+      yield* fs.writeFileString(path.join(units, "agentd-watchdog.timer"), "[Timer]\n");
+      yield* fs.symlink(
+        path.join(units, "agentd-watchdog.timer"),
+        path.join(wants, "agentd-watchdog.timer"),
+      );
+      // The timer is on throughout; what it starts is the service systemd last loaded.
+      let loaded = "/gone/agentd";
+      let reloads = false;
+      const runs: Array<string> = [];
+      const bridge = yield* makeBridge(
+        { PATH: "", AGENTD_BIN: process.execPath, AGENTD_DESKTOP_BUNDLED: "1" },
+        (input) => {
+          runs.push([input.command, ...input.args].join(" "));
+          if (input.command === "systemctl") {
+            switch (input.args[1]) {
+              case "is-active":
+                return Effect.succeed(output("active\n"));
+              case "show":
+                return fs.readFileString(unit).pipe(
+                  Effect.orDie,
+                  Effect.map((text) =>
+                    output(
+                      `NeedDaemonReload=${text.includes(loaded) ? "no" : "yes"}\n` +
+                        `ExecStart={ path=${loaded} ; argv[]=${loaded} watchdog ; ignore_errors=no }\n`,
+                    ),
+                  ),
+                );
+              case "daemon-reload":
+                if (!reloads) return Effect.succeed(output("", 1));
+                loaded = process.execPath;
+                return Effect.succeed(output(""));
+              default:
+                return Effect.succeed(output(""));
+            }
+          }
+          if (input.args[0] !== "install") return Effect.succeed(output(""));
+          return fs
+            .writeFileString(unit, `[Service]\nExecStart=${process.execPath} watchdog\n`)
+            .pipe(
+              Effect.orDie,
+              Effect.as(output("then: systemctl --user enable --now agentd-watchdog.timer\n")),
+            );
+        },
+      ).pipe(
+        Effect.provideService(HostProcess.Platform, "linux"),
+        Effect.provideService(HostProcess.HomeDirectory, home),
+      );
+      // The file is rewritten but the reload fails: the timer still runs the gone agentd.
+      expect(yield* bridge.repairServices({ moves: ["watchdog"] })).toEqual({ ok: false });
+      runs.length = 0;
+      expect(yield* bridge.repairServices({ moves: ["watchdog"] })).toEqual({ ok: false });
+      expect(runs).toContain("systemctl --user daemon-reload");
+      // Once systemd reloads, the same Repair succeeds, and then has nothing to do.
+      reloads = true;
+      expect(yield* bridge.repairServices({ moves: ["watchdog"] })).toEqual({ ok: true });
+      runs.length = 0;
+      expect(yield* bridge.repairServices({ moves: ["watchdog"] })).toEqual({ ok: true });
+      expect(runs.some((run) => run.includes("install"))).toBe(false);
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );
 

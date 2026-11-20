@@ -281,6 +281,15 @@ export function taskNames(service: ServiceName, root: string | undefined): Reado
   return [`${plain}-${hash}`, plain];
 }
 
+/**
+ * The program systemd has loaded for a unit whose file changed since its last reload, from
+ * `systemctl show -p NeedDaemonReload -p ExecStart`; null when it has none pending.
+ */
+function loadedProgram(show: string): string | null {
+  if (!/^NeedDaemonReload=yes$/m.test(show)) return null;
+  return /^ExecStart=\{ path=(.+?) ;/m.exec(show)?.[1] ?? null;
+}
+
 /** The units `agentd install` asks to enable, from its "then:" line. */
 export function unitsToEnable(installOutput: string): ReadonlyArray<string> {
   const line = /^then:.*enable --now (.+)$/m.exec(installOutput)?.[1] ?? "";
@@ -430,10 +439,26 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
   const kept: ServiceName[] = [];
   const unread: ServiceName[] = [];
   let watchdogOnTarget = false;
+  // A unit file already on this agentd that systemd hasn't reloaded (a failed daemon-reload)
+  // still runs the program it loaded: that one is in effect. A manager that doesn't answer leaves
+  // the file's.
+  const loaded = Effect.fn("AgentdServices.loaded")(function* (name: ServiceName) {
+    const shown = yield* exec("systemctl", [
+      "--user",
+      "show",
+      "-p",
+      "NeedDaemonReload",
+      "-p",
+      "ExecStart",
+      `agentd-${name}.service`,
+    ]);
+    return shown.ok ? loadedProgram(shown.text) : null;
+  });
   for (const name of SERVICES) {
-    const runs = yield* program(name);
-    if (runs === undefined) unread.push(name);
-    if (runs === null || runs === undefined) continue;
+    const file = yield* program(name);
+    if (file === undefined) unread.push(name);
+    if (file === null || file === undefined) continue;
+    const runs = platform === "linux" && file === agentd ? ((yield* loaded(name)) ?? file) : file;
     const exists = yield* fs.exists(runs).pipe(Effect.orElseSucceed(() => false));
     if (isStaleProgram(runs, exists, agentd)) services.push({ name, program: runs });
     else if (runs !== agentd) kept.push(name);

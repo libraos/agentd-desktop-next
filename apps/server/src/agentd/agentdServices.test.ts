@@ -47,6 +47,10 @@ ${Object.entries(env)
 const task = (program: string, envFile: string) =>
   `<Actions Context="Author"><Exec><Command>${program}</Command><Arguments>service-run --env &quot;${envFile}&quot; --log x.log -- watchdog</Arguments></Exec></Actions>`;
 
+// What a check or Repair ran besides reading what systemd has loaded.
+const acted = (runs: ReadonlyArray<ReadonlyArray<string>>) =>
+  runs.filter((run) => run[0] !== "systemctl" || run[2] !== "show");
+
 const output = (stdout: string, code = 0): ProcessRunner.ProcessRunOutput => ({
   stdout,
   stderr: "",
@@ -213,9 +217,9 @@ describe("agentd services", () => {
         agentd: bundled,
         moves: ["watchdog", "dash"],
       });
-      expect(runs).toEqual([]);
+      expect(acted(runs)).toEqual([]);
       expect(yield* repairServices(deps, problem!)).toEqual({ ok: true });
-      expect(runs).toEqual([[bundled, "install"]]);
+      expect(acted(runs)).toEqual([[bundled, "install"]]);
 
       // Healthy services: no notice.
       runs.length = 0;
@@ -238,7 +242,7 @@ describe("agentd services", () => {
         kept: ["dash"],
       });
       expect(yield* repairServices(deps, kept!)).toEqual({ ok: false });
-      expect(runs).toEqual([]);
+      expect(acted(runs)).toEqual([]);
       // A dash plist that is there but can't be read is not an absent one: install would rewrite it.
       yield* fs.remove(dashPlist);
       yield* fs.makeDirectory(dashPlist);
@@ -314,9 +318,9 @@ describe("agentd services", () => {
         agentd: bundled,
         moves: ["watchdog"],
       });
-      expect(runs).toEqual([]);
+      expect(acted(runs)).toEqual([]);
       expect(yield* repairServices(linux, watchdog!)).toEqual({ ok: true });
-      expect(runs).toEqual([
+      expect(acted(runs)).toEqual([
         [bundled, "install"],
         ["systemctl", "--user", "daemon-reload"],
         ["systemctl", "--user", "enable", "--now", "agentd-watchdog.timer"],
@@ -335,7 +339,7 @@ describe("agentd services", () => {
       const dash = yield* detectServices(linux);
       expect(dash).toMatchObject({ moves: ["dash"] });
       expect(yield* repairServices(linux, dash!)).toEqual({ ok: true });
-      expect(runs).toEqual([
+      expect(acted(runs)).toEqual([
         ["systemctl", "--user", "is-active", "agentd-watchdog.timer"],
         [bundled, "dash", "install"],
       ]);
@@ -381,7 +385,7 @@ describe("agentd services", () => {
         "",
       );
       expect(yield* detectServices(linux)).toBe(null);
-      expect(runs).toEqual([["systemctl", "--user", "is-active", "agentd-watchdog.timer"]]);
+      expect(acted(runs)).toEqual([["systemctl", "--user", "is-active", "agentd-watchdog.timer"]]);
       // A timer systemd enabled but couldn't start: still reported, and Repair starts it.
       const stopped =
         (state: string): ProcessRunner.ProcessRunner["Service"]["run"] =>
@@ -410,7 +414,7 @@ describe("agentd services", () => {
           watchdogOff: true,
         });
       }
-      expect(runs).toEqual([]);
+      expect(acted(runs)).toEqual([]);
 
       // An AppImage with no lasting agentd to register: reported, with no Repair.
       yield* fs.writeFileString(
@@ -420,7 +424,7 @@ describe("agentd services", () => {
       const transient = yield* detectServices({ ...linux, target: null });
       expect(transient).toMatchObject({ agentd: null, moves: [] });
       expect(yield* repairServices({ ...linux, target: null }, transient!)).toEqual({ ok: false });
-      expect(runs).toEqual([]);
+      expect(acted(runs)).toEqual([]);
 
       // Windows: the plain legacy task is reported only when its env file is in this root, and
       // finding it only queries schtasks. A profile folder with a non-ASCII name, in UTF-16.
@@ -459,13 +463,13 @@ describe("agentd services", () => {
       expect(yield* detectServices(windows)).toBe(null);
       listing = '"\\LibraOS\\agentd-watchdog","N/A","Ready"\r\n';
       dashQuery = "";
-      expect(runs.every(([command]) => command === "schtasks")).toBe(true);
+      expect(acted(runs).every(([command]) => command === "schtasks")).toBe(true);
       expect(yield* repairServices(windows, stale!)).toEqual({ ok: true });
       expect(runs.at(-1)).toEqual([bundled, "install"]);
       legacyEnv = path.join(home, "Other", "services", "agentd-watchdog.env");
       runs.length = 0;
       expect(yield* detectServices(windows)).toBe(null);
-      expect(runs.every(([command]) => command === "schtasks")).toBe(true);
+      expect(acted(runs).every(([command]) => command === "schtasks")).toBe(true);
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );
 });
