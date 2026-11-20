@@ -1240,7 +1240,7 @@ const probeCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(function*
   return withNoServedModelsNotice(draft, modelSettings.onlyCustomModels);
 });
 
-type CodexStatusProbe = typeof probeCodexAppServerProvider;
+type CodexStatusProbe = NonNullable<Parameters<typeof probeCodexProviderStatus>[1]>;
 
 /**
  * The probe, with the last route Codex's config confirmed standing in when a later config read
@@ -1254,7 +1254,7 @@ export const withRememberedCodexRoute = Effect.fn("withRememberedCodexRoute")(fu
   >(undefined);
   const remembered: CodexStatusProbe = (input) =>
     probe(input).pipe(
-      Effect.flatMap((snapshot) =>
+      Effect.flatMap((snapshot: CodexAppServerProviderSnapshot) =>
         snapshot.routeUnknown
           ? Ref.get(last).pipe(
               Effect.map((route) => (route ? { ...snapshot, ...route } : snapshot)),

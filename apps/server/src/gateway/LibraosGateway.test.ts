@@ -197,7 +197,10 @@ it.effect("a refresh gives the Gateway agents the key's models as they are now",
             : variable.name === "OPENCODE_CONFIG_CONTENT"
               ? {
                   ...variable,
-                  value: JSON.stringify({ ...JSON.parse(variable.value), autoupdate: false }),
+                  value: JSON.stringify({
+                    ...JSON.parse(String(variable.value)),
+                    autoupdate: false,
+                  }),
                 }
               : variable,
         ),

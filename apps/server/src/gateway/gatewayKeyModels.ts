@@ -95,7 +95,7 @@ export const makeGatewayKeyModels = Effect.fn("LibraosGateway.makeGatewayKeyMode
     if (!key) return Effect.succeed([]);
     return askGatewayModels(key).pipe(
       Effect.provideService(HttpClient.HttpClient, http),
-      Effect.flatMap((answer) => {
+      Effect.flatMap((answer): Effect.Effect<ReadonlyArray<CustomModelSetting>> => {
         if (answer.kind === "models") {
           const models = family
             ? gatewayFamilyModels(answer.models, family)

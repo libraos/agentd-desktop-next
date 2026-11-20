@@ -225,10 +225,11 @@ export function opencodeOwnGatewayKey(
   current: ProviderInstanceConfigMap,
   connected: string,
 ): string | undefined {
-  const value = current[GATEWAY_INSTANCE_IDS.opencode]?.environment
-    ?.find((variable) => variable.name === KEY_ENV)
-    ?.value?.trim();
-  return value && value !== connected ? value : undefined;
+  const value = current[GATEWAY_INSTANCE_IDS.opencode]?.environment?.find(
+    (variable) => variable.name === KEY_ENV,
+  )?.value;
+  const key = typeof value === "string" ? value.trim() : undefined;
+  return key && key !== connected ? key : undefined;
 }
 
 /**
@@ -270,7 +271,12 @@ export function withGatewayModels(
     const environment = opencode.environment ?? [];
     const existing = environment.find((variable) => variable.name === OPENCODE_CONFIG_ENV)?.value;
     const value =
-      opencodeModels === null ? null : patchOpencodeGatewayConfig(existing, opencodeModels);
+      opencodeModels === null
+        ? null
+        : patchOpencodeGatewayConfig(
+            typeof existing === "string" ? existing : undefined,
+            opencodeModels,
+          );
     set(GATEWAY_INSTANCE_IDS.opencode, {
       ...opencode,
       // Its models live in OPENCODE_CONFIG_CONTENT; an older build let users add custom ones.
