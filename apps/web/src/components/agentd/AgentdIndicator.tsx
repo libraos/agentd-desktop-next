@@ -9,8 +9,16 @@ import { resolveThreadRouteTarget } from "~/threadRoutes";
 import { Button } from "../ui/button";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
-import { openAgentdSetupDialog, useCanSetUpAgentd } from "./AgentdSetupDialog";
-import { agentdIndicatorState, type AgentdIndicatorState } from "./agentdVisibility.logic";
+import {
+  openAgentdLinkDialog,
+  openAgentdSetupDialog,
+  useCanSetUpAgentd,
+} from "./AgentdSetupDialog";
+import {
+  agentdIndicatorState,
+  offerAccountLink,
+  type AgentdIndicatorState,
+} from "./agentdVisibility.logic";
 import { TASK_WORKERS } from "./startTask.logic";
 
 /** The open thread's environment, else the primary one. */
@@ -111,7 +119,14 @@ export function AgentdStatusLines({
       <dt className="font-medium">
         <T>LibraOS account</T>
       </dt>
-      <dd className="wrap-anywhere text-muted-foreground">{libraos}</dd>
+      <dd className="wrap-anywhere flex flex-wrap items-center gap-x-1 text-muted-foreground">
+        <span>{libraos}</span>
+        {offerAccountLink(account) === true ? (
+          <Button size="xs" variant="link" onClick={() => openAgentdLinkDialog(environmentId)}>
+            <T>Link account</T>
+          </Button>
+        ) : null}
+      </dd>
     </dl>
   );
 }
