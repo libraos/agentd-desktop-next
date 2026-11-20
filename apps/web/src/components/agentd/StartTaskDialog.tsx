@@ -7,7 +7,7 @@ import { Atom } from "effect/reactivity";
 import { T, useGT } from "gt-react";
 import { useId, useState } from "react";
 
-import { agentdEnvironment, useAgentdCommands } from "~/lib/agentdState";
+import { agentdEnvironment, useAgentdCommands, useAgentdTasks } from "~/lib/agentdState";
 import { useLibraosGatewayConnected } from "~/lib/libraosGatewayState";
 import { newMessageId } from "~/lib/utils";
 import { rightPanelHostRef, useRightPanelStore } from "~/rightPanelStore";
@@ -67,6 +67,12 @@ export function replaceQuestion(gt: ReturnType<typeof useGT>): string {
 
 export function openStartTaskDialog(threadRef: ScopedThreadRef, fields: TaskFields | null = null) {
   appAtomRegistry.set(dialogState, { threadRef, fields });
+}
+
+/** The task list's subscription runs the server's cloud sync fallback, closed tasks pane or not. */
+function SyncsCloudTasks({ environmentId }: { environmentId: EnvironmentId }) {
+  useAgentdTasks(environmentId);
+  return null;
 }
 
 export function useCanStartTask(environmentId: EnvironmentId | null) {
@@ -445,6 +451,9 @@ function StartTaskDialog({
               role="alert"
               className="space-y-1 rounded-lg border border-destructive/30 p-3 text-sm"
             >
+              {offeredId !== null && cloud.enabled && (
+                <SyncsCloudTasks environmentId={environmentId} />
+              )}
               {offeredId !== null && (
                 <p>
                   {cloud.enabled

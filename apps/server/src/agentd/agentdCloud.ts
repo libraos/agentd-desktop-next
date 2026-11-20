@@ -633,7 +633,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
         if (show._tag === "None") return yield* unknownOutcome();
         if (show.value.cloud_state === "submitting" && !CLOSED_STATES.has(show.value.state)) {
           return yield* commandError(
-            `${project} already holds an AgentD reservation: task ${holder} is still being submitted to Cloud Workers. Wait for it, or stop it in Background tasks.`,
+            `Task ${holder} for ${project} is still being submitted to Cloud Workers. Wait for it, or stop it in Background tasks, before starting another.`,
           );
         }
       }

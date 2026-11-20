@@ -51,6 +51,7 @@ const state = vi.hoisted(() => ({
   // Paths this connection may not check: it lacks filesystem read.
   keyFilesDenied: new Set<string>(),
   fixKeyFile: vi.fn(),
+  tasks: vi.fn(),
 }));
 
 vi.mock("~/lib/agentdState", async () => {
@@ -93,6 +94,10 @@ vi.mock("~/lib/agentdState", async () => {
       refresh: state.cloudRefresh,
     }),
     useAgentdTaskOthers: () => ({ data: state.others, isPending: false, isSuccess: true }),
+    useAgentdTasks: (environmentId: EnvironmentId) => {
+      state.tasks(environmentId);
+      return { data: [] };
+    },
   };
 });
 vi.mock("~/lib/libraosGatewayState", () => ({
@@ -150,6 +155,7 @@ function setup(
   state.keyFiles = {};
   state.keyFilesDenied = new Set();
   state.fixKeyFile.mockReset();
+  state.tasks.mockReset();
   state.start.mockReset();
   state.configure.mockReset();
   state.cloudRefresh.mockReset();
@@ -400,8 +406,12 @@ it("checks an unknown cloud outcome before retrying and can replace an earlier s
     environmentId: thread.environmentId,
     input: { ...input, cloud: { budget: "30m,$5", modelAccess: "libraos" } },
   });
+  // Until agentd records a task, nothing here subscribes to the task list.
+  expect(state.tasks).not.toHaveBeenCalled();
   answer(AsyncResult.success({ id: "hof-aabbcc", started: false, note: "Recorded." }));
   await expect.element(page.getByText(/AgentD saved task hof-aabbcc/)).toBeVisible();
+  // While the dialog shows it, its task list subscription drives the cloud sync fallback.
+  expect(state.tasks).toHaveBeenCalledWith(thread.environmentId);
   await expect
     .element(page.getByRole("button", { name: /Start|Check and retry/ }))
     .not.toBeInTheDocument();

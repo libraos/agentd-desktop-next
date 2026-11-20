@@ -783,7 +783,7 @@ describe("AgentdBridge", () => {
       });
       const held = yield* Effect.flip(bridge.startTask(other));
       expect(held.message).toBe(
-        "acme/app already holds an AgentD reservation: task hof-aabbcc is still being submitted to Cloud Workers. Wait for it, or stop it in Background tasks.",
+        "Task hof-aabbcc for acme/app is still being submitted to Cloud Workers. Wait for it, or stop it in Background tasks, before starting another.",
       );
       expect(offers()).toHaveLength(3);
 
