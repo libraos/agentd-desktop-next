@@ -38,6 +38,12 @@ The installers include agentd and its Skills. AgentD Next is not in app stores
 or package managers such as Homebrew, winget, the AUR or nixpkgs; the packages
 there are upstream's and not part of AgentD Next.
 
+If Claude Code, Codex or opencode was connected to agentd by an earlier install
+whose agentd is no longer there (for example AgentD Desktop's), AgentD Next
+connects that agent again once, with the agentd it carries. An agent you never
+connected, or one connected to an agentd that is still there, is left as it is;
+if the repair fails, AgentD shows "needs attention" with agentd's own fix.
+
 ### Linux
 
 To launch the AppImage, open a terminal in its download folder:

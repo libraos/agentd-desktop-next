@@ -175,8 +175,8 @@ describe("AgentdBridge", () => {
       const recordPath = `${yield* fs.makeTempDirectoryScoped()}/agentd-install.json`;
       yield* fs.writeFileString(
         recordPath,
-        '{"action":"installed","path":"/home/les/.local/bin/agentd","directory":"/home/les/.local/bin",' +
-          '"onPath":false,"pathLine":"export PATH=\\"/home/les/.local/bin:$PATH\\"","skills":[]}\n',
+        '{"action":"installed","path":"~/.local/bin/agentd","directory":"~/.local/bin",' +
+          '"onPath":false,"pathLine":"export PATH=\\"~/.local/bin:$PATH\\"","skills":[]}\n',
       );
       const env = { AGENTD_BIN: process.execPath, AGENTD_DESKTOP_INSTALL_RECORD: recordPath };
       const bridge = yield* makeBridge(env, (input) => {
@@ -187,6 +187,8 @@ describe("AgentdBridge", () => {
         if (key === "doctor --json") return Effect.succeed(output(DOCTOR_JSON, 1));
         if (key === "config get dispatch.default_tool")
           return Effect.succeed(output("opencode\r\n"));
+        // agentd prints an empty table while no model has a price.
+        if (key === "config get budget.prices") return Effect.succeed(output("{}\n"));
         if (key === "handoff list --json") return Effect.succeed(output(LIST_JSON));
         if (key === "handoff show hof-a6e5f4e329 --json") return Effect.succeed(output(SHOW_JSON));
         return Effect.die(`unexpected agentd ${key}`);
@@ -197,6 +199,7 @@ describe("AgentdBridge", () => {
         ok: false,
         setUp: true,
         defaultWorker: "opencode",
+        dollarBudgets: false,
         teamServer: "https://team.example:8443/agentd",
         checks: [
           { id: "binary", status: "pass", detail: "agentd v0.1.13 0d0b360a58c0", fix: null },
@@ -218,10 +221,10 @@ describe("AgentdBridge", () => {
         binary: process.execPath,
         install: {
           action: "installed",
-          path: "/home/les/.local/bin/agentd",
-          directory: "/home/les/.local/bin",
+          path: "~/.local/bin/agentd",
+          directory: "~/.local/bin",
           onPath: false,
-          pathLine: 'export PATH="/home/les/.local/bin:$PATH"',
+          pathLine: 'export PATH="~/.local/bin:$PATH"',
           skills: [],
         },
       });
@@ -290,6 +293,116 @@ describe("AgentdBridge", () => {
         started: "2026-11-18T06:24:58+00:00",
         updated: "2026-11-18T06:47:57+00:00",
       });
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
+  // doctor's Go-quoted detail for a registration whose command moved, per platform's path form.
+  it.effect.each([
+    String.raw`server agentd runs "C:\\Program Files\\AgentD\\resources\\bin\\agentd.exe", which is not there`,
+    'server agentd runs "/opt/AgentD/resources/bin/agentd", which is not there',
+    'server agentd runs "/Applications/AgentD.app/Contents/Resources/bin/agentd", which is not there',
+  ])("connects an agent once whose registration runs a command that is gone: %s", (stale) =>
+    Effect.gen(function* () {
+      const doctor = (claude: string, codex: string, opencode: string) =>
+        output(
+          JSON.stringify({
+            set_up: true,
+            checks: [
+              { id: "claude-mcp", status: claude === "pass" ? "pass" : "fail", detail: claude },
+              { id: "codex-mcp", status: codex === "pass" ? "pass" : "fail", detail: codex },
+              { id: "opencode-mcp", status: "fail", detail: opencode },
+            ],
+          }),
+          1,
+        );
+      const neverRegistered = "agentd is not registered in ~/.config/opencode/opencode.json";
+      let claudeFixed = false;
+      let doctorReads = 0;
+      const calls: string[] = [];
+      const bridge = yield* makeBridge({ AGENTD_BIN: process.execPath }, (input) => {
+        const key = input.args.join(" ");
+        calls.push(key);
+        switch (key) {
+          case "version":
+            return Effect.succeed(output("agentd v0.1.20\n"));
+          case "doctor --json":
+            doctorReads += 1;
+            return Effect.succeed(doctor(claudeFixed ? "pass" : stale, stale, neverRegistered));
+          case "connect claude":
+            claudeFixed = true;
+            return Effect.succeed(output("registered MCP server agentd"));
+          case "connect codex":
+            return Effect.succeed(output("agentd: ~/.codex/config.toml is not writable", 1));
+          case "config get dispatch.default_tool":
+            return Effect.succeed(output("claude\n"));
+          case "config get budget.prices":
+            return Effect.succeed(output("{}\n"));
+          default:
+            return Effect.die(`unexpected agentd ${key}`);
+        }
+      });
+
+      const first = yield* bridge.status;
+      expect(calls.filter((call) => call.startsWith("connect"))).toEqual([
+        "connect claude",
+        "connect codex",
+      ]);
+      expect(doctorReads).toBe(2);
+      expect(first.checks.map((check) => [check.id, check.status])).toEqual([
+        ["claude-mcp", "pass"],
+        ["codex-mcp", "fail"],
+        ["opencode-mcp", "fail"],
+      ]);
+
+      // codex's failed repair is not tried again in this server run.
+      const second = yield* bridge.status;
+      expect(calls.filter((call) => call.startsWith("connect"))).toHaveLength(2);
+      expect(doctorReads).toBe(3);
+      expect(second.checks.find((check) => check.id === "codex-mcp")?.detail).toBe(stale);
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
+  it.effect("leaves a registration alone whose command is there or that was never made", () =>
+    Effect.gen(function* () {
+      const calls: string[] = [];
+      const bridge = yield* makeBridge({ AGENTD_BIN: process.execPath }, (input) => {
+        const key = input.args.join(" ");
+        calls.push(key);
+        if (key === "version") return Effect.succeed(output("agentd v0.1.20\n"));
+        if (key === "doctor --json")
+          return Effect.succeed(
+            output(
+              JSON.stringify({
+                set_up: true,
+                checks: [
+                  {
+                    id: "claude-mcp",
+                    status: "pass",
+                    detail: "server agentd runs /usr/local/bin/agentd",
+                  },
+                  {
+                    id: "codex-mcp",
+                    status: "fail",
+                    detail: "agentd is not registered in ~/.codex/config.toml",
+                  },
+                  {
+                    id: "claude-hooks",
+                    status: "fail",
+                    detail: "hooks in ~/.claude/settings.json run /gone/agentd, which is not there",
+                  },
+                ],
+              }),
+              1,
+            ),
+          );
+        if (key === "config get dispatch.default_tool") return Effect.succeed(output("claude\n"));
+        if (key === "config get budget.prices") return Effect.succeed(output("{}\n"));
+        return Effect.die(`unexpected agentd ${key}`);
+      });
+      yield* bridge.status;
+      expect(
+        calls.filter((call) => call.startsWith("connect") || call === "doctor --json"),
+      ).toEqual(["doctor --json"]);
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );
 

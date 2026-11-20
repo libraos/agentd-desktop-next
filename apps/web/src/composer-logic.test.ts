@@ -622,7 +622,7 @@ describe("hand to a worker slash command", () => {
         label: `/${command}`,
         description: "",
       })),
-      handToWorkerSlashItem("Start a background task for this project"),
+      handToWorkerSlashItem("Start a background task, or draft one from this chat as a task card"),
     ];
     expect(items.at(-1)?.label).toBe("/hand-to-worker");
     expect(searchSlashCommandItems(items, "/hand").map((item) => item.id)).toEqual([

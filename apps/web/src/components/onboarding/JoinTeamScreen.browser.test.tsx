@@ -1,5 +1,4 @@
 import { AgentdCommandError, EnvironmentId, type AgentdCommandOutput } from "@t3tools/contracts";
-import { AsyncResult } from "effect/reactivity";
 import { expect, it, vi } from "vite-plus/test";
 
 import { act, render } from "../../../test/render";
@@ -15,6 +14,7 @@ vi.mock(import("../../state/environments"), async (original) => ({
 vi.mock(import("../../lib/agentdState"), async (original) => {
   const actual = await original();
   const { Atom } = await import("effect/reactivity");
+  const Effect = await import("effect/Effect");
   const allowed = Atom.make(true);
   return {
     ...actual,
@@ -23,7 +23,12 @@ vi.mock(import("../../lib/agentdState"), async (original) => {
       joinTeam: {
         ...actual.agentdEnvironment.joinTeam,
         permissionAtom: () => allowed,
-        run: (_registry, target) => runJoin(target),
+        // The command runs as an Effect; the test settles it with a promise.
+        run: (_registry, target) =>
+          Effect.tryPromise({
+            try: () => runJoin(target) as Promise<AgentdCommandOutput>,
+            catch: (error) => error as AgentdCommandError,
+          }),
       },
     },
   };
@@ -32,16 +37,11 @@ vi.mock(import("../../lib/agentdState"), async (original) => {
 it("clears the invite immediately, shows the refusal, and confirms a successful retry", async () => {
   const expiredTicket = "adt_0123456789abcdef";
   const freshTicket = "adt_fixtureABCD12345";
-  const pending = Promise.withResolvers<AsyncResult.AsyncResult<AgentdCommandOutput, Error>>();
-  runJoin
-    .mockReset()
-    .mockReturnValueOnce(pending.promise)
-    .mockResolvedValueOnce(
-      AsyncResult.success({
-        output:
-          "joined https://team.example as device dvc_new (cli, person Mira Chen), protocol 3; credential in /agentd/device (mode 600), never shown",
-      }),
-    );
+  const pending = Promise.withResolvers<AgentdCommandOutput>();
+  runJoin.mockReset().mockReturnValueOnce(pending.promise).mockResolvedValueOnce({
+    output:
+      "joined https://team.example as device dvc_new (cli, person Mira Chen), protocol 3; credential in /agentd/device (mode 600), never shown",
+  });
   await using screen = await render(<JoinTeamScreen />, { router: "/welcome?screen=team" });
   using warn = vi.spyOn(console, "warn");
   const input = screen.getByLabelText("Team invitation link");
@@ -81,13 +81,11 @@ it("clears the invite immediately, shows the refusal, and confirms a successful 
   expect(screen.router?.state.location.href).toBe("/welcome?screen=team");
 
   await act(() => {
-    pending.resolve(
-      AsyncResult.fail(
-        new AgentdCommandError({
-          message: `Ticket ${expiredTicket} expired.\nAsk your team for a new invitation.`,
-          notSetUp: false,
-        }),
-      ),
+    pending.reject(
+      new AgentdCommandError({
+        message: `Ticket ${expiredTicket} expired.\nAsk your team for a new invitation.`,
+        notSetUp: false,
+      }),
     );
   });
   await expect

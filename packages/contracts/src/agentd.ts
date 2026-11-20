@@ -270,6 +270,11 @@ export const AgentdStatus = Schema.Struct({
   ok: Schema.Boolean,
   setUp: Schema.Boolean,
   defaultWorker: Schema.optionalKey(Schema.NullOr(AgentdWorkerTool)),
+  /**
+   * Whether a local worker can take a dollar budget: agentd refuses one while its model prices are
+   * empty. Null when agentd did not say.
+   */
+  dollarBudgets: Schema.optionalKey(Schema.NullOr(Schema.Boolean)),
   teamServer: NullableString,
   checks: Schema.Array(AgentdDoctorCheck),
   /** The agentd binary the app runs. */

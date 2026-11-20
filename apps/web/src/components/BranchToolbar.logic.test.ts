@@ -8,6 +8,9 @@ import {
   resolveDraftEnvModeAfterBranchChange,
   resolveEffectiveEnvMode,
   resolveBranchToolbarPrBranch,
+  resolveBranchTriggerLabel,
+  resolveLocalBaseAheadCount,
+  resolveStartFromOriginAfterBasePick,
   resolveConfirmedSelectedRef,
   resolveDefaultWorktreeBaseBranch,
   resolveLocalCheckoutBranchMismatch,
@@ -430,5 +433,57 @@ describe("resolveConfirmedSelectedRef", () => {
     expect(resolveConfirmedSelectedRef(listed, refs === null ? null : { refs }).worktreePath).toBe(
       expected,
     );
+  });
+});
+
+describe("worktree base: local or remote", () => {
+  it.each([
+    { ref: { isRemote: false }, startFromOrigin: true, expected: false },
+    { ref: {}, startFromOrigin: true, expected: false },
+    { ref: { isRemote: true }, startFromOrigin: true, expected: true },
+    { ref: { isRemote: true }, startFromOrigin: false, expected: false },
+  ])("picking $ref with Start from remote $startFromOrigin leaves it $expected", (row) => {
+    expect(resolveStartFromOriginAfterBasePick(row.ref, row.startFromOrigin)).toBe(row.expected);
+  });
+
+  it.each([
+    { startFromOrigin: true, hasRemote: true, isRemote: false, label: "From master (remote)" },
+    { startFromOrigin: false, hasRemote: true, isRemote: false, label: "From master (local)" },
+    { startFromOrigin: false, hasRemote: false, isRemote: false, label: "From master" },
+    { startFromOrigin: true, hasRemote: true, isRemote: true, label: "From master" },
+  ])("labels the base $label", (row) => {
+    expect(
+      resolveBranchTriggerLabel({
+        activeWorktreePath: null,
+        effectiveEnvMode: "worktree",
+        resolvedActiveBranch: "master",
+        resolvedActiveBranchIsRemote: row.isRemote,
+        startFromOrigin: row.startFromOrigin,
+        hasRemote: row.hasRemote,
+      }),
+    ).toBe(row.label);
+  });
+
+  const aheadStatus = { refName: "master", hasUpstream: true, aheadCount: 2 };
+  it.each([
+    { name: "remote base", input: {}, expected: 2 },
+    { name: "local base", input: { startFromOrigin: false }, expected: 0 },
+    { name: "remote ref picked", input: { baseIsRemote: true }, expected: 0 },
+    { name: "other branch checked out", input: { baseBranch: "develop" }, expected: 0 },
+    {
+      name: "no upstream",
+      input: { projectStatus: { ...aheadStatus, hasUpstream: false } },
+      expected: 0,
+    },
+  ])("counts unpushed local commits for a $name", (row) => {
+    expect(
+      resolveLocalBaseAheadCount({
+        startFromOrigin: true,
+        baseBranch: "master",
+        baseIsRemote: false,
+        projectStatus: aheadStatus,
+        ...row.input,
+      }),
+    ).toBe(row.expected);
   });
 });

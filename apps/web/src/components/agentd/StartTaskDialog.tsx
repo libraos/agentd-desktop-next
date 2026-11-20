@@ -210,7 +210,15 @@ function StartTaskDialog({
   const budgetReason =
     validation.budget === "invalid"
       ? gt("Enter a positive budget such as 30m, $2, or 30m,$2.")
-      : null;
+      : validation.budget === "no-prices"
+        ? plan.noPricesReason
+        : null;
+  // Not a problem, so it does not open the inputs: why the default names no dollars.
+  const budgetHint =
+    budgetReason ??
+    (plan.dollarBudgets === false
+      ? gt("No dollar limit: AgentD on this machine has no model prices.")
+      : null);
   const acceptReason = validation.accept
     ? gt(
         "Use at most {limit} acceptance criteria, one per line, with no leading dashes or NUL characters.",
@@ -327,7 +335,7 @@ function StartTaskDialog({
   const acceptProps = fieldProps("accept", acceptReason);
   const checkProps = fieldProps("check", checkReason);
   const workerProps = fieldProps("worker", null);
-  const budgetProps = fieldProps("budget", budgetReason);
+  const budgetProps = fieldProps("budget", budgetHint);
   const issueProps = fieldProps("issue", issueReason);
 
   return (
@@ -446,7 +454,7 @@ function StartTaskDialog({
                       </SelectPopup>
                     </Select>
                   </TaskField>
-                  <TaskField label={gt("Budget")} id={budgetProps.id} reason={budgetReason}>
+                  <TaskField label={gt("Budget")} id={budgetProps.id} reason={budgetHint}>
                     <Input
                       {...budgetProps}
                       maxLength={TASK_BUDGET_LIMIT}

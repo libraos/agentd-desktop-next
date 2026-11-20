@@ -263,7 +263,11 @@ export function useComposerMenuItems({
           description: gt("Switch response model for this thread"),
         },
         ...(handToWorkerAvailable
-          ? [handToWorkerSlashItem(gt("Start a background task for this project"))]
+          ? [
+              handToWorkerSlashItem(
+                gt("Start a background task, or draft one from this chat as a task card"),
+              ),
+            ]
           : []),
         ...(sideChatAvailable
           ? ([

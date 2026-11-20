@@ -49,7 +49,20 @@ const isIssue = Schema.is(AgentdStartTaskInput.fields.issue);
 const isTaskText = (text: string) =>
   text.length <= TASK_TEXT_LIMIT && !text.startsWith("-") && !text.includes("\0");
 
-export function prepareTaskFields(fields: TaskFields) {
+/** The dollars of an agentd budget such as `30m,$5`; null when it names none. */
+export function budgetDollarCap(budget: string): number | null {
+  const match = /\$(\d+(?:\.\d+)?)/.exec(budget);
+  return match ? Number(match[1]) : null;
+}
+
+/**
+ * `dollarBudgets` is agentd's answer to whether a local worker can take a dollar budget; with
+ * `false` a budget naming dollars is refused here, before agentd refuses it after Start.
+ */
+export function prepareTaskFields(
+  fields: TaskFields,
+  { dollarBudgets = null }: { readonly dollarBudgets?: boolean | null } = {},
+) {
   const accept = fields.accept
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -72,7 +85,9 @@ export function prepareTaskFields(fields: TaskFields) {
         : !isBudget(input.budget) ||
             input.budget.split(",").some((limit) => parseFloat(limit.replace("$", "")) <= 0)
           ? "invalid"
-          : null,
+          : dollarBudgets === false && budgetDollarCap(input.budget) !== null
+            ? "no-prices"
+            : null,
     accept:
       fields.accept.length > TASK_TEXT_LIMIT ||
       accept.length > TASK_ACCEPT_LIMIT ||
@@ -199,6 +214,19 @@ export function autoBudget({
       ? wanted
       : Math.min(wanted, Math.floor(Math.max(balanceUsd, 0) * 100) / 100);
   return { minutes, dollars };
+}
+
+/**
+ * The budget a local Start fills in: minutes and dollars, or minutes only while agentd has no model
+ * prices to hold a dollar limit with.
+ */
+export function localBudget(
+  budget: { readonly minutes: number; readonly dollars: number },
+  dollarBudgets: boolean | null,
+): string {
+  return dollarBudgets === false
+    ? `${budget.minutes}m`
+    : `${budget.minutes}m,$${budgetDollars(budget.dollars)}`;
 }
 
 /** The minutes of an agentd budget such as `30m,$5`; null when it names none. */

@@ -44,6 +44,7 @@ const state = vi.hoisted(() => ({
   defaults: { estimate: null, check: null } as AgentdTaskDefaults,
   gateway: false,
   worker: "opencode" as string | null,
+  dollarBudgets: null as boolean | null,
   primary: null as EnvironmentId | null,
   os: "unknown" as ExecutionEnvironmentPlatformOs,
   cloudError: null as Error | null,
@@ -67,7 +68,9 @@ vi.mock("~/lib/agentdState", async () => {
       cloudConfigure: { permissionAtom: () => allowed, label: "cloud-configure" },
       cloudKeyFileFix: { permissionAtom: () => allowed },
     },
-    useAgentdStatus: () => ({ data: { defaultWorker: state.worker } }),
+    useAgentdStatus: () => ({
+      data: { defaultWorker: state.worker, dollarBudgets: state.dollarBudgets },
+    }),
     useAgentdTaskDefaults: () => ({ data: state.defaults }),
     useAgentdCloudSetup: (cwd: string | null) => ({
       data: cwd && state.cloudError === null ? state.cloud : null,
@@ -168,6 +171,7 @@ function setup(
   state.tasks.mockReset();
   state.rows = [];
   state.rowListeners.clear();
+  state.dollarBudgets = null;
   state.start.mockReset();
   state.configure.mockReset();
   state.cloudRefresh.mockReset();
@@ -499,6 +503,45 @@ it("shows a drafted task as one summary with Start and its inputs folded under E
       check: "pnpm test",
       worker: "opencode",
       budget: "60m,$5",
+      issue: null,
+    },
+  });
+});
+
+it("budgets in minutes only while agentd has no model prices, and flags typed dollars", async () => {
+  setup("feature/export", drafted);
+  state.defaults = { estimate, check: null };
+  state.dollarBudgets = false;
+  state.start.mockResolvedValue(
+    AsyncResult.success({ id: "hof-123abc", started: true, note: null }),
+  );
+  await using _screen = await renderDialog();
+  await expect
+    .element(page.getByText("opencode · time limit 60 min · check: pnpm test"))
+    .toBeVisible();
+  await page.getByRole("button", { name: "Edit" }).click();
+  const budget = page.getByLabelText("Budget");
+  await expect.element(budget).toHaveValue("60m");
+  await userEvent.fill(budget, "30m,$2");
+  const start = page.getByRole("button", { name: "Start", exact: true });
+  await expect.element(start).toBeDisabled();
+  await expect
+    .element(page.getByRole("alert"))
+    .toHaveTextContent(
+      "AgentD on this machine has no model prices, so it cannot hold a dollar limit. Use minutes, such as 60m.",
+    );
+  await userEvent.clear(budget);
+  await start.click();
+  await expect.element(page.getByText("Started task hof-123abc.")).toBeVisible();
+  expect(state.start).toHaveBeenCalledExactlyOnceWith({
+    environmentId: thread.environmentId,
+    input: {
+      cwd: "/repo/worktrees/export",
+      goal: "Fix export",
+      accept: ["Keeps the row order"],
+      check: "pnpm test",
+      worker: "opencode",
+      budget: "60m",
       issue: null,
     },
   });

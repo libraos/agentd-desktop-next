@@ -265,6 +265,8 @@ export function resolveBranchTriggerLabel(
     resolvedActiveBranch: string | null;
     resolvedActiveBranchIsRemote: boolean | null;
     startFromOrigin: boolean;
+    /** The repository has a remote, so a local base is worth naming as local. */
+    hasRemote?: boolean | undefined;
   },
   resolve: MessageResolver = m,
 ): string {
@@ -280,11 +282,41 @@ export function resolveBranchTriggerLabel(
   }
   if (effectiveEnvMode === "worktree" && !activeWorktreePath) {
     // Only the server can determine a local branch's configured remote.
-    return startFromOrigin && resolvedActiveBranchIsRemote === false
-      ? resolve(msg("From {branch} (remote)", { branch: resolvedActiveBranch }))
-      : resolve(msg("From {branch}", { branch: resolvedActiveBranch }));
+    if (resolvedActiveBranchIsRemote === false && startFromOrigin)
+      return resolve(msg("From {branch} (remote)", { branch: resolvedActiveBranch }));
+    if (resolvedActiveBranchIsRemote === false && input.hasRemote === true)
+      return resolve(msg("From {branch} (local)", { branch: resolvedActiveBranch }));
+    return resolve(msg("From {branch}", { branch: resolvedActiveBranch }));
   }
   return resolvedActiveBranch;
+}
+
+/** Picking a local branch as a worktree base means its local commit, so Start from remote turns off. */
+export function resolveStartFromOriginAfterBasePick(
+  ref: Pick<VcsRef, "isRemote">,
+  startFromOrigin: boolean,
+): boolean {
+  return ref.isRemote === true && startFromOrigin;
+}
+
+/**
+ * How many commits the local base branch has that a Start from remote worktree would leave out.
+ * Known only for the branch checked out at the project root, whose status counts them.
+ */
+export function resolveLocalBaseAheadCount(input: {
+  startFromOrigin: boolean;
+  baseBranch: string | null;
+  baseIsRemote: boolean | null;
+  projectStatus: {
+    readonly refName: string | null;
+    readonly hasUpstream: boolean;
+    readonly aheadCount: number;
+  } | null;
+}): number {
+  const { startFromOrigin, baseBranch, baseIsRemote, projectStatus } = input;
+  if (!startFromOrigin || baseIsRemote !== false || baseBranch === null) return 0;
+  if (projectStatus?.refName !== baseBranch || !projectStatus.hasUpstream) return 0;
+  return projectStatus.aheadCount;
 }
 
 export function resolveBranchToolbarPrBranch(input: {
