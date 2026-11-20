@@ -76,12 +76,20 @@ export interface AppModelOption {
   isUnavailable?: boolean;
 }
 
+/** The server lists exactly the Gateway key's models for this agent; settings cannot add one. */
+export function listsGatewayModels(
+  instanceId: string,
+  provider: Pick<ServerProvider, "auth"> | undefined,
+): boolean {
+  return (
+    isLibraosGatewayInstanceId(instanceId) || provider?.auth.endpoint === LIBRAOS_GATEWAY_ORIGIN
+  );
+}
+
 // An agent on the LibraOS Gateway lists its key's models, so it loses a model when the key does.
 function listsModelsAtRuntime(entry: ProviderInstanceEntry): boolean {
   return (
-    hasRuntimeModelCatalog(entry.driverKind) ||
-    isLibraosGatewayInstanceId(entry.instanceId) ||
-    entry.snapshot.auth.endpoint === LIBRAOS_GATEWAY_ORIGIN
+    hasRuntimeModelCatalog(entry.driverKind) || listsGatewayModels(entry.instanceId, entry.snapshot)
   );
 }
 
@@ -224,8 +232,10 @@ export function getAppModelOptionsForInstance(
   entry: ProviderInstanceEntry,
   selectedModel?: string | null,
 ): AppModelOption[] {
+  const gatewayListed = listsGatewayModels(entry.instanceId, entry.snapshot);
+  // The Gateway's list, custom rows included, is the authority; saved custom models are not.
   const options: AppModelOption[] = entry.models
-    .filter((model) => !model.isCustom)
+    .filter((model) => gatewayListed || !model.isCustom)
     .map((model) => toAppModelOption(model, entry.driverKind));
   const seen = new Set(options.map((option) => option.slug));
   const builtInModelSlugs = new Set(
@@ -234,7 +244,9 @@ export function getAppModelOptionsForInstance(
     ),
   );
 
-  const customModels = readInstanceCustomModels(settings, entry.instanceId, entry.driverKind);
+  const customModels = gatewayListed
+    ? []
+    : readInstanceCustomModels(settings, entry.instanceId, entry.driverKind);
   for (const custom of normalizeCustomModelEntries(customModels, builtInModelSlugs)) {
     if (seen.has(custom.slug)) {
       continue;

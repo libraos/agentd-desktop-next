@@ -21,6 +21,7 @@ import { settingsSecretLiteral } from "@t3tools/contracts";
 
 import { OpenCodeSettings } from "../settings.ts";
 import type { ProviderCompatibilityLookup } from "@t3tools/provider-core/server/compatibility";
+import type { EndpointKeyModels } from "@t3tools/provider-core/server/snapshotProbe";
 import * as OpenCodeRuntime from "./OpenCodeRuntime.ts";
 import * as OpenCodeServerOwner from "./OpenCodeServerOwner.ts";
 import {
@@ -509,6 +510,7 @@ const checkProvider = Effect.fn("checkProvider")(function* (
     OpenCodeRuntime.OpenCodeRuntimeError
   > = Effect.succeed([]),
   compatibility?: ProviderCompatibilityLookup,
+  endpointKeyModels?: EndpointKeyModels,
 ) {
   return yield* Effect.scoped(
     Effect.gen(function* () {
@@ -529,6 +531,7 @@ const checkProvider = Effect.fn("checkProvider")(function* (
         openCode2Models,
         environment,
         compatibility,
+        endpointKeyModels,
       ).pipe(Effect.provideService(OpenCodeServerOwner.OpenCodeServerOwner, serverOwner));
     }),
   );
@@ -640,6 +643,64 @@ it.layer(layerTest)("checkOpenCodeProviderStatus", (it) => {
         ["openai/gpt-5.4"],
       );
     }),
+  );
+
+  it.effect(
+    "lists only the models the Gateway allows for the key OpenCode's own config sends",
+    () =>
+      Effect.gen(function* () {
+        const model = (id: string) => ({ id, name: id, variants: {} });
+        runtimeMock.state.inventory = {
+          providerList: {
+            connected: ["libraos", "openai"],
+            all: [
+              {
+                id: "libraos",
+                name: "LibraOS Gateway",
+                key: "lk_opencode_key_123",
+                options: { baseURL: "https://api.libraos.com/v1" },
+                models: {
+                  "anthropic/claude-opus-5-5": model("anthropic/claude-opus-5-5"),
+                  "openai/gpt-6-astra": model("openai/gpt-6-astra"),
+                },
+              },
+              {
+                id: "openai",
+                name: "OpenAI",
+                options: {},
+                models: { "gpt-5.4": model("gpt-5.4") },
+              },
+            ],
+            default: {},
+          },
+          agents: [],
+          skills: [],
+        };
+        const asked: Array<{ readonly endpoint: string; readonly key: string | undefined }> = [];
+        const status = yield* checkProvider(
+          makeOpenCodeSettings(),
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          (input) =>
+            Effect.sync(() => asked.push(input)).pipe(
+              Effect.as(
+                input.endpoint === "https://api.libraos.com"
+                  ? [{ slug: "openai/gpt-6-astra" }]
+                  : undefined,
+              ),
+            ),
+        );
+        NodeAssert.deepEqual(status.models.map((entry) => entry.slug).toSorted(), [
+          "libraos/openai/gpt-6-astra",
+          "openai/gpt-5.4",
+        ]);
+        NodeAssert.deepEqual(asked, [
+          { endpoint: "https://api.libraos.com", key: "lk_opencode_key_123" },
+        ]);
+      }),
   );
 
   it.effect("emits OpenCode variant defaults so trait picker can resolve a visible selection", () =>

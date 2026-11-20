@@ -536,6 +536,33 @@ describe("instance-scoped model selection", () => {
     );
   });
 
+  it("lists exactly the Gateway's models for an agent configured by hand to use it", () => {
+    const instanceId = ProviderInstanceId.make("codex");
+    const base = provider({ instanceId: "codex", models: ["gpt-6-astra"] });
+    const [entry] = deriveProviderInstanceEntries([
+      {
+        ...base,
+        auth: { status: "authenticated", endpoint: "https://api.libraos.com" },
+        // The key allows a model the CLI catalog lacks; the probe adds it as custom.
+        models: [{ slug: "gpt-7-nova", name: "GPT-7 Nova", isCustom: true, capabilities: {} }],
+      },
+    ]);
+    const settings: UnifiedSettings = {
+      ...DEFAULT_UNIFIED_SETTINGS,
+      providerInstances: {
+        [instanceId]: {
+          driver: ProviderDriverKind.make("codex"),
+          // Saved before, and not served for this key.
+          config: { customModels: ["old-custom"] },
+        },
+      },
+    };
+
+    expect(getAppModelOptionsForInstance(settings, entry!).map((o) => o.slug)).toEqual([
+      "gpt-7-nova",
+    ]);
+  });
+
   it("falls back from an explicit non-OpenCode draft with a missing model", () => {
     const instanceId = ProviderInstanceId.make("codex");
     const driver = ProviderDriverKind.make("codex");

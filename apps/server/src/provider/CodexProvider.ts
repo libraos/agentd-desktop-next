@@ -1157,7 +1157,7 @@ const probeCodexProviderStatus = Effect.fn("checkCodexProviderStatus")(function*
     ? resolvedEnvironment[snapshot.endpointKeyEnv]?.trim()
     : undefined;
   const endpointModels =
-    endpointKeyModels && snapshot.endpoint && endpointKey && codexSettings.onlyCustomModels !== true
+    endpointKeyModels && snapshot.endpoint && codexSettings.onlyCustomModels !== true
       ? yield* endpointKeyModels({ endpoint: snapshot.endpoint, key: endpointKey })
       : undefined;
   const modelSettings = endpointModels

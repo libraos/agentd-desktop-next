@@ -267,16 +267,16 @@ function onlyCustomProviderModels(
 }
 
 /**
- * The models a custom endpoint serves for the key the agent sends it, or undefined when it cannot
- * say (not an endpoint it knows, or unreachable). A refused key serves none.
+ * The models a custom endpoint serves for the key the agent sends it (none when it sends none), or
+ * undefined for an endpoint that serves every model.
  */
 export type EndpointKeyModels = (input: {
   readonly endpoint: string;
-  readonly key: string;
+  readonly key: string | undefined;
 }) => Effect.Effect<ReadonlyArray<CustomModelSetting> | undefined>;
 
 export const NO_SERVED_MODELS_MESSAGE =
-  "No models: the key this agent uses allows none of its models, or was refused. Check the key, then refresh.";
+  "No models: the key this agent uses allows none of its models, is missing or refused, or could not be checked yet. Check the key and connection, then refresh.";
 
 /** A provider limited to its endpoint's models says why its list is empty. */
 export function withNoServedModelsNotice(

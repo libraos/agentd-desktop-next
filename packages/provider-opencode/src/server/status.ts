@@ -26,6 +26,7 @@ import {
   COMPACT_SLASH_COMMAND,
   nonEmptyTrimmed,
   providerModelsFromSettings,
+  type EndpointKeyModels,
   type ServerProviderDraft,
 } from "@t3tools/provider-core/server/snapshotProbe";
 import * as OpenCodeRuntime from "./OpenCodeRuntime.ts";
@@ -368,6 +369,42 @@ function flattenOpenCodeModels(
 
   return markOpenCodeLegacy(entries).toSorted((left, right) => left.name.localeCompare(right.name));
 }
+
+/**
+ * OpenCode lists every model its config names; an endpoint that serves only some of them for the
+ * key OpenCode sends it (LibraOS Gateway) decides which of them work.
+ */
+const restrictToEndpointModels = Effect.fn("OpencodeProviderStatus.restrictToEndpointModels")(
+  function* (providerList: ProviderListResponse, endpointKeyModels: EndpointKeyModels | undefined) {
+    if (!endpointKeyModels) return providerList;
+    const all = yield* Effect.forEach(
+      providerList.all,
+      (provider) => {
+        const baseUrl = provider.options.baseURL;
+        const endpoint = typeof baseUrl === "string" ? URL.parse(baseUrl)?.origin : undefined;
+        if (!endpoint) return Effect.succeed(provider);
+        const apiKey = provider.options.apiKey;
+        const key = (provider.key ?? (typeof apiKey === "string" ? apiKey : undefined))?.trim();
+        return endpointKeyModels({ endpoint, key: key || undefined }).pipe(
+          Effect.map((served) => {
+            if (served === undefined) return provider;
+            const allowed = new Set(
+              served.map((model) => (typeof model === "string" ? model : model.slug)),
+            );
+            return {
+              ...provider,
+              models: Object.fromEntries(
+                Object.entries(provider.models).filter(([, model]) => allowed.has(model.id)),
+              ),
+            };
+          }),
+        );
+      },
+      { concurrency: "unbounded" },
+    );
+    return { ...providerList, all };
+  },
+);
 
 // An empty list may be a cold start or a key that allows no models (a LibraOS Gateway key).
 const NO_MODELS_HINT =
@@ -793,6 +830,7 @@ export const checkOpenCodeProviderStatus = Effect.fn("checkOpenCodeProviderStatu
   >,
   environment?: NodeJS.ProcessEnv,
   compatibility: ProviderCompatibilityLookup = noCompatibilityPolicy,
+  endpointKeyModels?: EndpointKeyModels,
 ): Effect.fn.Return<
   ServerProviderDraft,
   never,
@@ -949,7 +987,14 @@ export const checkOpenCodeProviderStatus = Effect.fn("checkOpenCodeProviderStatu
     };
   }
 
-  const catalogModels = openCodeProviderModels(openCodeSettings, inventoryExit.value);
+  const inventory = {
+    ...inventoryExit.value,
+    providerList: yield* restrictToEndpointModels(
+      inventoryExit.value.providerList,
+      endpointKeyModels,
+    ),
+  };
+  const catalogModels = openCodeProviderModels(openCodeSettings, inventory);
   const models =
     catalogModels ??
     providerModelsFromSettings([], customModels, DEFAULT_OPENCODE_MODEL_CAPABILITIES);

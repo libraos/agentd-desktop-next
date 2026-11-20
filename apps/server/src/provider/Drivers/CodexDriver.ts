@@ -287,7 +287,8 @@ export const CodexDriver: ProviderDriver<
             gatewayKeyModels,
           ),
           currentCatalog,
-          (draft, catalog) => stampIdentity(applyCodexModelCatalog(draft, catalog)),
+          (draft, catalog) =>
+            stampIdentity(applyCodexModelCatalog(draft, catalog, effectiveConfig)),
           { concurrent: true },
         ),
       ),
@@ -305,7 +306,8 @@ export const CodexDriver: ProviderDriver<
         Effect.zipWith(
           makePendingCodexProvider(settings.provider),
           currentCatalog,
-          (draft, catalog) => stampIdentity(applyCodexModelCatalog(draft, catalog)),
+          (draft, catalog) =>
+            stampIdentity(applyCodexModelCatalog(draft, catalog, effectiveConfig)),
         ),
       checkProvider,
       enrichSnapshot: ({ settings, snapshot, publishSnapshot }) =>

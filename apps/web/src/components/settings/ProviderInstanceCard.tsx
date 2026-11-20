@@ -42,6 +42,7 @@ import {
 import { cn } from "../../lib/utils";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useStableCallback } from "../../hooks/useStableCallback";
+import { listsGatewayModels } from "../../modelSelection";
 import { normalizeProviderAccentColor } from "../../providerInstances";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -185,7 +186,9 @@ function nextConfigBlobWithValue(
 export function deriveProviderModelsForDisplay(input: {
   readonly liveModels: ReadonlyArray<ServerProviderModel> | undefined;
   readonly customModels: ReadonlyArray<CustomModelDefinition>;
+  readonly gatewayListed?: boolean;
 }): ReadonlyArray<ServerProviderModel> {
+  if (input.gatewayListed && input.liveModels) return input.liveModels;
   const liveCustomModelsBySlug = new Map(
     Arr.filterMap(input.liveModels ?? [], (model) =>
       model.isCustom ? Result.succeed([model.slug, model] as const) : Result.failVoid,
@@ -908,10 +911,11 @@ export function ProviderInstanceCard({
     },
   );
   // The Gateway serves only the key's models, so another slug would fail at the first turn.
-  const gatewayModels = isLibraosGatewayInstanceId(instanceId);
+  const gatewayModels = listsGatewayModels(instanceId, liveProvider);
   const modelsForDisplay = deriveProviderModelsForDisplay({
     liveModels: liveProvider?.models,
     customModels,
+    gatewayListed: gatewayModels,
   });
   const updateDisplayName = (value: string) => {
     const trimmed = value.trim();
@@ -1498,9 +1502,10 @@ export function ProviderInstanceCard({
             </p>
             {gatewayModels ? (
               <p className="mb-3 text-xs text-muted-foreground">
-                {readOnly ? (
+                {readOnly && isLibraosGatewayInstanceId(instanceId) ? (
                   // The refresh this session may run re-checks the saved list; only a provider
-                  // manager's refresh asks the Gateway again.
+                  // manager's refresh asks the Gateway again. An agent configured by hand asks
+                  // the Gateway at every status check.
                   <T>
                     These are the models your LibraOS Gateway key allowed when a device that manages
                     providers last refreshed or the server last started. A refresh from here does

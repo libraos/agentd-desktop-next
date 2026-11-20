@@ -891,7 +891,7 @@ const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(functio
     resolvedEnvironment.ANTHROPIC_API_KEY
   )?.trim();
   const endpointModels =
-    endpointKeyModels && endpoint && endpointKey && claudeSettings.onlyCustomModels !== true
+    endpointKeyModels && endpoint && claudeSettings.onlyCustomModels !== true
       ? yield* endpointKeyModels({ endpoint, key: endpointKey })
       : undefined;
   const servedModels = endpointModels

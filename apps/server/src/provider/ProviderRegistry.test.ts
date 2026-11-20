@@ -41,6 +41,7 @@ import {
   type ServerSettings as ContractServerSettings,
 } from "@t3tools/contracts";
 import { HttpClient, HttpClientResponse } from "effect/http";
+import { makeGatewayKeyModels } from "../gateway/gatewayKeyModels.ts";
 import { ChildProcessSpawner } from "effect/process";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import { WindowsShellEnvironment } from "@t3tools/shared/shell";
@@ -667,7 +668,7 @@ it.layer(
         assert.strictEqual(none.message, NO_SERVED_MODELS_MESSAGE);
 
         // Codex's own config routes to the Gateway: the key it sends decides, not a stored list.
-        const asked: Array<{ readonly endpoint: string; readonly key: string }> = [];
+        const asked: Array<{ readonly endpoint: string; readonly key: string | undefined }> = [];
         const ownConfig = (environment: NodeJS.ProcessEnv, served: ReadonlyArray<string>) =>
           checkCodexProviderStatus(
             decodeCodexSettings({}),
@@ -698,10 +699,45 @@ it.layer(
         const revoked = yield* ownConfig({ LIBRAOS_API_KEY: "lk_codex_key_123" }, []);
         assert.deepStrictEqual(revoked.models, []);
         assert.strictEqual(revoked.message, NO_SERVED_MODELS_MESSAGE);
-        // Without the key in its environment Codex cannot use the Gateway either; nothing is asked.
+        // Without the key in its environment Codex cannot use the Gateway either.
         const keyless = yield* ownConfig({}, []);
-        assert.strictEqual(keyless.models.length, catalog.length);
-        assert.strictEqual(asked.length, 2);
+        assert.deepStrictEqual(keyless.models, []);
+        assert.deepStrictEqual(asked[2], { endpoint: "https://api.libraos.com", key: undefined });
+
+        // The Gateway answers once, then is down: the key's list stands, not Codex's catalog.
+        let gatewayAnswer = () => Response.json({ data: [{ id: "openai/gpt-6-luna" }] });
+        const gatewayKeyModels = yield* makeGatewayKeyModels("openai").pipe(
+          Effect.provideService(
+            HttpClient.HttpClient,
+            HttpClient.make((request) =>
+              Effect.sync(() => HttpClientResponse.fromWeb(request, gatewayAnswer())),
+            ),
+          ),
+        );
+        const live = () =>
+          checkCodexProviderStatus(
+            decodeCodexSettings({}),
+            () =>
+              Effect.succeed(
+                makeCodexProbeSnapshot({
+                  models: catalog,
+                  endpoint: "https://api.libraos.com",
+                  endpointKeyEnv: "LIBRAOS_API_KEY",
+                }),
+              ),
+            { LIBRAOS_API_KEY: "lk_codex_key_123" },
+            undefined,
+            gatewayKeyModels,
+          );
+        assert.deepStrictEqual(
+          (yield* live()).models.map((model) => model.slug),
+          ["gpt-6-luna"],
+        );
+        gatewayAnswer = () => Response.json({ error: { message: "Down" } }, { status: 503 });
+        assert.deepStrictEqual(
+          (yield* live()).models.map((model) => model.slug),
+          ["gpt-6-luna"],
+        );
       }),
     );
 
@@ -4761,7 +4797,7 @@ it.layer(
 
     it.effect("lists only the models the Gateway allows for the key Claude sends itself", () =>
       Effect.gen(function* () {
-        const asked: Array<{ readonly endpoint: string; readonly key: string }> = [];
+        const asked: Array<{ readonly endpoint: string; readonly key: string | undefined }> = [];
         const check = (environment: NodeJS.ProcessEnv, served: ReadonlyArray<string>) =>
           checkClaudeProviderStatus(
             defaultClaudeSettings,
@@ -4799,8 +4835,8 @@ it.layer(
         assert.strictEqual(none.message, NO_SERVED_MODELS_MESSAGE);
 
         const keyless = yield* check({}, []);
-        assert.isAbove(keyless.models.length, 1);
-        assert.strictEqual(asked.length, 2);
+        assert.deepStrictEqual(keyless.models, []);
+        assert.deepStrictEqual(asked[2], { endpoint: "https://api.libraos.com", key: undefined });
       }).pipe(
         Effect.provide(
           layerMockSpawner((args) => {

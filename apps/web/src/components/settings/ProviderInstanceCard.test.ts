@@ -37,6 +37,18 @@ describe("deriveProviderModelsForDisplay", () => {
       }).map((model) => model.slug),
     ).toEqual(["server-model", "kept-custom"]);
   });
+
+  it("shows exactly the live list for an agent whose models come from the Gateway", () => {
+    expect(
+      deriveProviderModelsForDisplay({
+        liveModels: [
+          { slug: "gpt-7-nova", name: "GPT-7 Nova", isCustom: true, capabilities: null },
+        ],
+        customModels: [{ slug: "old-custom", name: "old-custom", capabilities: null }],
+        gatewayListed: true,
+      }).map((model) => model.slug),
+    ).toEqual(["gpt-7-nova"]);
+  });
 });
 
 describe("provider environment helpers", () => {

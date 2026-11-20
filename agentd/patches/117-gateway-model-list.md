@@ -2,9 +2,9 @@
 
 "Claude Code · LibraOS Gateway" and "Codex · LibraOS Gateway" now list the key's models instead of the agent's whole catalog with the key's models added. A catalog entry the key allows keeps its name and options, a key model the catalog lacks is added as a custom model, the rest is dropped. With none, the agent lists nothing and says why. A provider refresh by a client allowed to manage providers, and each server start, asks the Gateway for the key's list again and changes only the model lists of the Gateway agents still present, in one settings write, so the user's launch arguments, variables and a concurrent edit or removal stay. A key the Gateway refuses (401/403) leaves the agents no models and the Gateway card says why, with the Gateway's reason cut to one line, 200 characters and no credentials; an unreachable Gateway leaves the last list. A model the key dropped is not brought back from the previous snapshot or the boot cache. Agents connected before #117 are limited to their list from their first snapshot, before the Gateway answers. The opencode Gateway agent loses custom models added before #117. A client without `providers:manage` is told its refresh does not ask the Gateway again. The Gateway agents' models cannot be edited in Settings; mobile marks a model the key dropped unavailable. Agents on their own login keep their full catalogs. A thread on a Gateway agent set to a model the key no longer allows shows it as unavailable instead of quietly showing another model.
 
-An agent whose own config points at the Gateway (Codex with `model_provider` at api.libraos.com, Claude Code with `ANTHROPIC_BASE_URL` there) lists the models the Gateway allows for the key that agent sends: its status check reads the key from the variable the agent itself reads (Codex's `env_key`; `ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_API_KEY` from Claude's settings or environment), asks `https://api.libraos.com/v1/models` with it and nowhere else, and keeps it nowhere. A refused key lists none; an unreachable Gateway leaves the catalog. opencode configured by hand already lists only the providers and models its config names.
+An agent whose own config points at the Gateway (Codex with `model_provider` at api.libraos.com, Claude Code with `ANTHROPIC_BASE_URL` there) lists the models the Gateway allows for the key that agent sends: its status check reads the key from the variable the agent itself reads (Codex's `env_key`; `ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_API_KEY` from Claude's settings or environment), asks `https://api.libraos.com/v1/models` with it and nowhere else, and keeps it only in memory, beside the list it last allowed. A refused or missing key lists none; an unreachable Gateway leaves what the key last allowed, or none before its first answer, never the whole catalog. opencode configured by hand with a provider at the Gateway lists only that provider's models the key it sends allows (opencode 1.x; opencode 2 does not report a provider's endpoint or key). Web and desktop show such an agent's list as the server sends it, without saved custom models.
 
-Ours: `apps/server/src/gateway/gatewayKeyModels.ts` (one Gateway model request, used by the Gateway service and the hand-configured check) and its test.
+Ours: `apps/server/src/gateway/gatewayKeyModels.ts` (one Gateway model request under one deadline for headers and body, used by the Gateway service and the hand-configured check) and its test.
 
 ## Upstream files changed
 
@@ -14,6 +14,11 @@ Ours: `apps/server/src/gateway/gatewayKeyModels.ts` (one Gateway model request, 
 - `apps/server/src/provider/CodexProvider.ts` — Pass `onlyCustomModels` through and add the empty-list notice to the status check; read the route's `env_key` and, for an endpoint that serves only some models for that key, list only those.
 - `apps/server/src/provider/ClaudeProvider.ts` — The same for Claude, with the key from `ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_API_KEY`.
 - `apps/server/src/provider/CodexProvider.test.ts` — The `env_key` a LibraOS route names.
+- `apps/server/src/provider/codexModelCatalog.ts` — No "update Codex" notice for a Gateway agent: its key decides which models it lacks.
+- `apps/server/src/provider/codexModelCatalog.test.ts` — That case.
+- `apps/server/src/provider/ProviderHostLive.ts` — Gives drivers the hand-configured Gateway check.
+- `packages/provider-core/src/server/ProviderHost.ts` — Optional `endpointKeyModels` for a driver that cannot import the server's Gateway code (opencode).
+- `packages/provider-opencode/src/server/driver.ts` — Passes the host's Gateway check to the status check.
 - `apps/server/src/provider/Drivers/ClaudeSkills.ts` — Claude's settings `env` also yields the two key variables, for that check.
 - `apps/server/src/provider/Drivers/CodexDriver.ts` — A Gateway instance without the flag (saved before #117) is limited anyway; the status check asks the Gateway for the key Codex sends.
 - `apps/server/src/provider/Drivers/ClaudeDriver.ts` — The same for Claude.
@@ -27,14 +32,17 @@ Ours: `apps/server/src/gateway/gatewayKeyModels.ts` (one Gateway model request, 
 - `apps/server/src/serverSettings.ts` — `updateProviderInstances` rewrites instances from the stored ones within one write.
 - `apps/server/src/device/DeviceService.test.ts` — Its settings mock gains `updateProviderInstances`.
 - `apps/server/src/orchestration-v2/ThreadSettlementService.test.ts` — Its settings mock gains `updateProviderInstances`.
-- `packages/provider-opencode/src/server/status.ts` — An empty model list no longer reads as a discovery delay ("yet"); a key may allow none.
-- `packages/provider-opencode/src/server/status.test.ts` — The empty-list message.
-- `apps/web/src/components/settings/ProviderInstanceCard.tsx` — No custom models on the Gateway agents; a line says where their models come from, and that a refresh without `providers:manage` does not ask the Gateway.
+- `packages/provider-opencode/src/server/status.ts` — An empty model list no longer reads as a discovery delay ("yet"); a key may allow none. A provider at the Gateway lists only the models its key allows.
+- `packages/provider-opencode/src/server/status.test.ts` — The empty-list message; a hand-configured Gateway provider.
+- `apps/web/src/components/settings/ProviderInstanceCard.tsx` — No custom models on the Gateway agents or agents configured for the Gateway, which show the server's list; a line says where their models come from, and that a refresh without `providers:manage` does not ask the Gateway.
+- `apps/web/src/components/settings/ProviderInstanceCard.test.ts` — The server's list for an agent configured for the Gateway.
 - `apps/web/src/components/onboarding/ConnectEndpointScreen.tsx` — The Gateway's refusal, and what to do then instead of the usual guidance.
-- `apps/web/src/modelSelection.ts` — A Gateway instance, or one whose endpoint is the Gateway, keeps a selected model it no longer lists, marked unavailable, as runtime-catalog drivers already do.
+- `apps/web/src/modelSelection.ts` — A Gateway instance, or one whose endpoint is the Gateway, lists exactly the server's models and keeps a selected model it no longer lists, marked unavailable, as runtime-catalog drivers already do.
 - `apps/web/src/modelSelection.test.ts` — A Gateway Codex agent shows a dropped model as unavailable; the agent's own instance does not.
 - `apps/mobile/src/lib/modelOptions.ts` — A model the key dropped is unavailable on a Gateway agent or one whose endpoint is the Gateway, as on web.
 - `apps/mobile/src/lib/modelOptions.test.ts` — That case.
+- `apps/mobile/src/state/thread-task-permissions.test.ts` — Its provider fixtures gain the schema-required `auth` the Gateway check reads.
+- `apps/mobile/src/features/settings/SettingsEnvironmentDetailRouteScreen.tsx` — Refresh providers asks for `refreshModels`, as web does, so a provider manager's refresh asks the Gateway again.
 - `apps/web/src/i18n/translations/de.json` — The new web strings.
 - `apps/web/src/i18n/translations/en.json` — The new web strings.
 - `apps/web/src/i18n/translations/es.json` — The new web strings.
