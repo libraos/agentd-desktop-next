@@ -4,16 +4,16 @@ import * as NodeCrypto from "node:crypto";
 import type { AgentdCloudTaskInput } from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
 
-// A paid cloud offer is reserved per GitHub project as pins, in order: `{id, after, fingerprint}`,
-// `{id, attempt: fingerprint, nonce}` before each later offer, `{id, released: true, nonce}` after
-// agentd refused that offer ("reserve" for the first), `{id, handoff}` once agentd names the task.
-// The id is the offer's --idem and --state marker, released only once every offer was refused.
+// A cloud offer is reserved per GitHub project as pins: `{id, after, fingerprint, nonce}`, then
+// `{id, attempt: fingerprint, nonce}` before each later offer, `{id, released: true, nonce}` once
+// agentd refused that offer, `{id, handoff}` once it names the task. The id is the offer's --idem
+// and --state marker, released only once every offer under it, each its own nonce, was refused.
 
 const SUBMISSION_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-8[a-f0-9]{3}-8[a-f0-9]{3}-[a-f0-9]{12}$/;
 const HANDOFF_ID = /^hof-[0-9a-f]{6,32}$/;
 const FINGERPRINT = /^[a-f0-9]{64}$/;
 const NONCE = /^[a-z0-9-]{1,64}$/;
-/** The attempt a reservation's own offer is, which its release names. */
+/** The attempt a reservation pinned without a nonce (older versions) is, which its release names. */
 export const RESERVE_ATTEMPT = "reserve";
 export const newAttempt = () => NodeCrypto.randomUUID();
 
@@ -85,16 +85,23 @@ const decodeRecord = Schema.decodeUnknownOption(
         id: Schema.String,
         after: Schema.NullOr(Schema.String),
         fingerprint: Schema.String,
+        nonce: Schema.optionalKey(Schema.String),
       }),
     ]),
   ),
 );
 
-export function reserveRecord(id: string, after: string | null, fingerprint: string): string {
+export function reserveRecord(
+  id: string,
+  after: string | null,
+  fingerprint: string,
+  nonce: string,
+): string {
   if (!isSubmissionId(id) || (after !== null && !isSubmissionId(after)))
     throw new Error("not a cloud submission id");
   if (!FINGERPRINT.test(fingerprint)) throw new Error("not a submission fingerprint");
-  return JSON.stringify({ id, after, fingerprint });
+  if (!NONCE.test(nonce) || nonce === RESERVE_ATTEMPT) throw new Error("not a submission attempt");
+  return JSON.stringify({ id, after, fingerprint, nonce });
 }
 
 export function releaseRecord(id: string, nonce: string): string {
@@ -130,13 +137,14 @@ export function currentReservation(
   const handoffs = new Map<string, string>();
   // Each id's latest draft.
   const attempts = new Map<string, string>();
-  // Each id's offers with no refusal yet; null for an attempt pin without a nonce (older versions),
-  // which only a release without one clears. Released once none is left: any one still open, from
-  // this server or another sharing the ledger, may have reached the Job API.
+  // Each id's offers with no refusal yet, one per reservation and attempt pin; null for an attempt
+  // pin without a nonce (older versions), which only a release without one clears. Released once
+  // none is left: any one still open, from this server or another sharing the ledger, may have
+  // reached the Job API.
   const open = new Map<string, Set<string | null>>();
   const openOf = (id: string) => {
     let set = open.get(id);
-    if (set === undefined) open.set(id, (set = new Set([RESERVE_ATTEMPT])));
+    if (set === undefined) open.set(id, (set = new Set()));
     return set;
   };
   for (const raw of pins.value) {
@@ -157,8 +165,11 @@ export function currentReservation(
     } else if ("handoff" in value) {
       if (HANDOFF_ID.test(value.handoff) && !handoffs.has(value.id))
         handoffs.set(value.id, value.handoff);
-    } else if (FINGERPRINT.test(value.fingerprint) && !successors.has(value.after)) {
-      successors.set(value.after, { id: value.id, fingerprint: value.fingerprint });
+    } else if (FINGERPRINT.test(value.fingerprint)) {
+      // Every reservation of this id is an offer, the losing window's too until it is released.
+      openOf(value.id).add(value.nonce ?? RESERVE_ATTEMPT);
+      if (!successors.has(value.after))
+        successors.set(value.after, { id: value.id, fingerprint: value.fingerprint });
     }
   }
   let current: { id: string; fingerprint: string } | null = null;

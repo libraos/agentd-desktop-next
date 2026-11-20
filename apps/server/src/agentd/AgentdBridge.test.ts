@@ -17,6 +17,7 @@ import {
   RESERVE_ATTEMPT,
   attemptRecord,
   releaseRecord,
+  reserveRecord,
   submissionFingerprint,
 } from "./agentdCloudSubmissions.ts";
 
@@ -1206,6 +1207,19 @@ describe("AgentdBridge", () => {
       expect(
         yield* Effect.flip(bridge.startTask({ ...input, goal: "Retry aftermath" })),
       ).not.toHaveProperty("replaceSubmission");
+      // Two servers that reserved the same draft at once: one's refusal leaves the other's open.
+      ledger = cloudLedger();
+      runs.length = 0;
+      offerSays = "error: 402: insufficient credit";
+      yield* Effect.flip(bridge.startTask(input));
+      const fingerprint = submissionFingerprint(input, "acme/app");
+      ledger.pins.push({
+        session: ledger.pins[0]!.session,
+        text: reserveRecord(keys()[0]!, null, fingerprint, "other-server"),
+      });
+      expect(
+        yield* Effect.flip(bridge.startTask({ ...input, goal: "Retry aftermath" })),
+      ).toMatchObject({ replaceSubmission: keys()[0] });
 
       ledger = cloudLedger();
       runs.length = 0;

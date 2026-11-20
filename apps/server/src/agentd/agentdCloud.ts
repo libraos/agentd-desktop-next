@@ -24,7 +24,6 @@ import {
   foundHandoffs,
   newAttempt,
   nextSubmissionId,
-  RESERVE_ATTEMPT,
   type Reservation,
   submissionFingerprint,
   submissionMarker,
@@ -590,7 +589,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
     const current = yield* reservation;
     let submission: string;
     // This offer, which a refusal releases: never an earlier or later one under the same key.
-    let attempt = RESERVE_ATTEMPT;
+    const attempt = newAttempt();
     if (current !== null && current.handoff === null) {
       const handoff = yield* recorded(current.id);
       if (handoff !== null) {
@@ -613,7 +612,6 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       submission = current.id;
       // Recorded first, so a lost answer for this offer, even a retry of the same draft, asks the
       // next different one to replace it.
-      attempt = newAttempt();
       yield* agentd(() =>
         agentdArgs.attemptSubmission(session, submission, fingerprint, attempt),
       ).pipe(
@@ -639,7 +637,13 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       }
       submission = nextSubmissionId(session, current?.id ?? null);
       yield* agentd(() =>
-        agentdArgs.reserveSubmission(session, submission, current?.id ?? null, fingerprint),
+        agentdArgs.reserveSubmission(
+          session,
+          submission,
+          current?.id ?? null,
+          fingerprint,
+          attempt,
+        ),
       ).pipe(
         Effect.mapError(() =>
           commandError(
@@ -649,6 +653,8 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       );
       const saved = yield* reservation;
       if (saved?.id !== submission || saved.fingerprint !== fingerprint) {
+        // This window offers nothing, so its reservation pin mustn't keep the winner's open.
+        yield* release(submission, attempt);
         return yield* commandError(
           `Another window started a Cloud Workers submission for ${project}. Press Start to check it.`,
         );

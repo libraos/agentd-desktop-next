@@ -198,14 +198,13 @@ export const agentdArgs = {
   ],
   cloudSync: () => ["cloud", "sync"],
   submissionPins: (session: string) => ["pin", "list", "--session", session, "--json"],
-  reserveSubmission: (session: string, id: string, after: string | null, fingerprint: string) => [
-    "pin",
-    "add",
-    reserveRecord(id, after, fingerprint),
-    "--session",
-    session,
-    "--json",
-  ],
+  reserveSubmission: (
+    session: string,
+    id: string,
+    after: string | null,
+    fingerprint: string,
+    nonce: string,
+  ) => ["pin", "add", reserveRecord(id, after, fingerprint, nonce), "--session", session, "--json"],
   rememberSubmission: (session: string, id: string, handoff: string) => [
     "pin",
     "add",
