@@ -66,6 +66,7 @@ import { makeCloudReview } from "./agentdCloudReview.ts";
 import { AgentdArgumentError, agentdArgs, agentdTicket } from "./agentdCommands.ts";
 import * as AgentdJson from "./agentdJson.ts";
 import { detectServices, repairServices, serviceAgentd } from "./agentdServices.ts";
+import { makeClaudeTrust, projectFolder } from "./claudeTrust.ts";
 import { makeCloudKeyFile } from "./cloudKeyFile.ts";
 import {
   estimateType,
@@ -582,10 +583,46 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
       }),
     );
 
+  const claudeTrust = makeClaudeTrust({
+    fs,
+    path: pathService,
+    env,
+    home: yield* HostProcess.HomeDirectory,
+  });
+
+  // Claude Code checks the main checkout, also for a worktree, then the folder and its parents.
+  const ensureClaudeTrust = Effect.fn("AgentdBridge.ensureClaudeTrust")(function* (
+    cwd: string,
+    consent: boolean,
+  ) {
+    const commonDir = yield* runner
+      .run({
+        command: "git",
+        args: ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+        cwd,
+        timeout: Duration.seconds(10),
+      })
+      .pipe(
+        Effect.map((output) => (output.code === 0 ? output.stdout : null)),
+        Effect.orElseSucceed(() => null),
+      );
+    const folder = projectFolder(cwd, commonDir, pathService);
+    if ((yield* claudeTrust.trusted(folder)) || (yield* claudeTrust.trusted(cwd))) return;
+    if (!consent)
+      return yield* new AgentdCommandError({
+        message: `Claude Code hasn’t been allowed to work in ${folder} yet.`,
+        notSetUp: false,
+        untrustedFolder: folder,
+      });
+    yield* claudeTrust.trust(folder);
+  });
+
   const startTask = Effect.fn("AgentdBridge.startTask")(function* (
     input: AgentdStartTaskInput | AgentdCloudTaskInput,
   ) {
     if (input.cloud !== undefined) return yield* cloud.startCloudTask(input);
+    if (input.worker === "claude")
+      yield* ensureClaudeTrust(input.cwd, input.trustClaudeFolder === true);
     const created = yield* run(yield* args(() => agentdArgs.new(input))).pipe(
       Effect.flatMap(
         decodeJson(

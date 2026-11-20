@@ -30,6 +30,7 @@ import { Label } from "../ui/label";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Textarea } from "../ui/textarea";
 import { toastManager } from "../ui/toast";
+import { ClaudeTrustDialog } from "./ClaudeTrustDialog";
 import { CloudWorkersSetup } from "./CloudWorkersSetup";
 import { StartTaskCloud, useStartTaskCloud } from "./StartTaskCloud";
 import { PendingCloudKeyFiles } from "./PendingCloudKeyFiles";
@@ -184,6 +185,7 @@ function StartTaskDialog({
   const [replaceSubmission, setReplaceSubmission] = useState<string | null>(null);
   const [privateFile, setPrivateFile] = useState<string | null>(null);
   const [fixingFile, setFixingFile] = useState(false);
+  const [untrustedFolder, setUntrustedFolder] = useState<string | null>(null);
   const { cloudKeyFileFix } = useAgentdCommands();
   const projection = useThreadProjection(draft === null ? null : threadRef)?.projection;
   const reply = draft === null ? null : conversationTaskDraft(projection, draft.messageId);
@@ -294,6 +296,9 @@ function StartTaskDialog({
       case "refused":
         setStartError(outcome.reason);
         return;
+      case "untrusted":
+        setUntrustedFolder(outcome.folder);
+        return;
       case "failed":
         setOutcomeUnknown(outcome.outcomeUnknown);
         setReplaceSubmission(outcome.replaceSubmission);
@@ -321,11 +326,12 @@ function StartTaskDialog({
     }
   }
 
-  function submit(replacing: string | null = null) {
+  function submit(replacing: string | null = null, trustClaudeFolder = false) {
     if (disabled) return;
     setStartError(null);
     setPrivateFile(null);
-    void plan.start(replacing).then((outcome) => {
+    setUntrustedFolder(null);
+    void plan.start(replacing, trustClaudeFolder).then((outcome) => {
       if (outcome !== null) settle(outcome);
     });
   }
@@ -615,6 +621,11 @@ function StartTaskDialog({
             </Button>
           )}
         </DialogFooter>
+        <ClaudeTrustDialog
+          folder={untrustedFolder}
+          onTrust={() => submit(null, true)}
+          onCancel={() => setUntrustedFolder(null)}
+        />
       </DialogPopup>
     </Dialog>
   );

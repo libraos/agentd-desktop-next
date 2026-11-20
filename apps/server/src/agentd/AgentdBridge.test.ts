@@ -807,6 +807,49 @@ describe("AgentdBridge", () => {
     }),
   );
 
+  it.effect("asks before a Claude worker runs where Claude Code was never trusted", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const home = yield* fs.makeTempDirectoryScoped();
+      const repo = path.join(home, "app");
+      const worktree = path.join(home, "app-wt");
+      const ran: string[] = [];
+      const bridge = yield* makeBridge({ PATH: "", AGENTD_BIN: process.execPath }, (input) => {
+        if (input.command === "git") return Effect.succeed(output(`${path.join(repo, ".git")}\n`));
+        ran.push(input.args[0]!);
+        return Effect.succeed(
+          output(input.args[0] === "new" ? '{"handoff":"hof-a6e5f4e329"}' : "{}"),
+        );
+      }).pipe(Effect.provideService(HostProcess.HomeDirectory, home));
+      const input = {
+        goal: "Fix it",
+        accept: [],
+        check: null,
+        worker: "claude",
+        budget: "30m",
+        cwd: worktree,
+        issue: null,
+      } as const;
+
+      expect(yield* Effect.flip(bridge.startTask(input))).toMatchObject({ untrustedFolder: repo });
+      expect(ran).toEqual([]);
+      // Another worker is not Claude Code's to trust.
+      yield* bridge.startTask({ ...input, worker: "codex" });
+      expect(ran).toEqual(["new", "handoff"]);
+
+      expect(yield* bridge.startTask({ ...input, trustClaudeFolder: true })).toMatchObject({
+        started: true,
+      });
+      expect(JSON.parse(yield* fs.readFileString(path.join(home, ".claude.json")))).toEqual({
+        projects: { [repo.replace(/\\/g, "/")]: { hasTrustDialogAccepted: true } },
+      });
+      // Trusted now: no question the next time.
+      yield* bridge.startTask(input);
+      expect(ran).toEqual(["new", "handoff", "new", "handoff", "new", "handoff"]);
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
   it.effect("offers cloud jobs against origin and passes only absolute key file paths", () =>
     Effect.gen(function* () {
       const runs: Array<ProcessRunner.ProcessRunInput> = [];
