@@ -3373,6 +3373,7 @@
   "7b6058e001c8cbbb": "把这个交给 Cloud Workers",
   "4f46f448da7c06cf": "把这个交给 worker",
   "9fa3a3b35507d8c9": "本地 worker 无法在这个分支上启动，因此可以由 Cloud Workers 接手任务，你继续工作。",
+  "db521ab750130dd8": "本机上的 worker 或 Cloud Workers 可以在后台接手这个任务，你继续工作。",
   "e3ceb4aa50f129f6": "worker 可以在后台接手这个任务，你继续工作。",
   "2903b7545da9f578": "起草任务",
   "50d55d89adc66bde": "不再建议",

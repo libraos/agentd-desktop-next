@@ -3369,6 +3369,7 @@
   "7b6058e001c8cbbb": "Hand this to Cloud Workers",
   "4f46f448da7c06cf": "Hand this to a worker",
   "9fa3a3b35507d8c9": "A local worker cannot start on this branch, so Cloud Workers would take the task while you keep working.",
+  "db521ab750130dd8": "A worker on this machine or Cloud Workers can take this task in the background while you keep working.",
   "e3ceb4aa50f129f6": "A worker can take this task in the background while you keep working.",
   "2903b7545da9f578": "Draft the task",
   "50d55d89adc66bde": "Don't suggest again",
