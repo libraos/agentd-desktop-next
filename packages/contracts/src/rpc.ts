@@ -391,6 +391,7 @@ import {
   AgentdPeopleInput,
   AgentdStartTaskInput,
   AgentdStartTaskResult,
+  AgentdRetryStartInput,
   AgentdStatus,
   AgentdStopTaskInput,
   AgentdTask,
@@ -726,6 +727,7 @@ export const WS_METHODS = {
   agentdSubscribeTaskOutput: "agentd.subscribeTaskOutput",
   agentdStopTask: "agentd.stopTask",
   agentdStartTask: "agentd.startTask",
+  agentdRetryStart: "agentd.retryStart",
   agentdApprovals: "agentd.approvals",
   agentdInbox: "agentd.inbox",
   agentdPeople: "agentd.people",
@@ -2370,6 +2372,12 @@ const WsAgentdStartTaskRpc = Rpc.make(WS_METHODS.agentdStartTask, {
   error: AgentdRpcError,
 });
 
+const WsAgentdRetryStartRpc = Rpc.make(WS_METHODS.agentdRetryStart, {
+  payload: AgentdRetryStartInput,
+  success: AgentdStartTaskResult,
+  error: AgentdRpcError,
+});
+
 const WsAgentdApprovalsRpc = Rpc.make(WS_METHODS.agentdApprovals, {
   payload: Schema.Struct({}),
   success: Schema.Array(AgentdApproval),
@@ -2750,6 +2758,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsAgentdSubscribeTaskOutputRpc,
   WsAgentdStopTaskRpc,
   WsAgentdStartTaskRpc,
+  WsAgentdRetryStartRpc,
   WsAgentdApprovalsRpc,
   WsAgentdInboxRpc,
   WsAgentdPeopleRpc,

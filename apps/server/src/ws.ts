@@ -3634,6 +3634,7 @@ export const layerWsRpc = (
                 ),
               ),
             ),
+        [WS_METHODS.agentdRetryStart]: (input) => agentd.retryStart(input),
         [WS_METHODS.agentdApprovals]: (_input) => agentd.approvals,
         [WS_METHODS.agentdInbox]: (_input) => agentd.inbox,
         [WS_METHODS.agentdPeople]: (input) => agentd.people(input),

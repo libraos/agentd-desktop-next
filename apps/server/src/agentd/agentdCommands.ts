@@ -138,12 +138,14 @@ export const agentdArgs = {
     input.cwd,
     "--no-start",
   ],
-  dispatch: (id: string, worker: AgentdWorkerTool) => [
+  // force starts past an open task holding the directory or issue, after the person chose to.
+  dispatch: (id: string, worker: AgentdWorkerTool, force = false) => [
     "handoff",
     "dispatch",
     handoffId(id),
     "--tool",
     worker,
+    ...(force ? ["--force"] : []),
   ],
   connectAgent: (input: AgentdConnectAgentInput) => [
     "connect",
