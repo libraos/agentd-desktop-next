@@ -670,7 +670,8 @@ describe("AgentdBridge", () => {
       const bridge = yield* makeBridge({ AGENTD_BIN: process.execPath }, (input) => {
         runs.push(input.args);
         if (brokenPins && input.args[0] === "pin") return Effect.succeed(output("<html>"));
-        if (failPinAdd && input.args[0] === "pin" && input.args[1] === "add")
+        const handoffPin = input.args[1] === "add" && input.args[2]?.includes('"handoff"');
+        if (failPinAdd && input.args[0] === "pin" && handoffPin)
           return Effect.succeed(output("ledger busy", 1));
         const recorded = ledger.answer(input.args);
         if (recorded !== null) return Effect.succeed(recorded);
@@ -1128,6 +1129,29 @@ describe("AgentdBridge", () => {
       brokenJoin = false;
       yield* Effect.flip(bridge.startTask(input));
       expect(keys()).toHaveLength(3);
+      expect(new Set(keys()).size).toBe(1);
+
+      // After a refusal, a different draft whose outcome is lost is the one a third must replace.
+      offerSays = "error: runner unavailable";
+      expect(
+        yield* Effect.flip(bridge.startTask({ ...input, goal: "Bump the version" })),
+      ).toMatchObject({ outcomeUnknown: true });
+      const third = yield* Effect.flip(bridge.startTask({ ...input, goal: "Tidy the README" }));
+      expect(third).toMatchObject({ replaceSubmission: keys()[0] });
+      expect(keys()).toHaveLength(4);
+      // Its retry, and the replaced draft once confirmed, go under the same key without asking.
+      yield* Effect.flip(bridge.startTask({ ...input, goal: "Bump the version" }));
+      yield* Effect.flip(
+        bridge.startTask({
+          ...input,
+          goal: "Tidy the README",
+          cloud: { ...input.cloud, replaceSubmission: keys()[0]! },
+        }),
+      );
+      expect(
+        yield* Effect.flip(bridge.startTask({ ...input, goal: "Bump the version" })),
+      ).toMatchObject({ replaceSubmission: keys()[0] });
+      expect(keys()).toHaveLength(6);
       expect(new Set(keys()).size).toBe(1);
     }),
   );

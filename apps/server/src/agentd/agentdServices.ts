@@ -3,26 +3,48 @@ import * as NodeCrypto from "node:crypto";
 // @effect-diagnostics-next-line nodeBuiltinImport:off -- agentd cleans Windows roots as POSIX paths.
 import * as NodePathPosix from "node:path/posix";
 
-import type { AgentdServicesRepair } from "@t3tools/contracts";
+import type { AgentdInstallRecord, AgentdServicesRepair } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 
 import type { ProcessRunner } from "../processRunner.ts";
 
-// agentd's services run the binary their LaunchAgent, systemd unit or task names; after the old
-// AgentD Desktop is removed that binary is gone. A service on a missing or the old app's agentd is
-// re-registered by the bundled agentd's own `install` (and `dash install` for a Linux dash), with
-// the root and ledger the service itself names: install writes the ones in its own environment.
+// A service whose agentd is missing or the old AgentD Desktop's is re-registered by an agentd this
+// app carries, with its own `install` (and `dash install` for a Linux dash) and the root and ledger
+// the service names. An AppImage's agentd is never registered: its mount is gone when the app quits.
 
 export type ServiceName = "watchdog" | "dash";
 const SERVICES: ReadonlyArray<ServiceName> = ["watchdog", "dash"];
 
 /** The old AgentD Desktop's install folder on macOS, Windows or Linux; not AgentD Next's. */
 const OLD_DESKTOP = /(?:^|[\\/])AgentD[ -]Desktop(?:\.app)?[\\/]/i;
+/** An AppImage's mount, such as /tmp/.mount_AgentDXXXXXX/: removed when that app quits. */
+const APPIMAGE_MOUNT = /^\/(?:[^/]+\/)*\.mount_[^/]+\//;
 
 export function isStaleProgram(program: string, exists: boolean, bundled: string): boolean {
-  return program !== bundled && (!exists || OLD_DESKTOP.test(program));
+  return (
+    program !== bundled && (!exists || OLD_DESKTOP.test(program) || APPIMAGE_MOUNT.test(program))
+  );
+}
+
+/**
+ * The agentd services may run: the bundled one, unless it is inside this AppImage's mount. Then
+ * the copy the app installed for the terminal (the same agentd, kept after the app quits), else
+ * null: nothing lasting to register.
+ */
+export function serviceAgentd(
+  bundled: string,
+  appDir: string | undefined,
+  installed: AgentdInstallRecord | null,
+): string | null {
+  const mount = appDir?.trim().replace(/\/+$/, "");
+  const inMount = (file: string) =>
+    APPIMAGE_MOUNT.test(file) || (!!mount && file.startsWith(`${mount}/`));
+  if (!inMount(bundled)) return bundled;
+  const ours =
+    installed !== null && ["installed", "replaced", "unchanged"].includes(installed.action);
+  return ours && !inMount(installed.path) ? installed.path : null;
 }
 
 function unescapeXml(text: string): string {
@@ -105,7 +127,7 @@ export function unitProgram(unit: string, home: string): string | null {
 
 /** The program of a scheduled task's first action, from `schtasks /Query /XML`. */
 export function taskProgram(xml: string): string | null {
-  const command = /<Command>([\s\S]*?)<\/Command>/.exec(xml)?.[1];
+  const command = /<Command>([\s\S]*?)<\/Command>/.exec(xml.replaceAll("\0", ""))?.[1];
   return command === undefined ? null : unescapeXml(command.trim()).replace(/^"(.*)"$/, "$1");
 }
 
@@ -141,12 +163,14 @@ function legacyDisableCommand(installOutput: string): string | null {
 
 export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps: {
   readonly bundled: string;
+  /** The agentd to register: bundled, or null when it can't outlast this app (an AppImage). */
+  readonly target: string | null;
   readonly platform: string;
   readonly home: string;
   readonly root: string | undefined;
   readonly run: ProcessRunner["Service"]["run"];
 }) {
-  const { bundled, platform, home, root, run } = deps;
+  const { bundled, target, platform, home, root, run } = deps;
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const read = (file: string) => fs.readFileString(file).pipe(Effect.option);
@@ -207,14 +231,18 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
     if (found === null) continue;
     ledgers.set(name, found.ledger);
     const exists = yield* fs.exists(found.program).pipe(Effect.orElseSucceed(() => false));
-    if (isStaleProgram(found.program, exists, bundled)) stale.push(name);
-    else if (found.program !== bundled) kept.push(name);
+    const agentd = target ?? bundled;
+    if (isStaleProgram(found.program, exists, agentd)) stale.push(name);
+    else if (found.program !== agentd) kept.push(name);
   }
   if (stale.length === 0) return null;
+  if (target === null)
+    return { services: stale, ok: false, reason: "transient" } satisfies AgentdServicesRepair;
   const ledgerEnv = (name: ServiceName) => installEnv(ledgers.get(name) ?? noLedger);
 
   let ok = true;
   let command: string | null = null;
+  let reason: "ledger" | null = null;
   if (platform === "darwin" || platform === "win32") {
     // install moves both services, so it would also move the one kept on the user's agentd.
     if (kept.length > 0) return { services: stale, ok: false, kept } satisfies AgentdServicesRepair;
@@ -222,11 +250,17 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
     // them can't be moved by one install without one changing ledger.
     const [first, ...rest] = [...ledgers.values()];
     if (rest.some((ledger) => ledger.root !== first?.root || ledger.db !== first?.db))
-      return { services: stale, ok: false } satisfies AgentdServicesRepair;
-    ok = (yield* exec(bundled, ["install"], installEnv(first ?? noLedger))).ok;
+      return { services: stale, ok: false, reason: "ledgers" } satisfies AgentdServicesRepair;
+    ok = (yield* exec(target, ["install"], installEnv(first ?? noLedger))).ok;
   } else {
-    if (stale.includes("watchdog")) {
-      const installed = yield* exec(bundled, ["install"], ledgerEnv("watchdog"));
+    // agentd's Linux units name only PATH, so install would move a watchdog off a ledger it names.
+    const watchdogLedger = ledgers.get("watchdog") ?? noLedger;
+    const ownLedger = watchdogLedger.root !== null || watchdogLedger.db !== null;
+    if (stale.includes("watchdog") && ownLedger) {
+      ok = false;
+      reason = "ledger";
+    } else if (stale.includes("watchdog")) {
+      const installed = yield* exec(target, ["install"], ledgerEnv("watchdog"));
       ok = installed.ok;
       if (ok) {
         ok = (yield* exec("systemctl", ["--user", "daemon-reload"])).ok;
@@ -238,11 +272,12 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
       }
     }
     if (stale.includes("dash"))
-      ok = (yield* exec(bundled, ["dash", "install"], ledgerEnv("dash"))).ok && ok;
+      ok = (yield* exec(target, ["dash", "install"], ledgerEnv("dash"))).ok && ok;
   }
   return {
     services: stale,
     ok,
     ...(command === null ? {} : { command }),
+    ...(reason === null ? {} : { reason }),
   } satisfies AgentdServicesRepair;
 });

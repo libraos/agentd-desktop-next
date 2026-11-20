@@ -588,6 +588,15 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       // The same key again: agentd's --idem makes this the earlier offer, never a second one; a
       // different draft under it is refused once the earlier one made a task, and found above.
       submission = current.id;
+      // Recorded first, so a lost answer for this draft asks the next different one to replace it.
+      if (current.fingerprint !== fingerprint)
+        yield* agentd(() => agentdArgs.attemptSubmission(session, submission, fingerprint)).pipe(
+          Effect.mapError(() =>
+            commandError(
+              "AgentD couldn’t reserve this Cloud Workers submission, so nothing was submitted.",
+            ),
+          ),
+        );
     } else {
       if (current !== null && current.handoff !== null) {
         const holder = current.handoff;

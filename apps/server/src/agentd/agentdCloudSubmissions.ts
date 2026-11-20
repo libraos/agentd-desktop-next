@@ -4,10 +4,10 @@ import * as NodeCrypto from "node:crypto";
 import type { AgentdCloudTaskInput } from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
 
-// A cloud offer is paid and its outcome can be lost. Each is reserved per GitHub project as pins:
-// `{id, after, fingerprint}`, then `{id, handoff}` once agentd names the task, or
-// `{id, released: true}` after a refusal. The id goes on the offer as --idem and as a --state
-// marker; a refusal keeps it, since another server may still be offering under it.
+// A paid cloud offer is reserved per GitHub project as pins, in order: `{id, after, fingerprint}`,
+// `{id, attempt: fingerprint}` before a different draft goes under it, `{id, released: true}` after
+// a refusal of the latest draft, `{id, handoff}` once agentd names the task. The id is the offer's
+// --idem and --state marker; a refusal keeps it, as another server may still offer under it.
 
 const SUBMISSION_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-8[a-f0-9]{3}-8[a-f0-9]{3}-[a-f0-9]{12}$/;
 const HANDOFF_ID = /^hof-[0-9a-f]{6,32}$/;
@@ -53,9 +53,10 @@ export function nextSubmissionId(session: string, after: string | null): string 
 
 export interface Reservation {
   readonly id: string;
+  /** The draft last offered, or about to be, under this id. */
   readonly fingerprint: string;
   readonly handoff: string | null;
-  /** agentd refused an offer under it before making a task; the next Start reuses it without asking. */
+  /** agentd refused that draft before making a task; the next Start reuses the id without asking. */
   readonly released: boolean;
 }
 
@@ -67,6 +68,7 @@ const decodeRecord = Schema.decodeUnknownOption(
     Schema.Union([
       Schema.Struct({ id: Schema.String, handoff: Schema.String }),
       Schema.Struct({ id: Schema.String, released: Schema.Literal(true) }),
+      Schema.Struct({ id: Schema.String, attempt: Schema.String }),
       Schema.Struct({
         id: Schema.String,
         after: Schema.NullOr(Schema.String),
@@ -88,6 +90,12 @@ export function releaseRecord(id: string): string {
   return JSON.stringify({ id, released: true });
 }
 
+export function attemptRecord(id: string, fingerprint: string): string {
+  if (!isSubmissionId(id)) throw new Error("not a cloud submission id");
+  if (!FINGERPRINT.test(fingerprint)) throw new Error("not a submission fingerprint");
+  return JSON.stringify({ id, attempt: fingerprint });
+}
+
 export function handoffRecord(id: string, handoff: string): string {
   if (!isSubmissionId(id) || !HANDOFF_ID.test(handoff)) throw new Error("not a cloud submission");
   return JSON.stringify({ id, handoff });
@@ -107,6 +115,8 @@ export function currentReservation(
   const successors = new Map<string | null, { id: string; fingerprint: string }>();
   const handoffs = new Map<string, string>();
   const released = new Set<string>();
+  // Each id's latest different draft, which a release after it applies to.
+  const attempts = new Map<string, string>();
   for (const raw of pins.value) {
     const pin = decodePin(raw);
     if (pin._tag === "None" || (pin.value.session !== undefined && pin.value.session !== session))
@@ -116,6 +126,11 @@ export function currentReservation(
     const value = record.value;
     if ("released" in value) {
       released.add(value.id);
+    } else if ("attempt" in value) {
+      if (FINGERPRINT.test(value.attempt)) {
+        attempts.set(value.id, value.attempt);
+        released.delete(value.id);
+      }
     } else if ("handoff" in value) {
       if (HANDOFF_ID.test(value.handoff) && !handoffs.has(value.id))
         handoffs.set(value.id, value.handoff);
@@ -132,7 +147,12 @@ export function currentReservation(
   }
   return current === null
     ? null
-    : { ...current, handoff: handoffs.get(current.id) ?? null, released: released.has(current.id) };
+    : {
+        id: current.id,
+        fingerprint: attempts.get(current.id) ?? current.fingerprint,
+        handoff: handoffs.get(current.id) ?? null,
+        released: released.has(current.id),
+      };
 }
 
 const decodeHits = Schema.decodeUnknownOption(

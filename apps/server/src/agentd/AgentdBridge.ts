@@ -63,7 +63,7 @@ import { makeAgentdCloud } from "./agentdCloud.ts";
 import { makeCloudReview } from "./agentdCloudReview.ts";
 import { AgentdArgumentError, agentdArgs, agentdTicket } from "./agentdCommands.ts";
 import * as AgentdJson from "./agentdJson.ts";
-import { repairServices } from "./agentdServices.ts";
+import { repairServices, serviceAgentd } from "./agentdServices.ts";
 import { makeCloudKeyFile } from "./cloudKeyFile.ts";
 import { estimateType, PROJECT_FILES, readEstimate, suggestCheck } from "./taskDefaults.ts";
 import { joinedPerson, mergeTaskHolders, repositoryTargets } from "./taskOthers.ts";
@@ -296,18 +296,31 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     originProject: cloud.originProject,
   });
 
+  // The desktop app's last pass installing agentd for the terminal and agents, when it ran one.
+  const recordPath = env.AGENTD_DESKTOP_INSTALL_RECORD?.trim();
+  const readInstallRecord = recordPath
+    ? fs.readFileString(recordPath).pipe(
+        Effect.flatMap(decodeInstallRecord),
+        Effect.orElseSucceed(() => null),
+      )
+    : Effect.succeed(null);
+
   // Set once on start when agentd's services were moved to the bundled agentd.
   let servicesRepair: AgentdServicesRepair | null = null;
   const bundledBinary = env.AGENTD_DESKTOP_BUNDLED === "1" ? env.AGENTD_BIN?.trim() : undefined;
   if (bundledBinary) {
     const home = yield* HostProcess.HomeDirectory;
-    yield* repairServices({
-      bundled: bundledBinary,
-      platform,
-      home,
-      root: env.AGENTD_ROOT,
-      run: runner.run,
-    }).pipe(
+    yield* readInstallRecord.pipe(
+      Effect.flatMap((installed) =>
+        repairServices({
+          bundled: bundledBinary,
+          target: serviceAgentd(bundledBinary, env.APPDIR, installed),
+          platform,
+          home,
+          root: env.AGENTD_ROOT,
+          run: runner.run,
+        }),
+      ),
       Effect.tap((repair) =>
         Effect.sync(() => {
           servicesRepair = repair;
@@ -391,14 +404,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
           Effect.orElseSucceed(() => null),
         )
       : null;
-    // The desktop app's last pass installing agentd for the terminal and agents, when it ran one.
-    const recordPath = env.AGENTD_DESKTOP_INSTALL_RECORD?.trim();
-    const install = recordPath
-      ? yield* fs.readFileString(recordPath).pipe(
-          Effect.flatMap(decodeInstallRecord),
-          Effect.orElseSucceed(() => null),
-        )
-      : null;
+    const install = yield* readInstallRecord;
     return {
       ...status,
       defaultWorker,

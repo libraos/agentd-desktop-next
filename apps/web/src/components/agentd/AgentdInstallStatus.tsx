@@ -35,6 +35,26 @@ export function AgentdInstallStatus({ status }: { status: AgentdStatus }) {
               old AgentD Desktop, and another runs your own AgentD. This app left both alone: run
               agentd install with the AgentD you use.
             </T>
+          ) : repair.reason === "ledgers" ? (
+            <T>
+              AgentD’s background services run an AgentD that is missing or belongs to the old
+              AgentD Desktop, and they use two different AgentD ledgers. This app left them alone:
+              run agentd install for each ledger, with its AGENTD_ROOT and AGENTD_DB set as that
+              service has them.
+            </T>
+          ) : repair.reason === "ledger" ? (
+            <T>
+              AgentD’s watchdog runs an AgentD that is missing or belongs to the old AgentD Desktop,
+              and its service sets its own AGENTD_ROOT or AGENTD_DB, which agentd install would not
+              keep. This app left it alone: run agentd install in a terminal, then set those for the
+              agentd-watchdog service again.
+            </T>
+          ) : repair.reason === "transient" ? (
+            <T>
+              AgentD’s background services run an AgentD that is missing or belongs to the old
+              AgentD Desktop. This app’s AgentD is gone once the app closes, so they were left
+              alone: install agentd for the terminal, then run agentd install.
+            </T>
           ) : repair.command !== undefined ? (
             <>
               <T>

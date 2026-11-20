@@ -12,6 +12,7 @@ import {
   plistLedger,
   plistProgram,
   repairServices,
+  serviceAgentd,
   taskEnvFile,
   taskNames,
   taskProgram,
@@ -75,6 +76,13 @@ describe("agentd services", () => {
         "<Actions><Exec><Command>&quot;C:\\Program Files\\AgentD Desktop\\resources\\bin\\agentd.exe&quot;</Command></Exec></Actions>",
       ),
     ).toBe("C:\\Program Files\\AgentD Desktop\\resources\\bin\\agentd.exe");
+    // schtasks /Query /XML may answer in UTF-16, which the runner decodes as UTF-8.
+    const utf16 = Buffer.from(
+      `\uFEFF${task("C:\\gone\\agentd.exe", "C:\\R\\services\\agentd-dash.env")}`,
+      "utf16le",
+    ).toString("utf8");
+    expect(taskProgram(utf16)).toBe("C:\\gone\\agentd.exe");
+    expect(taskEnvFile(utf16)).toBe("C:\\R\\services\\agentd-dash.env");
     expect(taskNames("dash", undefined)).toEqual(["\\LibraOS\\agentd-dash"]);
     expect(taskNames("dash", "C:\\Users\\Me\\Root\\")[0]).toMatch(
       /^\\LibraOS\\agentd-dash-[0-9a-f]{8}$/,
@@ -113,6 +121,32 @@ describe("agentd services", () => {
     expect(
       isStaleProgram("C:\\Program Files\\AgentD Desktop\\resources\\bin\\agentd.exe", true, NEXT),
     ).toBe(true);
+    // A service on an AppImage's mount stops working once that app quits.
+    expect(isStaleProgram("/tmp/.mount_AgentDx1y2z3/resources/agentd/agentd", true, NEXT)).toBe(
+      true,
+    );
+  });
+
+  it("registers an AppImage's agentd only through the copy that outlasts the app", () => {
+    const mounted = "/tmp/.mount_AgentDab12/resources/agentd/agentd";
+    const record = (action: "installed" | "kept-newer") => ({
+      action,
+      path: "/home/me/.local/bin/agentd",
+      directory: "/home/me/.local/bin",
+      onPath: true,
+      pathLine: null,
+      skills: [],
+    });
+    expect(serviceAgentd(NEXT, undefined, null)).toBe(NEXT);
+    expect(serviceAgentd(mounted, "/tmp/.mount_AgentDab12", record("installed"))).toBe(
+      "/home/me/.local/bin/agentd",
+    );
+    expect(serviceAgentd("/apps/x/agentd", "/apps/x/", record("installed"))).toBe(
+      "/home/me/.local/bin/agentd",
+    );
+    // The person's own agentd kept at the install location, or no install yet: nothing lasting.
+    expect(serviceAgentd(mounted, "/tmp/.mount_AgentDab12", record("kept-newer"))).toBe(null);
+    expect(serviceAgentd(mounted, undefined, null)).toBe(null);
   });
 
   it.effect("re-registers stale services with the bundled agentd's own install, once", () =>
@@ -133,7 +167,7 @@ describe("agentd services", () => {
         envs.push(input.env);
         return Effect.succeed(output("services  reloaded com.libraos.agentd.watchdog"));
       };
-      const deps = { bundled, platform: "darwin", home, root: undefined, run };
+      const deps = { bundled, target: bundled, platform: "darwin", home, root: undefined, run };
       expect(yield* repairServices(deps)).toEqual({ services: ["watchdog"], ok: true });
       expect(runs).toEqual([[bundled, "install"]]);
       expect(envs).toEqual([UNSET]);
@@ -155,7 +189,11 @@ describe("agentd services", () => {
       // Services on two ledgers: one install can't move both, so nothing runs.
       yield* fs.writeFileString(path.join(agents, "com.libraos.agentd.dash.plist"), plist(bundled));
       runs.length = 0;
-      expect(yield* repairServices(deps)).toEqual({ services: ["watchdog"], ok: false });
+      expect(yield* repairServices(deps)).toEqual({
+        services: ["watchdog"],
+        ok: false,
+        reason: "ledgers",
+      });
       expect(runs).toEqual([]);
       yield* fs.writeFileString(path.join(agents, "com.libraos.agentd.watchdog.plist"), plist(OLD));
 
@@ -226,6 +264,36 @@ describe("agentd services", () => {
         [bundled, "install"],
         ["systemctl", "--user", "daemon-reload"],
       ]);
+
+      // A watchdog on its own ledger: agentd's Linux unit names none, so install would drop it.
+      yield* fs.writeFileString(
+        path.join(units, "agentd-watchdog.service"),
+        "[Service]\nEnvironment=AGENTD_DB=/data/ledger.db\nExecStart=/gone/agentd watchdog\n",
+      );
+      runs.length = 0;
+      expect(yield* repairServices({ ...deps, platform: "linux", run: linuxRun })).toEqual({
+        services: ["watchdog"],
+        ok: false,
+        reason: "ledger",
+      });
+      expect(runs).toEqual([]);
+
+      // An AppImage with no lasting agentd to register: left alone, and said so.
+      yield* fs.writeFileString(
+        path.join(units, "agentd-watchdog.service"),
+        "[Service]\nExecStart=/gone/agentd watchdog\n",
+      );
+      expect(
+        yield* repairServices({ ...deps, platform: "linux", run: linuxRun, target: null }),
+      ).toEqual({ services: ["watchdog"], ok: false, reason: "transient" });
+      expect(runs).toEqual([]);
+      // With the app's lasting copy, install runs from that copy, which writes its own path.
+      const lasting = path.join(home, "lasting-agentd");
+      yield* fs.writeFileString(lasting, "");
+      expect(
+        yield* repairServices({ ...deps, platform: "linux", run: linuxRun, target: lasting }),
+      ).toMatchObject({ ok: true });
+      expect(runs[0]).toEqual([lasting, "install"]);
 
       // Nothing stale: nothing runs.
       runs.length = 0;

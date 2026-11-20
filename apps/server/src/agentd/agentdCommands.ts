@@ -2,6 +2,7 @@ import * as Schema from "effect/Schema";
 
 import {
   handoffRecord,
+  attemptRecord,
   releaseRecord,
   reserveRecord,
   submissionMarker,
@@ -209,6 +210,14 @@ export const agentdArgs = {
     "pin",
     "add",
     handoffRecord(id, handoff),
+    "--session",
+    session,
+    "--json",
+  ],
+  attemptSubmission: (session: string, id: string, fingerprint: string) => [
+    "pin",
+    "add",
+    attemptRecord(id, fingerprint),
     "--session",
     session,
     "--json",
