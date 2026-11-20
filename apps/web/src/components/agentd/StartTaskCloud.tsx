@@ -644,12 +644,17 @@ function ByokKeyFile({
           {fixError ? <p>{fixError}</p> : null}
         </div>
       ) : problem === "unreadable" ? (
-        <p id={errorId} role="alert" className="text-xs text-destructive">
-          <T>
-            Couldn’t read <Var>{path}</Var> on this environment’s machine. Check the path and that
-            your account can read the file.
-          </T>
-        </p>
+        <div id={errorId} role="alert" className="space-y-1.5 text-xs text-destructive">
+          <p>
+            <T>
+              Couldn’t read <Var>{path}</Var> on this environment’s machine. Check the path and that
+              your account can read the file.
+            </T>
+          </p>
+          <Button variant="outline" size="xs" disabled={disabled} onClick={cloud.refreshKeyFiles}>
+            <T>Check again</T>
+          </Button>
+        </div>
       ) : problem === "check-failed" ? (
         <div id={errorId} role="alert" className="flex items-center gap-2 text-xs text-destructive">
           <p>

@@ -7,7 +7,7 @@ import { rightPanelHostRef, useRightPanelStore } from "~/rightPanelStore";
 import { Button } from "../ui/button";
 import { toastManager } from "../ui/toast";
 import { useStartTaskCloud } from "./StartTaskCloud";
-import { openStartTaskDialog } from "./StartTaskDialog";
+import { openStartTaskDialog, replaceQuestion } from "./StartTaskDialog";
 import type { TaskFields } from "./startTask.logic";
 import { TaskPlanSummary, useTaskDefaults, useTaskDirectory, useTaskPlan } from "./taskPlan";
 
@@ -30,10 +30,12 @@ export function TaskDraftCard({
   const plan = useTaskPlan({ threadRef, cwd, fields, checkEdited: true, defaults, cloud });
   const [result, setResult] = useState<string | null>(null);
   const [startedId, setStartedId] = useState<string | null>(null);
+  const [replaceSubmission, setReplaceSubmission] = useState<string | null>(null);
 
-  async function start() {
+  async function start(replacing: string | null = null) {
     setResult(null);
-    const outcome = await plan.start();
+    setReplaceSubmission(null);
+    const outcome = await plan.start(replacing);
     switch (outcome?.kind) {
       case undefined:
         return;
@@ -56,10 +58,13 @@ export function TaskDraftCard({
         setResult(outcome.reason);
         return;
       case "failed":
+        setReplaceSubmission(outcome.replaceSubmission);
         setResult(
-          outcome.error instanceof Error
-            ? outcome.error.message
-            : gt("AgentD could not start the task."),
+          outcome.replaceSubmission !== null
+            ? replaceQuestion(gt)
+            : outcome.error instanceof Error
+              ? outcome.error.message
+              : gt("AgentD could not start the task."),
         );
     }
   }
@@ -76,7 +81,30 @@ export function TaskDraftCard({
           {result}
         </p>
       ) : null}
-      {startedId === null ? (
+      {startedId === null && cloud.enabled && replaceSubmission !== null ? (
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            disabled={!plan.ready || plan.starting}
+            onClick={() => void start(replaceSubmission)}
+          >
+            {plan.starting ? <T>Starting…</T> : <T>Replace</T>}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={plan.starting}
+            onClick={() => {
+              setResult(null);
+              setReplaceSubmission(null);
+            }}
+          >
+            <T>Don’t replace</T>
+          </Button>
+        </div>
+      ) : startedId === null ? (
         <div className="flex gap-2">
           <Button
             type="button"

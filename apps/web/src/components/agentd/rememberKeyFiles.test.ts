@@ -48,24 +48,27 @@ it("keeps a key path another window saved before its change reached this one", a
   // This window's snapshot predates the other window's write; storage already has it.
   __setClientSettingsForTests({
     ...DEFAULT_CLIENT_SETTINGS,
-    agentdCloudKeyFiles: { here: { openai: "/a/openai.key" } },
+    agentdCloudKeyFiles: { here: { openai: "/old/openai.key" } },
   });
   storage.settings = {
     ...DEFAULT_CLIENT_SETTINGS,
     agentdCloudKeyFiles: {
-      here: { openai: "/old/openai.key", anthropic: "/b/anthropic.key" },
+      here: { openai: "/new/openai.key", anthropic: "/b/anthropic.key" },
       other: { openai: "/b/openai.key" },
     },
   };
   let durable: ClientSettings = DEFAULT_CLIENT_SETTINGS;
   const persist = vi.fn(async (settings: ClientSettings) => {
     durable = settings;
+    storage.settings = settings;
   });
 
   await persistRememberedKeyFiles("third", { anthropicKeyFile: "/c/anthropic.key" }, persist);
+  // The same environment: only the submitted provider's path changes.
+  await persistRememberedKeyFiles("here", { anthropicKeyFile: "/a/anthropic.key" }, persist);
 
   expect(durable.agentdCloudKeyFiles).toEqual({
-    here: { openai: "/a/openai.key", anthropic: "/b/anthropic.key" },
+    here: { openai: "/new/openai.key", anthropic: "/a/anthropic.key" },
     other: { openai: "/b/openai.key" },
     third: { anthropic: "/c/anthropic.key" },
   });

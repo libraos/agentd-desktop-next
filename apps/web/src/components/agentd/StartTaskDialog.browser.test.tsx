@@ -362,9 +362,11 @@ it("checks an unknown cloud outcome before retrying and can replace an earlier s
   }) => AsyncResult.failure(Cause.fail(new AgentdCommandError({ notSetUp: false, ...fields })));
   const unfinished =
     "AgentD hasn’t confirmed your last cloud submission for this project, and it may still start. Replace it with this one? If it started, this one isn’t sent.";
+  // The dialog asks in the user's language, whatever text agentd's refusal carries.
+  const said = "server question";
   state.start
-    .mockResolvedValueOnce(refused({ message: unfinished, replaceSubmission: earlier }))
-    .mockResolvedValueOnce(refused({ message: unfinished, replaceSubmission: earlier }))
+    .mockResolvedValueOnce(refused({ message: said, replaceSubmission: earlier }))
+    .mockResolvedValueOnce(refused({ message: said, replaceSubmission: earlier }))
     .mockResolvedValueOnce(
       refused({ message: "AgentD may have created this cloud task.", outcomeUnknown: true }),
     )
@@ -1051,6 +1053,48 @@ it.each([
   },
 );
 
+it("answers a replacement question on the draft card itself", async () => {
+  setup("feature/export", false, { agentdRunTasksOn: "cloud" });
+  state.cloud = cloudReady();
+  const earlier = "0123abcd-ef01-8234-8567-89abcdef0123";
+  const question = AsyncResult.failure(
+    Cause.fail(
+      new AgentdCommandError({
+        message: "server question",
+        notSetUp: false,
+        replaceSubmission: earlier,
+      }),
+    ),
+  );
+  state.start
+    .mockResolvedValueOnce(question)
+    .mockResolvedValueOnce(question)
+    .mockResolvedValueOnce(AsyncResult.success({ id: "hof-123abc", started: true, note: null }));
+  await using _screen = await render(
+    <AppAtomRegistryProvider>
+      <ToastProvider>
+        <TaskDraftCard threadRef={threadRef} fields={drafted} />
+      </ToastProvider>
+    </AppAtomRegistryProvider>,
+  );
+  const card = page.getByRole("region", { name: "Drafted task" });
+  const asked = card.getByText(/Replace it with this one\?/);
+  await card.getByRole("button", { name: "Start" }).click();
+  await expect.element(asked).toBeVisible();
+  await card.getByRole("button", { name: "Don’t replace" }).click();
+  await expect.element(asked).not.toBeInTheDocument();
+  await card.getByRole("button", { name: "Start" }).click();
+  await card.getByRole("button", { name: "Replace", exact: true }).click();
+  await expect.element(card.getByText(/Task hof-123abc is in Background tasks/)).toBeVisible();
+  expect(state.start).toHaveBeenCalledTimes(3);
+  expect(state.start).toHaveBeenLastCalledWith({
+    environmentId: thread.environmentId,
+    input: expect.objectContaining({
+      cloud: expect.objectContaining({ replaceSubmission: earlier }),
+    }),
+  });
+});
+
 it("offers Retry on the AgentD page when agentd didn't answer the cloud probe", async () => {
   setup("feature/export", false);
   state.cloud = { ...cloudReady(), unreachable: true };
@@ -1081,6 +1125,14 @@ it("keeps Start disabled until each BYOK path is checked, and says when one can'
     .toBeVisible();
   await expect.element(start).toBeDisabled();
   expect(state.start).not.toHaveBeenCalled();
+  // Recreated at the same path: Check again reads it again.
+  state.keyFiles["/home/me/gone.key"] = {
+    provider: "anthropic",
+    readable: true,
+    openToOthers: false,
+  };
+  await page.getByRole("button", { name: "Check again" }).click();
+  await expect.element(start).toBeEnabled();
 
   // A connection without filesystem read can't check the file: agentd checks it on Start.
   state.keyFilesDenied.add("/home/me/team.key");

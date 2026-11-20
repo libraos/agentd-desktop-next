@@ -58,6 +58,13 @@ const dialogState = Atom.make<{
 } | null>(null).pipe(Atom.keepAlive, Atom.withLabel("agentd:start-task-dialog"));
 
 /** Opens Start task for the session, with fields from a task card's draft when given. */
+/** The question for agentd's replaceSubmission refusal, in the user's language. */
+export function replaceQuestion(gt: ReturnType<typeof useGT>): string {
+  return gt(
+    "AgentD hasn’t confirmed your last cloud submission for this project, and it may still start. Replace it with this one? If it started, this one isn’t sent.",
+  );
+}
+
 export function openStartTaskDialog(threadRef: ScopedThreadRef, fields: TaskFields | null = null) {
   appAtomRegistry.set(dialogState, { threadRef, fields });
 }
@@ -235,7 +242,11 @@ function StartTaskDialog({
         setOutcomeUnknown(outcome.outcomeUnknown);
         setReplaceSubmission(outcome.replaceSubmission);
         setPrivateFile(outcome.privateFile ?? null);
-        setStartError(showFailure(outcome.error, gt("AgentD could not start the task.")));
+        setStartError(
+          outcome.replaceSubmission !== null
+            ? replaceQuestion(gt)
+            : showFailure(outcome.error, gt("AgentD could not start the task.")),
+        );
         return;
       case "offered":
         setOutcomeUnknown(false);
