@@ -535,7 +535,7 @@ describe("AgentdBridge", () => {
         calls.push(line);
         if (input.args[0] === "new") return Effect.succeed(output(`{"handoff":"hof-0e3d000001"}`));
         switch (line) {
-          case "handoff dispatch hof-0e3d000001 --tool claude":
+          case "handoff dispatch hof-0e3d000001 --tool codex":
             return Effect.succeed(
               calls.includes(
                 "handoff done hof-b10c4ed001 --cancel --reason Released from AgentD Next to start hof-0e3d000001",
@@ -543,7 +543,7 @@ describe("AgentdBridge", () => {
                 ? output("{}")
                 : { ...output("", 1), stderr: refusal },
             );
-          case "handoff dispatch hof-0e3d000001 --tool claude --force":
+          case "handoff dispatch hof-0e3d000001 --tool codex --force":
           case "handoff done hof-b10c4ed001 --cancel --reason Released from AgentD Next to start hof-0e3d000001":
             return Effect.succeed(output("{}"));
           case "handoff list --json":
@@ -567,7 +567,7 @@ describe("AgentdBridge", () => {
         goal: "Fix the login form",
         accept: [],
         check: null,
-        worker: "claude",
+        worker: "codex",
         budget: "30m",
         cwd: "/work/app",
         issue: null,
@@ -584,7 +584,7 @@ describe("AgentdBridge", () => {
         },
       });
 
-      const retry = { id: "hof-0e3d000001", worker: "claude", blocking: "hof-b10c4ed001" } as const;
+      const retry = { id: "hof-0e3d000001", worker: "codex", blocking: "hof-b10c4ed001" } as const;
       running = true;
       const live = yield* Effect.flip(bridge.retryStart({ ...retry, action: "release" }));
       expect(live.message).toBe(
@@ -596,7 +596,7 @@ describe("AgentdBridge", () => {
       expect(yield* bridge.retryStart({ ...retry, action: "force" })).toMatchObject({
         started: true,
       });
-      expect(calls).toEqual(["handoff dispatch hof-0e3d000001 --tool claude --force"]);
+      expect(calls).toEqual(["handoff dispatch hof-0e3d000001 --tool codex --force"]);
 
       running = false;
       calls.length = 0;
@@ -606,7 +606,7 @@ describe("AgentdBridge", () => {
       expect(calls).toEqual([
         "handoff list --json",
         "handoff done hof-b10c4ed001 --cancel --reason Released from AgentD Next to start hof-0e3d000001",
-        "handoff dispatch hof-0e3d000001 --tool claude",
+        "handoff dispatch hof-0e3d000001 --tool codex",
       ]);
     }),
   );
