@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 
 import {
   agentdEnvironment,
+  useAgentdCloudAccount,
   useAgentdEula,
   useAgentdSetup,
   useAgentdStatus,
@@ -25,6 +26,8 @@ import {
   DialogPopup,
   DialogTitle,
 } from "../ui/dialog";
+import { offerAccountLink } from "./agentdVisibility.logic";
+import { CloudWorkersSetup } from "./CloudWorkersSetup";
 
 const EULA_URL = "https://libraos.com/eula";
 
@@ -38,6 +41,11 @@ const openedFor = Atom.make<EnvironmentId | null>(null).pipe(
   Atom.keepAlive,
   Atom.withLabel("agentd:setup-dialog"),
 );
+// The environment the person asked to link a LibraOS account for, from the indicator or Settings.
+const linkOpenedFor = Atom.make<EnvironmentId | null>(null).pipe(
+  Atom.keepAlive,
+  Atom.withLabel("agentd:link-dialog"),
+);
 const notNow = Atom.make<Readonly<Record<EnvironmentId, true>>>({}).pipe(
   Atom.keepAlive,
   Atom.withLabel("agentd:setup-not-now"),
@@ -48,12 +56,18 @@ export function openAgentdSetupDialog(environmentId: EnvironmentId) {
   appAtomRegistry.set(openedFor, environmentId);
 }
 
+/** Opens the link step alone, with the same Cloud Workers key form as after setup. */
+export function openAgentdLinkDialog(environmentId: EnvironmentId) {
+  appAtomRegistry.set(linkOpenedFor, environmentId);
+}
+
 export function useCanSetUpAgentd(environmentId: EnvironmentId | null) {
   return useAtomValue(agentdEnvironment.setupStart.permissionAtom(environmentId));
 }
 
 function closeDialog(environmentId: EnvironmentId) {
   appAtomRegistry.set(openedFor, null);
+  appAtomRegistry.set(linkOpenedFor, null);
   appAtomRegistry.set(notNow, { ...appAtomRegistry.get(notNow), [environmentId]: true });
 }
 
@@ -63,6 +77,7 @@ function closeDialog(environmentId: EnvironmentId) {
  */
 export function AgentdSetupDialogHost() {
   const opened = useAtomValue(openedFor);
+  const linkOnly = useAtomValue(linkOpenedFor);
   const dismissed = useAtomValue(notNow);
   const primary = usePrimaryEnvironmentId();
   const status = useAgentdStatus(primary);
@@ -71,13 +86,21 @@ export function AgentdSetupDialogHost() {
     primary !== null && status.data?.setUp === false && canSetUp && dismissed[primary] !== true
       ? primary
       : null;
+  if (opened === null && linkOnly !== null)
+    return <AgentdSetupDialog key={`link:${linkOnly}`} environmentId={linkOnly} linkOnly />;
   const environmentId = opened ?? automatic;
   return environmentId === null ? null : (
-    <AgentdSetupDialog key={environmentId} environmentId={environmentId} />
+    <AgentdSetupDialog key={environmentId} environmentId={environmentId} linkOnly={false} />
   );
 }
 
-function AgentdSetupDialog({ environmentId }: { readonly environmentId: EnvironmentId }) {
+function AgentdSetupDialog({
+  environmentId,
+  linkOnly,
+}: {
+  readonly environmentId: EnvironmentId;
+  readonly linkOnly: boolean;
+}) {
   const gt = useGT();
   const eula = useAgentdEula(environmentId);
   const setup = useAgentdSetup(environmentId);
@@ -96,13 +119,72 @@ function AgentdSetupDialog({ environmentId }: { readonly environmentId: Environm
   const finished = ours?.phase === "succeeded" || ours?.phase === "failed";
   const succeeded = ours?.phase === "succeeded";
   const refreshStatus = status.refresh;
+  // After setup, or when asked for alone, the dialog offers linking the LibraOS account.
+  const linkStep = linkOnly || succeeded;
+  const account = useAgentdCloudAccount(linkStep ? environmentId : null);
+  const offerLink = account.error !== null ? false : offerAccountLink(account.data);
+  // The person linked in this dialog: it stays to show the result until they close it.
+  const [linkedHere, setLinkedHere] = useState(false);
+  const refreshAccount = account.refresh;
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- re-reads agentd's status once the server's init run ends, and closes after a success
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- re-reads agentd's status and account once the server's init run ends
   useEffect(() => {
     if (!finished) return;
     refreshStatus();
-    if (succeeded) closeDialog(environmentId);
-  }, [finished, succeeded, refreshStatus, environmentId]);
+    if (succeeded) refreshAccount();
+  }, [finished, succeeded, refreshStatus, refreshAccount]);
+
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- closes once agentd says there is nothing to link: a linked account never sees the step
+  useEffect(() => {
+    if (linkStep && offerLink === false && !linkedHere) closeDialog(environmentId);
+  }, [linkStep, offerLink, linkedHere, environmentId]);
+
+  if (linkStep) {
+    const setup = account.data;
+    return (
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open) closeDialog(environmentId);
+        }}
+      >
+        <DialogPopup className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>
+              {succeeded ? <T>AgentD is set up</T> : <T>Link your LibraOS account</T>}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogPanel>
+            {setup === null || (offerLink !== true && !linkedHere) ? (
+              <p role="status" className="text-muted-foreground text-sm">
+                <T>Checking your LibraOS account…</T>
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm">
+                  <T>Optional: link your LibraOS account to run tasks on Cloud Workers.</T>
+                </p>
+                <CloudWorkersSetup
+                  environmentId={environmentId}
+                  canConfigure={setup.canConfigure === true}
+                  setupUrl={setup.setupUrl}
+                  onConfigured={() => {
+                    setLinkedHere(true);
+                    refreshAccount();
+                  }}
+                />
+              </div>
+            )}
+          </DialogPanel>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => closeDialog(environmentId)}>
+              {linkedHere ? <T>Done</T> : <T>Skip</T>}
+            </Button>
+          </DialogFooter>
+        </DialogPopup>
+      </Dialog>
+    );
+  }
 
   const accept = async () => {
     // From here the dialog stays until the person closes it, whatever the status says.

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   agentdIndicatorState,
+  offerAccountLink,
   OFFER_AFTER_MS,
   parseDefaultBudget,
   projectHasRunningWorker,
@@ -86,5 +87,21 @@ describe("parseDefaultBudget", () => {
     expect(parseDefaultBudget("60m,$5")).toEqual({ minutes: 60, dollars: 5 });
     expect(parseDefaultBudget("15m,$2.50")).toEqual({ minutes: 15, dollars: 2.5 });
     expect(parseDefaultBudget("$5")).toBeNull();
+  });
+});
+
+describe("offerAccountLink", () => {
+  it.each([
+    [null, null],
+    [undefined, null],
+    [{ supported: true, problem: "setup" }, true],
+    // Linked: an account key is installed, whatever else agentd reports.
+    [{ supported: true, problem: null }, false],
+    [{ supported: true, problem: "credit" }, false],
+    [{ supported: true, problem: "balance" }, false],
+    // This agentd has no Cloud Workers, so there is nothing to link.
+    [{ supported: false, problem: "setup" }, false],
+  ] as const)("%j offers the link step: %s", (account, expected) => {
+    expect(offerAccountLink(account)).toBe(expected);
   });
 });
