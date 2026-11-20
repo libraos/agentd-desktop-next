@@ -556,6 +556,27 @@ export const AgentdCloudKeyFileCheck = Schema.Struct({
 });
 export type AgentdCloudKeyFileCheck = typeof AgentdCloudKeyFileCheck.Type;
 
+type CloudKeyFiles = Readonly<
+  Record<string, { readonly anthropic?: string; readonly openai?: string }>
+>;
+
+/**
+ * Settings to store with the BYOK paths already stored kept under the incoming ones, so two windows
+ * that each read the same old settings and save a path can't erase each other's. Nothing forgets one.
+ */
+export function withStoredCloudKeyFiles<S extends { readonly agentdCloudKeyFiles: CloudKeyFiles }>(
+  stored: { readonly agentdCloudKeyFiles: CloudKeyFiles } | null,
+  incoming: S,
+): S {
+  if (stored === null) return incoming;
+  const merged: Record<string, { readonly anthropic?: string; readonly openai?: string }> = {
+    ...stored.agentdCloudKeyFiles,
+  };
+  for (const [environment, files] of Object.entries(incoming.agentdCloudKeyFiles))
+    merged[environment] = { ...merged[environment], ...files };
+  return { ...incoming, agentdCloudKeyFiles: merged };
+}
+
 /** The terminal command that makes a key file private, its path quoted for a POSIX shell. */
 export function chmodPrivateCommand(path: string): string {
   const word = /^[\w@%+=:,./-]+$/.test(path) ? path : `'${path.replaceAll("'", `'\\''`)}'`;

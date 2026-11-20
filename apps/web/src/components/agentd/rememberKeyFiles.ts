@@ -8,7 +8,7 @@ let queue: Promise<unknown> = Promise.resolve();
 /**
  * Keeps the BYOK paths a cloud worker took. Storage, read just before the write, is the base: this
  * window's snapshot may predate another window's save and would write its older paths back. Only
- * the submitted paths go on top. With no compare-and-set, two windows saving at once can drop one.
+ * the submitted paths go on top; the storage write keeps paths another window saved meanwhile.
  */
 export function persistRememberedKeyFiles(
   environmentId: string,

@@ -141,6 +141,34 @@ describe("DesktopClientSettings", () => {
     ),
   );
 
+  it.effect("keeps the key path each window saved from the same old settings", () =>
+    withClientSettings(
+      Effect.gen(function* () {
+        const settings = yield* DesktopClientSettings.DesktopClientSettings;
+        const old = { ...clientSettings, agentdCloudKeyFiles: { here: { openai: "/o.key" } } };
+        yield* settings.set(old);
+        yield* Effect.all(
+          [
+            settings.set({
+              ...old,
+              agentdCloudKeyFiles: { here: { openai: "/o.key", anthropic: "/a.key" } },
+            }),
+            settings.set({
+              ...old,
+              agentdCloudKeyFiles: { ...old.agentdCloudKeyFiles, other: { openai: "/b.key" } },
+            }),
+          ],
+          { concurrency: "unbounded" },
+        );
+        const stored = Option.getOrThrow(yield* settings.get);
+        assert.deepEqual(stored.agentdCloudKeyFiles, {
+          here: { openai: "/o.key", anthropic: "/a.key" },
+          other: { openai: "/b.key" },
+        });
+      }),
+    ),
+  );
+
   it.effect("removes its temporary file when replacing the settings file fails", () =>
     withClientSettings(
       Effect.gen(function* () {
