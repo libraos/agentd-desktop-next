@@ -2949,7 +2949,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       name: "agentd-desktop",
       description: "AgentD Next is a desktop app for coding agents.",
       author: { name: "LibraOS" },
-      homepage: "https://github.com/libraos/agentd-desktop-next",
+      homepage: "https://github.com/libraos/agentd-next",
       ...(platform === "linux" ? { desktopName: `${DESKTOP_APP_ID}.desktop` } : {}),
     },
     electronLanguages: [...DESKTOP_ELECTRON_LANGUAGES],

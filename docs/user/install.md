@@ -11,7 +11,7 @@ launch AgentD Next and configure providers afterwards.
 ## Desktop app
 
 Download an installer from the
-[releases page](https://github.com/libraos/agentd-desktop-next/releases). Each
+[releases page](https://github.com/libraos/agentd-next/releases). Each
 release lists its files and a `SHA256SUMS` file; installers are named
 `AgentD-Next-<version>-<arch>.<ext>`.
 
