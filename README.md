@@ -10,7 +10,7 @@ It runs on macOS, Linux and Windows.
 
 ## Install the desktop app
 
-Installers are on the [releases page](https://github.com/libraos/agentd-desktop-next/releases), with agentd and its Skills inside. Releases up to 0.1.10-agentd.6 carry the earlier name, AgentD Desktop, in the app and in the file names (`AgentD-Desktop-…`).
+Installers are on the [releases page](https://github.com/libraos/agentd-next/releases), with agentd and its Skills inside. Releases up to 0.1.10-agentd.6 carry the earlier name, AgentD Desktop, in the app and in the file names (`AgentD-Desktop-…`).
 
 | System                | File                                       |
 | --------------------- | ------------------------------------------ |
