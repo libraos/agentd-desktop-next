@@ -700,8 +700,8 @@ describe("sidebar Chat and Code tabs", () => {
     expect(
       vi
         .mocked(shelfHooks.useOlderSettledShelf)
-        .mock.lastCall![0].scopes.flatMap((scope) => scope.projectIds ?? [null]),
-    ).toEqual([app.id]);
+        .mock.lastCall![0].scopes.map((scope) => scope.projectIds),
+    ).toEqual([[app.id]]);
   });
 
   it("Chat has no pointer to Code without project sessions", async () => {
