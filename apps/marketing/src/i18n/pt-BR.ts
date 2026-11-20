@@ -2,14 +2,13 @@ import type { Messages } from "./en";
 
 export const ptBR: Messages = {
   layout: {
-    defaultTitle: "AgentD Next",
-    defaultDescription:
-      "AgentD Next. O painel de controle open source para agentes de programação.",
+    defaultTitle: "T3 Code",
+    defaultDescription: "T3 Code. O painel de controle open source para agentes de programação.",
     socialImageAlt:
-      "AgentD Next: o painel de controle open source para agentes de programação, com Claude Code, Codex, Cursor, OpenCode, Grok e Antigravity.",
-    homeLabel: "Página inicial do AgentD Next",
+      "T3 Code: o painel de controle open source para agentes de programação, com Claude Code, Codex, Cursor, OpenCode, Grok e Antigravity.",
+    homeLabel: "Página inicial do T3 Code",
     download: "Baixar",
-    starsLabel: "Dê uma estrela ao AgentD Next no GitHub, {stars} estrelas",
+    starsLabel: "Dê uma estrela ao T3 Code no GitHub, {stars} estrelas",
     githubStars: "{stars} estrelas no GitHub",
     language: "Idioma",
     mitLicensed: "Licença MIT",
@@ -20,8 +19,8 @@ export const ptBR: Messages = {
     security: "Segurança",
   },
   home: {
-    title: "AgentD Next | O painel de controle open source para agentes de programação",
-    description: "AgentD Next. O painel de controle open source para agentes de programação.",
+    title: "T3 Code | O painel de controle open source para agentes de programação",
+    description: "T3 Code. O painel de controle open source para agentes de programação.",
     heroTitle: ["O painel de controle", "open source para", "agentes de código."],
     heroSub:
       "Orquestre Claude Code, Codex, Antigravity, OpenCode, Cursor e Grok em um só lugar. Use a sua própria assinatura. Faça um fork do projeto inteiro.",
@@ -33,14 +32,14 @@ export const ptBR: Messages = {
     sourceLink: "Roube nosso código (legalmente)",
     alsoOnPhone: "Também no seu celular:",
     screenshotAlt:
-      "AgentD Next executando subagentes do Claude, Codex, Muse e Gemini em uma mesma thread",
+      "T3 Code executando subagentes do Claude, Codex, Muse e Gemini em uma mesma thread",
     endorsementsTitle: "Tolerado por mais de {users} devs",
     endorsementsSub: "Alguns até tuitaram sobre isso.",
     endorsementsLabel: "Depoimentos de desenvolvedores",
     readPost: "Ler o post de {handle} no X",
     harnessTitle: "Traga sua própria assinatura",
     harnessBody:
-      "O AgentD Next não revende tokens. Conecte Claude Code, Codex, Antigravity, OpenCode, Cursor ou Grok com as credenciais que você já tem. Nós orquestramos, você mantém seu plano.",
+      "O T3 Code não revende tokens. Conecte Claude Code, Codex, Antigravity, OpenCode, Cursor ou Grok com as credenciais que você já tem. Nós orquestramos, você mantém seu plano.",
     googleSignIn: "Login com Google",
     harnessPoints: [
       "Sem revenda de chaves. Sem limite de cota.",
@@ -48,7 +47,7 @@ export const ptBR: Messages = {
       "Novos agentes toda semana.",
     ],
     gitVisualLabel:
-      "Ilustração do fluxo de Git no AgentD Next: revisar um diff, fazer commit e push das alterações e abrir um pull request.",
+      "Ilustração do fluxo de Git no T3 Code: revisar um diff, fazer commit e push das alterações e abrir um pull request.",
     prReady: "Pronto",
     prCommits: "3 commits",
     viewDiff: "Ver diff",
@@ -77,15 +76,15 @@ export const ptBR: Messages = {
     browseSource: "Ver o código",
     ctaTitle: "Seus agentes merecem mais do que um terminal.",
     ctaSub:
-      "O AgentD Next é gratuito, open source e rápido. Instale, conecte o provedor que você já paga para usar e coloque seus agentes para trabalhar.",
+      "O T3 Code é gratuito, open source e rápido. Instale, conecte o provedor que você já paga para usar e coloque seus agentes para trabalhar.",
     otherPlatforms: "Outras plataformas",
   },
   download: {
-    title: "Baixe o AgentD Next para macOS, Windows e Linux | AgentD Next",
+    title: "Baixe o T3 Code para macOS, Windows e Linux | T3 Code",
     description:
-      "Baixe o app oficial de desktop do AgentD Next para macOS, Windows ou Linux, ou os apps para iOS e Android. t3.codes é o único site oficial de download.",
+      "Baixe o app oficial de desktop do T3 Code para macOS, Windows ou Linux, ou os apps para iOS e Android. t3.codes é o único site oficial de download.",
     breadcrumb: "Baixar",
-    heading: "Baixar o AgentD Next",
+    heading: "Baixar o T3 Code",
     channelLabel: "Canal de versões",
     stable: "Estável",
     nightly: "Nightly",
