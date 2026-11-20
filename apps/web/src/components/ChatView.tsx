@@ -338,6 +338,7 @@ import {
 import { QueuedRunsControl, type QueuedRunsControlHandle } from "./chat/QueuedRunsControl";
 import { useThreadLinkedPullRequest } from "./pullRequest/useThreadLinkedPullRequest";
 import { useProactivePanels } from "../hooks/useProactivePanels";
+import { useAgentWorkPanels } from "./agentd/useAgentWorkPanels";
 import { useIncrementalTimelineEntries } from "../hooks/useIncrementalTimelineEntries";
 import { useRightPanelSurfaceClose } from "../hooks/useRightPanelSurfaceClose";
 import { ComposerBannerStack, type ComposerBannerStackItem } from "./chat/ComposerBannerStack";
@@ -2066,6 +2067,16 @@ export default function ChatView(props: ChatViewProps) {
     pullRequestsSurfaceAvailable,
     visiblePullRequestCount,
     onDiffPanelOpen,
+  });
+  useAgentWorkPanels({
+    threadRef:
+      isServerThread &&
+      showCodeSurfaces &&
+      settings.agentWorkPanelsEnabled &&
+      !shouldUsePlanSidebarSheet
+        ? activeThreadRef
+        : null,
+    turnItems: serverProjection?.turnItems ?? EMPTY_TURN_ITEMS,
   });
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- consumes a pending maximize request from the right panel store once the panel can maximize
   useEffect(() => {

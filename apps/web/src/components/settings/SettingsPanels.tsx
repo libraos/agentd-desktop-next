@@ -569,6 +569,9 @@ export function useSettingsRestore(onRestored?: () => void) {
     settings.proactivePanelsEnabled !== DEFAULT_UNIFIED_SETTINGS.proactivePanelsEnabled
       ? [gt("Open pull requests and changes panels proactively")]
       : []),
+    ...(settings.agentWorkPanelsEnabled !== DEFAULT_UNIFIED_SETTINGS.agentWorkPanelsEnabled
+      ? [gt("Open the browser as the agent uses it")]
+      : []),
     ...(settings.showSkillsInSlashMenu !== DEFAULT_UNIFIED_SETTINGS.showSkillsInSlashMenu
       ? [gt("Show skills in slash menu")]
       : []),
@@ -708,6 +711,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       diffIgnoreWhitespace: DEFAULT_UNIFIED_SETTINGS.diffIgnoreWhitespace,
       diffLayout: DEFAULT_UNIFIED_SETTINGS.diffLayout,
       proactivePanelsEnabled: DEFAULT_UNIFIED_SETTINGS.proactivePanelsEnabled,
+      agentWorkPanelsEnabled: DEFAULT_UNIFIED_SETTINGS.agentWorkPanelsEnabled,
       showSkillsInSlashMenu: DEFAULT_UNIFIED_SETTINGS.showSkillsInSlashMenu,
       composerRichTextEnabled: DEFAULT_UNIFIED_SETTINGS.composerRichTextEnabled,
       sendShortcut: DEFAULT_UNIFIED_SETTINGS.sendShortcut,
@@ -1397,6 +1401,33 @@ export function ChatSettingsPanel() {
 
       <SettingsSection id="activity" title={gt("Activity")}>
         <ToolCallVisibilityRow />
+        <SettingsRow
+          {...setting("agent-work-panels")}
+          description={gt(
+            "In Code threads, show the browser beside the conversation when the agent uses it. Closing the panel stops this for that thread.",
+          )}
+          resetAction={
+            settings.agentWorkPanelsEnabled !== DEFAULT_UNIFIED_SETTINGS.agentWorkPanelsEnabled ? (
+              <SettingResetButton
+                ariaLabel={gt("Reset opening the browser for the agent to default")}
+                onClick={() =>
+                  updateSettings({
+                    agentWorkPanelsEnabled: DEFAULT_UNIFIED_SETTINGS.agentWorkPanelsEnabled,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <Switch
+              checked={settings.agentWorkPanelsEnabled}
+              onCheckedChange={(checked) =>
+                updateSettings({ agentWorkPanelsEnabled: Boolean(checked) })
+              }
+              aria-label={gt("Open the browser as the agent uses it")}
+            />
+          }
+        />
       </SettingsSection>
 
       <SettingsSection id="screen-reader" title={gt("Screen reader")}>
