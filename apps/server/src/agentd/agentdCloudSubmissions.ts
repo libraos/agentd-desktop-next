@@ -7,7 +7,7 @@ import * as Schema from "effect/Schema";
 // A paid cloud offer is reserved per GitHub project as pins, in order: `{id, after, fingerprint}`,
 // `{id, attempt: fingerprint, nonce}` before each later offer, `{id, released: true, nonce}` after
 // agentd refused that offer ("reserve" for the first), `{id, handoff}` once agentd names the task.
-// The id is the offer's --idem and --state marker; a refusal keeps it for other servers' offers.
+// The id is the offer's --idem and --state marker, released only once every offer was refused.
 
 const SUBMISSION_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-8[a-f0-9]{3}-8[a-f0-9]{3}-[a-f0-9]{12}$/;
 const HANDOFF_ID = /^hof-[0-9a-f]{6,32}$/;
@@ -60,7 +60,7 @@ export interface Reservation {
   /** The draft last offered, or about to be, under this id. */
   readonly fingerprint: string;
   readonly handoff: string | null;
-  /** agentd refused that draft before making a task; the next Start reuses the id without asking. */
+  /** agentd refused every offer under it before making a task; the next Start reuses it without asking. */
   readonly released: boolean;
 }
 
@@ -128,12 +128,17 @@ export function currentReservation(
   if (pins._tag === "None") return undefined;
   const successors = new Map<string | null, { id: string; fingerprint: string }>();
   const handoffs = new Map<string, string>();
-  const released = new Set<string>();
-  // Each id's latest draft, which a release after it applies to.
+  // Each id's latest draft.
   const attempts = new Map<string, string>();
-  // Each id's latest attempt: a release naming another attempt is about an earlier offer. An
-  // attempt pin without a nonce (older versions) can be released only by a release without one.
-  const latest = new Map<string, string | null>();
+  // Each id's offers with no refusal yet; null for an attempt pin without a nonce (older versions),
+  // which only a release without one clears. Released once none is left: any one still open, from
+  // this server or another sharing the ledger, may have reached the Job API.
+  const open = new Map<string, Set<string | null>>();
+  const openOf = (id: string) => {
+    let set = open.get(id);
+    if (set === undefined) open.set(id, (set = new Set([RESERVE_ATTEMPT])));
+    return set;
+  };
   for (const raw of pins.value) {
     const pin = decodePin(raw);
     if (pin._tag === "None" || (pin.value.session !== undefined && pin.value.session !== session))
@@ -142,13 +147,12 @@ export function currentReservation(
     if (record._tag === "None" || !isSubmissionId(record.value.id)) continue;
     const value = record.value;
     if ("released" in value) {
-      const attempt = latest.has(value.id) ? latest.get(value.id) : RESERVE_ATTEMPT;
-      if (value.nonce === undefined || value.nonce === attempt) released.add(value.id);
+      if (value.nonce === undefined) openOf(value.id).clear();
+      else openOf(value.id).delete(value.nonce);
     } else if ("attempt" in value) {
       if (FINGERPRINT.test(value.attempt)) {
         attempts.set(value.id, value.attempt);
-        latest.set(value.id, value.nonce ?? null);
-        released.delete(value.id);
+        openOf(value.id).add(value.nonce ?? null);
       }
     } else if ("handoff" in value) {
       if (HANDOFF_ID.test(value.handoff) && !handoffs.has(value.id))
@@ -170,7 +174,7 @@ export function currentReservation(
         id: current.id,
         fingerprint: attempts.get(current.id) ?? current.fingerprint,
         handoff: handoffs.get(current.id) ?? null,
-        released: released.has(current.id),
+        released: open.get(current.id)?.size === 0,
       };
 }
 

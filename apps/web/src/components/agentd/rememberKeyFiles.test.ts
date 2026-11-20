@@ -73,3 +73,18 @@ it("keeps a key path another window saved before its change reached this one", a
     third: { anthropic: "/c/anthropic.key" },
   });
 });
+
+it("keeps both provider paths when two saves queue in one window", async () => {
+  __setClientSettingsForTests(DEFAULT_CLIENT_SETTINGS);
+  storage.settings = DEFAULT_CLIENT_SETTINGS;
+  const persist = async (settings: ClientSettings) => {
+    storage.settings = settings;
+  };
+  await Promise.all([
+    persistRememberedKeyFiles("here", { openaiKeyFile: "/a/openai.key" }, persist),
+    persistRememberedKeyFiles("here", { anthropicKeyFile: "/a/anthropic.key" }, persist),
+  ]);
+  expect(storage.settings.agentdCloudKeyFiles).toEqual({
+    here: { openai: "/a/openai.key", anthropic: "/a/anthropic.key" },
+  });
+});

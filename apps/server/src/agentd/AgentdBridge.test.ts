@@ -13,7 +13,12 @@ import * as TestClock from "effect/testing/TestClock";
 import * as BackgroundPolicy from "../background/BackgroundPolicy.ts";
 import * as ProcessRunner from "../processRunner.ts";
 import * as AgentdBridge from "./AgentdBridge.ts";
-import { RESERVE_ATTEMPT, releaseRecord } from "./agentdCloudSubmissions.ts";
+import {
+  RESERVE_ATTEMPT,
+  attemptRecord,
+  releaseRecord,
+  submissionFingerprint,
+} from "./agentdCloudSubmissions.ts";
 
 // Recorded from agentd v0.1.13 (`handoff list --json`, `handoff show ID --json`, `doctor --json`),
 // trimmed; unknown keys stay to show they are ignored.
@@ -1179,10 +1184,32 @@ describe("AgentdBridge", () => {
       expect(
         yield* Effect.flip(bridge.startTask({ ...input, goal: "Retry aftermath" })),
       ).toMatchObject({ replaceSubmission: keys()[0] });
+      // A later attempt's refusal doesn't cover an earlier one still in flight: another server
+      // pinned its attempt for the same draft and hasn't heard back.
+      ledger = cloudLedger();
+      runs.length = 0;
+      offerSays = "error: 402: insufficient credit";
+      yield* Effect.flip(bridge.startTask(input));
+      ledger.pins.push({
+        session: ledger.pins[0]!.session,
+        text: attemptRecord(keys()[0]!, submissionFingerprint(input, "acme/app"), "other-server"),
+      });
+      yield* Effect.flip(bridge.startTask(input));
+      expect(
+        yield* Effect.flip(bridge.startTask({ ...input, goal: "Retry aftermath" })),
+      ).toMatchObject({ replaceSubmission: keys()[0] });
+      // Once that one is refused too, nothing is left open.
+      ledger.pins.push({
+        session: ledger.pins[0]!.session,
+        text: releaseRecord(keys()[0]!, "other-server"),
+      });
+      expect(
+        yield* Effect.flip(bridge.startTask({ ...input, goal: "Retry aftermath" })),
+      ).not.toHaveProperty("replaceSubmission");
+
       ledger = cloudLedger();
       runs.length = 0;
       yield* Effect.flip(bridge.startTask(input));
-      offerSays = "error: 402: insufficient credit";
       yield* Effect.flip(bridge.startTask(input));
       yield* Effect.flip(bridge.startTask(input));
       offerSays = "error: runner unavailable";

@@ -33,7 +33,9 @@ export function AgentdInstallStatus({ status }: { status: AgentdStatus }) {
             <T>
               One of AgentD’s background services runs an AgentD that is missing or belongs to the
               old AgentD Desktop, and another runs your own AgentD. This app left both alone: run
-              agentd install with the AgentD you use.
+              agentd install with the AgentD you use. It rewrites both services with the AGENTD_ROOT
+              and AGENTD_DB set where you run it; if the dashboard uses its own, run agentd dash
+              install with those afterwards.
             </T>
           ) : repair.reason === "ledgers" ? (
             <T>
@@ -48,6 +50,20 @@ export function AgentdInstallStatus({ status }: { status: AgentdStatus }) {
               old AgentD Desktop, and it sets its own AGENTD_ROOT or AGENTD_DB in a way agentd
               install would not keep. This app left it alone: run agentd install and agentd dash
               install in a terminal, then set those for that service again.
+            </T>
+          ) : repair.reason === "unread" ? (
+            <T>
+              One of AgentD’s background services runs an AgentD that is missing or belongs to the
+              old AgentD Desktop, and this app couldn’t read the settings file that names its AgentD
+              ledger. It left the services alone and checks again when it next starts; or run agentd
+              install in a terminal with that service’s AGENTD_ROOT and AGENTD_DB set.
+            </T>
+          ) : repair.reason === "override" ? (
+            <T>
+              One of AgentD’s background services runs an AgentD that is missing or belongs to the
+              old AgentD Desktop, and a systemd drop-in for it sets the program it runs, which
+              agentd install doesn’t change. This app left it alone: remove that ExecStart from the
+              drop-in, then run agentd install in a terminal.
             </T>
           ) : repair.reason === "transient" ? (
             <T>

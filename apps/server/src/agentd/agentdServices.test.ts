@@ -72,6 +72,14 @@ describe("agentd services", () => {
     expect(unitProgram('ExecStart="/opt/Agent D/agentd" dash --serve x', "/h")).toBe(
       "/opt/Agent D/agentd",
     );
+    // A drop-in's empty ExecStart= clears the unit's, and the next one is what runs.
+    expect(
+      unitProgram(
+        "[Service]\nExecStart=/new/agentd watchdog\n[Service]\nExecStart=\nExecStart=/gone/agentd watchdog\n",
+        "/h",
+      ),
+    ).toBe("/gone/agentd");
+    expect(unitProgram("ExecStart=/a/agentd x\nExecStart=\n", "/h")).toBe(null);
     expect(
       taskProgram(
         "<Actions><Exec><Command>&quot;C:\\Program Files\\AgentD Desktop\\resources\\bin\\agentd.exe&quot;</Command></Exec></Actions>",
@@ -139,6 +147,20 @@ describe("agentd services", () => {
     expect(unitLedger("Environment=AGENTD_ROOT=%t/agentd\n", "/h")).toBe(null);
     expect(unitLedger('Environment="AGENTD_DB=/a\n', "/h")).toBe(null);
     expect(unitLedger("Environment=PATH=/bin \\\n  AGENTD_DB=/a\n", "/h")).toBe(null);
+    // systemd's C escapes, in quotes or not; a byte past ASCII or an unknown escape can't be told.
+    expect(
+      unitLedger(
+        String.raw`Environment="AGENTD_DB=/data/My\x4cedger.db" AGENTD_ROOT=/a\sb\u00e9`,
+        "/h",
+      ),
+    ).toEqual({ root: "/a bé", db: "/data/MyLedger.db" });
+    expect(unitLedger(String.raw`Environment=AGENTD_DB=/d/\101\\x`, "/h")).toEqual({
+      root: null,
+      db: "/d/A\\x",
+    });
+    expect(unitLedger(String.raw`Environment=AGENTD_DB=/d/\xc3\xa9.db`, "/h")).toBe(null);
+    expect(unitLedger(String.raw`Environment=AGENTD_DB=/d/\q.db`, "/h")).toBe(null);
+    expect(unitLedger(String.raw`Environment=AGENTD_DB=/d/\x4`, "/h")).toBe(null);
     expect(envFileLedger("PATH=C:\\bin\r\nAGENTD_DB=D:\\l.db\r\n")).toEqual({
       root: null,
       db: "D:\\l.db",
@@ -226,24 +248,20 @@ describe("agentd services", () => {
       envs.length = 0;
       expect(yield* repairServices(deps)).toEqual({ services: ["watchdog"], ok: true });
       expect(envs).toEqual([{ ...UNSET, ...custom }]);
-      // Services on two ledgers: install moves both onto the watchdog's, then dash install puts
-      // the dash back on its own.
+      // Services on two ledgers: install would put both on one, and a failed or interrupted
+      // dash install after it would leave the working dash there. Left to the user.
       const dashLedger = { AGENTD_ROOT: "/dash/agentd", AGENTD_DB: "/dash/ledger.db" };
       yield* fs.writeFileString(
         path.join(agents, "com.libraos.agentd.dash.plist"),
         plist(bundled, dashLedger),
       );
       runs.length = 0;
-      envs.length = 0;
-      expect(yield* repairServices(deps)).toEqual({ services: ["watchdog"], ok: true });
-      expect(runs).toEqual([
-        [bundled, "install"],
-        [bundled, "dash", "install"],
-      ]);
-      expect(envs).toEqual([
-        { ...UNSET, ...custom },
-        { ...UNSET, ...dashLedger },
-      ]);
+      expect(yield* repairServices(deps)).toEqual({
+        services: ["watchdog"],
+        ok: false,
+        reason: "ledgers",
+      });
+      expect(runs).toEqual([]);
       yield* fs.writeFileString(path.join(agents, "com.libraos.agentd.watchdog.plist"), plist(OLD));
 
       // A working dash on the user's own agentd: install would move it too, so nothing runs.
@@ -352,6 +370,23 @@ describe("agentd services", () => {
         });
         expect(runs).toEqual([]);
       }
+      // A drop-in that runs the stale agentd over a current unit: install can't change it.
+      yield* fs.writeFileString(
+        path.join(units, "agentd-watchdog.service"),
+        `[Service]\nExecStart=${bundled} watchdog\n`,
+      );
+      yield* fs.makeDirectory(path.join(units, "agentd-watchdog.service.d"), { recursive: true });
+      yield* fs.writeFileString(
+        path.join(units, "agentd-watchdog.service.d", "exec.conf"),
+        "[Service]\nExecStart=\nExecStart=/gone/agentd watchdog\n",
+      );
+      expect(yield* repairServices({ ...deps, platform: "linux", run: linuxRun })).toEqual({
+        services: ["watchdog"],
+        ok: false,
+        reason: "override",
+      });
+      expect(runs).toEqual([]);
+      yield* fs.remove(path.join(units, "agentd-watchdog.service.d"), { recursive: true });
       // A stale dash whose ledger can't be told isn't moved either.
       yield* fs.writeFileString(
         path.join(units, "agentd-watchdog.service"),
@@ -440,6 +475,15 @@ describe("agentd services", () => {
       expect(yield* repairServices(windows)).toEqual({ services: ["watchdog"], ok: true });
       expect(runs.at(-1)).toEqual([bundled, "install"]);
       expect(envs.at(-1)).toEqual({ ...UNSET, AGENTD_ROOT: root });
+      // An env file it can't read: the root's ledger is unknown, so nothing is registered.
+      yield* fs.remove(envFile);
+      runs.length = 0;
+      expect(yield* repairServices(windows)).toEqual({
+        services: ["watchdog"],
+        ok: false,
+        reason: "unread",
+      });
+      expect(runs.every(([command]) => command === "schtasks")).toBe(true);
       legacyEnv = path.join(home, "Other", "services", "agentd-watchdog.env");
       runs.length = 0;
       expect(yield* repairServices(windows)).toBe(null);

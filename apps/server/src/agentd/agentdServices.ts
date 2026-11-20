@@ -86,6 +86,43 @@ export function plistLedger(plist: string): ServiceLedger {
   return ledgerOf(vars);
 }
 
+const C_ESCAPES: Readonly<Record<string, string>> = {
+  a: "\x07",
+  b: "\b",
+  f: "\f",
+  n: "\n",
+  r: "\r",
+  t: "\t",
+  v: "\v",
+  s: " ",
+  "\\": "\\",
+  '"': '"',
+  "'": "'",
+};
+
+/** The C escape at `at` (just after its backslash), as systemd's cunescape reads it; null if invalid. */
+function cEscape(
+  value: string,
+  at: number,
+): { readonly text: string; readonly length: number } | null {
+  const char = value[at];
+  if (char === undefined) return null;
+  const simple = C_ESCAPES[char];
+  if (simple !== undefined) return { text: simple, length: 1 };
+  const [radix, digits] =
+    char === "x" ? [16, 2] : char === "u" ? [16, 4] : char === "U" ? [16, 8] : [8, 3];
+  const start = radix === 8 ? at : at + 1;
+  const code = value.slice(start, start + digits);
+  const valid = radix === 8 ? /^[0-3][0-7]{2}$/ : /^[0-9a-fA-F]+$/;
+  if (code.length !== digits || !valid.test(code)) return null;
+  const point = Number.parseInt(code, radix);
+  // systemd refuses NUL; a byte past ASCII may be part of a UTF-8 sequence, so it isn't guessed.
+  const byte = char === "x" || radix === 8;
+  if (point === 0 || (byte && point > 0x7f) || point > 0x10ffff) return null;
+  if (point >= 0xd800 && point <= 0xdfff) return null;
+  return { text: String.fromCodePoint(point), length: start - at + digits };
+}
+
 /** The words of a systemd Environment= value: split at spaces, quotes removed, C escapes read. */
 function unitWords(value: string): ReadonlyArray<string> | null {
   const words: string[] = [];
@@ -94,9 +131,10 @@ function unitWords(value: string): ReadonlyArray<string> | null {
   for (let i = 0; i < value.length; i++) {
     const char = value[i]!;
     if (char === "\\") {
-      const next = value[++i];
-      if (next === undefined) return null;
-      word = (word ?? "") + ({ n: "\n", t: "\t", r: "\r" }[next] ?? next);
+      const escape = cEscape(value, i + 1);
+      if (escape === null) return null;
+      word = (word ?? "") + escape.text;
+      i += escape.length;
     } else if (quote !== null) {
       if (char === quote) quote = null;
       else word = (word ?? "") + char;
@@ -164,9 +202,17 @@ export function plistProgram(plist: string): string | null {
   return first === undefined ? null : unescapeXml(first.trim());
 }
 
-/** The program of a systemd unit's first ExecStart, with %h as the home folder. */
+/**
+ * The program a systemd unit runs, with %h as the home folder: its first ExecStart after the last
+ * empty `ExecStart=`, which clears the ones before (as a drop-in does to override the unit's).
+ */
 export function unitProgram(unit: string, home: string): string | null {
-  const line = /^ExecStart=[-@:+!]*\s*(.+)$/m.exec(unit)?.[1]?.trim();
+  let line: string | undefined;
+  for (const [, value] of unit.matchAll(/^[ \t]*ExecStart[ \t]*=(.*)$/gm)) {
+    const command = value!.trim();
+    if (command === "") line = undefined;
+    else line ??= command.replace(/^[-@:+!]+\s*/, "");
+  }
   if (line === undefined) return null;
   const quoted = /^"([^"]+)"/.exec(line)?.[1];
   const program = quoted ?? line.split(/\s+/)[0] ?? "";
@@ -271,13 +317,15 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
       .filter((name) => name.endsWith(".conf"))
       .toSorted();
     let text = unit.value;
+    let overrides = false;
     for (const name of dropIns) {
       const conf = yield* read(path.join(unitDir, `${file}.d`, name));
       // A drop-in it can't read may set anything.
-      if (conf._tag === "None") return { text, readable: false };
+      if (conf._tag === "None") return { text, readable: false, overrides };
       text += `\n${conf.value}`;
+      overrides ||= /^[ \t]*ExecStart[ \t]*=/m.test(conf.value);
     }
-    return { text, readable: true };
+    return { text, readable: true, overrides };
   });
   const service = Effect.fn("AgentdServices.program")(function* (name: ServiceName) {
     if (platform === "darwin") {
@@ -286,7 +334,9 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
       );
       if (plist._tag === "None") return null;
       const program = plistProgram(plist.value);
-      return program === null ? null : { program, ledger: plistLedger(plist.value) };
+      return program === null
+        ? null
+        : { program, ledger: plistLedger(plist.value), overridden: false };
     }
     if (platform === "win32") {
       const names = taskNames(name, root);
@@ -308,7 +358,10 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
           continue;
         if (program === null) return null;
         const env = envFile === null ? null : yield* read(envFile);
-        return { program, ledger: env?._tag === "Some" ? envFileLedger(env.value) : noLedger };
+        // An env file it can't read names a ledger it can't tell; no file names none.
+        const ledger =
+          env === null ? noLedger : env._tag === "Some" ? envFileLedger(env.value) : null;
+        return { program, ledger, overridden: false };
       }
       return null;
     }
@@ -317,7 +370,8 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
     const program = unitProgram(unit.text, home);
     // null: a ledger this app can't tell, which a move could change.
     const ledger = unit.readable ? unitLedger(unit.text, home) : null;
-    return program === null ? null : { program, ledger };
+    // A drop-in's ExecStart outlives the unit install rewrites.
+    return program === null ? null : { program, ledger, overridden: unit.overrides };
   });
 
   const stale: ServiceName[] = [];
@@ -326,13 +380,16 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
   const ledgers = new Map<ServiceName, ServiceLedger | null>();
   const agentd = target ?? bundled;
   let watchdogOnTarget = false;
+  let overridden = false;
   for (const name of SERVICES) {
     const found = yield* service(name);
     if (found === null) continue;
     ledgers.set(name, found.ledger);
     const exists = yield* fs.exists(found.program).pipe(Effect.orElseSucceed(() => false));
-    if (isStaleProgram(found.program, exists, agentd)) stale.push(name);
-    else if (found.program !== agentd) kept.push(name);
+    if (isStaleProgram(found.program, exists, agentd)) {
+      stale.push(name);
+      overridden ||= found.overridden;
+    } else if (found.program !== agentd) kept.push(name);
     else if (name === "watchdog") watchdogOnTarget = true;
   }
   if (stale.length === 0 && platform === "linux" && watchdogOnTarget) {
@@ -358,6 +415,9 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
   if (stale.length === 0) return null;
   if (target === null)
     return { services: stale, ok: false, reason: "transient" } satisfies AgentdServicesRepair;
+  // install rewrites the unit, never a drop-in that sets the program it runs.
+  if (overridden)
+    return { services: stale, ok: false, reason: "override" } satisfies AgentdServicesRepair;
   const ledgerEnv = (name: ServiceName) => installEnv(ledgers.get(name) ?? noLedger);
   const sameLedger = (a: ServiceLedger | null, b: ServiceLedger | null) =>
     a?.root === b?.root && a?.db === b?.db;
@@ -368,16 +428,17 @@ export const repairServices = Effect.fn("AgentdServices.repair")(function* (deps
   if (platform === "darwin" || platform === "win32") {
     // install moves both services, so it would also move the one kept on the user's agentd.
     if (kept.length > 0) return { services: stale, ok: false, kept } satisfies AgentdServicesRepair;
-    // install rewrites both LaunchAgents or both tasks of one root with its own ledger, and
-    // `dash install` the dash alone: services on two ledgers need both, in that order.
+    // A task whose env file can't be read: its ledger is unknown, and install would pick one.
+    if ([...ledgers.values()].includes(null))
+      return { services: stale, ok: false, reason: "unread" } satisfies AgentdServicesRepair;
     const watchdog = ledgers.get("watchdog") ?? null;
     const dash = ledgers.get("dash") ?? null;
-    const two = ledgers.has("watchdog") && ledgers.has("dash") && !sameLedger(watchdog, dash);
-    // On Windows the second run may name another root, which is another set of tasks.
-    if (two && platform === "win32")
+    // install rewrites both services with one ledger. Restoring the dash's with `dash install`
+    // after it would leave it on the watchdog's if that second run failed or the app quit first,
+    // and then nothing would show it had another: services on two ledgers are the user's to move.
+    if (ledgers.has("watchdog") && ledgers.has("dash") && !sameLedger(watchdog, dash))
       return { services: stale, ok: false, reason: "ledgers" } satisfies AgentdServicesRepair;
     ok = (yield* exec(target, ["install"], installEnv(watchdog ?? dash ?? noLedger))).ok;
-    if (ok && two) ok = (yield* exec(target, ["dash", "install"], ledgerEnv("dash"))).ok;
   } else {
     // agentd's Linux units name only PATH, so install would move a watchdog off a ledger it names.
     const watchdogLedger = ledgers.get("watchdog");
