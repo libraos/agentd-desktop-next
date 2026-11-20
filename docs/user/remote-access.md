@@ -393,7 +393,7 @@ an address you trust: the code is sent there.
   outside agent. Revoke it there to end it. **Forget** on this machine only
   removes it here.
 - A link stays valid while agents use it. One unused for 30 days expires, as
-  does one to a machine on an older T3 Code after 30 days; link again with a
+  does one to a machine on an older version of AgentD Next after 30 days; link again with a
   new pairing code.
 
 An agent can also hand a task to a linked machine with `delegate_task`: it runs
