@@ -2,7 +2,12 @@ import { useAtomValue } from "@effect/atom-react";
 import { scopedThreadKey } from "@t3tools/client-runtime/environment";
 import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import { threadRuntimeIsActive } from "@t3tools/client-runtime/state/shell";
-import { type EnvironmentId, type MessageId, type ScopedThreadRef } from "@t3tools/contracts";
+import {
+  type AgentdBlockingTask,
+  type EnvironmentId,
+  type MessageId,
+  type ScopedThreadRef,
+} from "@t3tools/contracts";
 import { Atom } from "effect/reactivity";
 import { T, useGT } from "gt-react";
 import { type ReactNode, useId, useState } from "react";
@@ -31,6 +36,7 @@ import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../
 import { Textarea } from "../ui/textarea";
 import { toastManager } from "../ui/toast";
 import { ClaudeTrustDialog } from "./ClaudeTrustDialog";
+import { BlockedTaskStart } from "./BlockedTaskStart";
 import { CloudWorkersSetup } from "./CloudWorkersSetup";
 import { StartTaskCloud, useStartTaskCloud } from "./StartTaskCloud";
 import { PendingCloudKeyFiles } from "./PendingCloudKeyFiles";
@@ -180,6 +186,8 @@ function StartTaskDialog({
   const [offeredId, setOfferedId] = useState<string | null>(null);
   // An earlier submission's task agentd found: not followed as this draft's start.
   const [offeredEarlier, setOfferedEarlier] = useState(false);
+  // The open task agentd named when it refused the dispatch: Release it or Start anyway.
+  const [blocking, setBlocking] = useState<AgentdBlockingTask | null>(null);
   // An earlier cloud offer whose outcome is unknown: Start checks agentd before offering again.
   const [outcomeUnknown, setOutcomeUnknown] = useState(false);
   const [replaceSubmission, setReplaceSubmission] = useState<string | null>(null);
@@ -314,6 +322,7 @@ function StartTaskDialog({
         setReplaceSubmission(null);
         setOfferedId(outcome.task.id);
         setOfferedEarlier(outcome.task.earlier === true);
+        setBlocking(outcome.task.blocking ?? null);
         setStartError(outcome.task.note ?? gt("AgentD did not dispatch the task."));
         return;
       case "started":
@@ -523,7 +532,20 @@ function StartTaskDialog({
                       : gt("Task {taskId} was offered but did not start.", { taskId: offeredId })}
                   </p>
                 )}
-                <p className="wrap-anywhere whitespace-pre-wrap">{startError}</p>
+                {offeredId !== null && blocking !== null && worker !== null ? (
+                  <BlockedTaskStart
+                    key={blocking.id}
+                    environmentId={environmentId}
+                    taskId={offeredId}
+                    worker={worker}
+                    blocking={blocking}
+                    onResult={(task) =>
+                      settle({ kind: task.started ? "started" : "offered", task })
+                    }
+                  />
+                ) : (
+                  <p className="wrap-anywhere whitespace-pre-wrap">{startError}</p>
+                )}
                 {cloud.enabled && replaceSubmission !== null ? (
                   <div className="flex gap-2">
                     <Button

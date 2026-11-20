@@ -1,4 +1,4 @@
-import type { ScopedThreadRef } from "@t3tools/contracts";
+import type { AgentdBlockingTask, ScopedThreadRef } from "@t3tools/contracts";
 import { T, useGT } from "gt-react";
 import { useState } from "react";
 
@@ -7,10 +7,17 @@ import { rightPanelHostRef, useRightPanelStore } from "~/rightPanelStore";
 import { Button } from "../ui/button";
 import { toastManager } from "../ui/toast";
 import { ClaudeTrustDialog } from "./ClaudeTrustDialog";
+import { BlockedTaskStart } from "./BlockedTaskStart";
 import { useStartTaskCloud } from "./StartTaskCloud";
 import { OfferedCloudTask, openStartTaskDialog, replaceQuestion } from "./StartTaskDialog";
 import type { TaskFields } from "./startTask.logic";
-import { TaskPlanSummary, useTaskDefaults, useTaskDirectory, useTaskPlan } from "./taskPlan";
+import {
+  TaskPlanSummary,
+  type TaskStartOutcome,
+  useTaskDefaults,
+  useTaskDirectory,
+  useTaskPlan,
+} from "./taskPlan";
 
 /** A task the session's agent drafted, shown in the conversation to start with one look. */
 export function TaskDraftCard({
@@ -35,16 +42,21 @@ export function TaskDraftCard({
   const [offered, setOffered] = useState<string | null>(null);
   const [replaceSubmission, setReplaceSubmission] = useState<string | null>(null);
   const [untrustedFolder, setUntrustedFolder] = useState<string | null>(null);
+  const [blocking, setBlocking] = useState<AgentdBlockingTask | null>(null);
 
   async function start(replacing: string | null = null, trustClaudeFolder = false) {
     setResult(null);
     setReplaceSubmission(null);
     setUntrustedFolder(null);
     const outcome = await plan.start(replacing, trustClaudeFolder);
-    switch (outcome?.kind) {
-      case undefined:
-        return;
+    if (outcome !== null) settle(outcome);
+  }
+
+  function settle(outcome: TaskStartOutcome) {
+    setBlocking(outcome.kind === "offered" ? (outcome.task.blocking ?? null) : null);
+    switch (outcome.kind) {
       case "started":
+        setResult(null);
         setStartedId(outcome.task.id);
         useRightPanelStore.getState().open(rightPanelHostRef(threadRef), "background-tasks");
         toastManager.add({
@@ -91,7 +103,18 @@ export function TaskDraftCard({
         onTrust={() => void start(null, true)}
         onCancel={() => setUntrustedFolder(null)}
       />
-      {result !== null ? (
+      {startedId !== null && blocking !== null && plan.worker !== null ? (
+        <div role="status" className="text-xs">
+          <BlockedTaskStart
+            key={blocking.id}
+            environmentId={threadRef.environmentId}
+            taskId={startedId}
+            worker={plan.worker}
+            blocking={blocking}
+            onResult={(task) => settle({ kind: task.started ? "started" : "offered", task })}
+          />
+        </div>
+      ) : result !== null ? (
         <OfferedCloudTask environmentId={threadRef.environmentId} taskId={offered}>
           <p role="status" className="wrap-anywhere whitespace-pre-wrap text-xs">
             {result}
