@@ -178,6 +178,7 @@ import {
   IssueCreateInput,
   IssueCreateResult,
   IssueDetail,
+  IssueLinkedThreadsResult,
   IssueListInput,
   IssueListResult,
   IssueOperationError,
@@ -193,6 +194,7 @@ import {
   IssueTrackerConnectionList,
   IssueUnavailableError,
   IssueUpdateInput,
+  ThreadIssueKey,
 } from "./issue.ts";
 import {
   GuestShareCreateError,
@@ -400,6 +402,10 @@ import {
   AgentdCloudSetupInput,
   AgentdCloudConfigureInput,
   AgentdCloudConfigured,
+  AgentdCloudKeyFileCheck,
+  AgentdServicesRepairResult,
+  AgentdServicesRepairInput,
+  AgentdCloudKeyFileInput,
   AgentdCloudReview,
   AgentdCloudReviewInput,
   AgentdTaskDefaults,
@@ -408,6 +414,12 @@ import {
   AgentdTaskOther,
   AgentdTaskOthersInput,
 } from "./agentd.ts";
+import {
+  AgentdSkillError,
+  AgentdSkillInput,
+  AgentdSkillInstallInput,
+  AgentdSkills,
+} from "./agentdSkills.ts";
 import {
   LibraosGatewayConnectInput,
   LibraosGatewayError,
@@ -675,6 +687,7 @@ export const WS_METHODS = {
   issuesUpdate: "issues.update",
   issuesSetState: "issues.setState",
   issuesReact: "issues.react",
+  issuesLinkedThreads: "issues.linkedThreads",
   issueTrackersList: "issueTrackers.list",
   issueTrackersConnect: "issueTrackers.connect",
   issueTrackersBindProject: "issueTrackers.bindProject",
@@ -721,6 +734,9 @@ export const WS_METHODS = {
   agentdCloudSetup: "agentd.cloudSetup",
   agentdCloudReview: "agentd.cloudReview",
   agentdCloudConfigure: "agentd.cloudConfigure",
+  agentdCloudKeyFile: "agentd.cloudKeyFile",
+  agentdCloudKeyFileFix: "agentd.cloudKeyFileFix",
+  agentdRepairServices: "agentd.repairServices",
   agentdTaskDefaults: "agentd.taskDefaults",
   agentdTaskOthers: "agentd.taskOthers",
   agentdSubscribeTeamNode: "agentd.subscribeTeamNode",
@@ -729,6 +745,9 @@ export const WS_METHODS = {
   agentdEula: "agentd.eula",
   agentdSetupStart: "agentd.setupStart",
   agentdSubscribeSetup: "agentd.subscribeSetup",
+  agentdSkillsList: "agentd.skillsList",
+  agentdSkillsInstall: "agentd.skillsInstall",
+  agentdSkillsRemove: "agentd.skillsRemove",
 
   libraosGatewayStatus: "libraosGateway.status",
   libraosGatewayConnect: "libraosGateway.connect",
@@ -1406,6 +1425,12 @@ const WsIssuesDetailRpc = Rpc.make(WS_METHODS.issuesDetail, {
 });
 
 /** Older comments, one page at a time, past the cursor the detail handed over. */
+const WsIssuesLinkedThreadsRpc = Rpc.make(WS_METHODS.issuesLinkedThreads, {
+  payload: ThreadIssueKey,
+  success: IssueLinkedThreadsResult,
+  error: IssueRpcError,
+});
+
 const WsIssuesCommentsRpc = Rpc.make(WS_METHODS.issuesComments, {
   payload: IssueCommentsPageInput,
   success: IssueCommentsPage,
@@ -2387,6 +2412,24 @@ const WsAgentdCloudConfigureRpc = Rpc.make(WS_METHODS.agentdCloudConfigure, {
   error: AgentdRpcError,
 });
 
+const WsAgentdCloudKeyFileRpc = Rpc.make(WS_METHODS.agentdCloudKeyFile, {
+  payload: AgentdCloudKeyFileInput,
+  success: AgentdCloudKeyFileCheck,
+  error: AgentdRpcError,
+});
+
+const WsAgentdCloudKeyFileFixRpc = Rpc.make(WS_METHODS.agentdCloudKeyFileFix, {
+  payload: AgentdCloudKeyFileInput,
+  success: AgentdCloudKeyFileCheck,
+  error: AgentdRpcError,
+});
+
+const WsAgentdRepairServicesRpc = Rpc.make(WS_METHODS.agentdRepairServices, {
+  payload: AgentdServicesRepairInput,
+  success: AgentdServicesRepairResult,
+  error: AgentdRpcError,
+});
+
 const WsAgentdCloudReviewRpc = Rpc.make(WS_METHODS.agentdCloudReview, {
   payload: AgentdCloudReviewInput,
   success: AgentdCloudReview,
@@ -2443,6 +2486,26 @@ const WsAgentdSubscribeSetupRpc = Rpc.make(WS_METHODS.agentdSubscribeSetup, {
   stream: true,
 });
 
+const AgentdSkillsRpcError = Schema.Union([AgentdSkillError, EnvironmentAuthorizationError]);
+
+const WsAgentdSkillsListRpc = Rpc.make(WS_METHODS.agentdSkillsList, {
+  payload: Schema.Struct({}),
+  success: AgentdSkills,
+  error: AgentdSkillsRpcError,
+});
+
+const WsAgentdSkillsInstallRpc = Rpc.make(WS_METHODS.agentdSkillsInstall, {
+  payload: AgentdSkillInstallInput,
+  success: AgentdSkills,
+  error: AgentdSkillsRpcError,
+});
+
+const WsAgentdSkillsRemoveRpc = Rpc.make(WS_METHODS.agentdSkillsRemove, {
+  payload: AgentdSkillInput,
+  success: AgentdSkills,
+  error: AgentdSkillsRpcError,
+});
+
 const LibraosGatewayRpcError = Schema.Union([LibraosGatewayError, EnvironmentAuthorizationError]);
 
 const WsLibraosGatewayStatusRpc = Rpc.make(WS_METHODS.libraosGatewayStatus, {
@@ -2474,6 +2537,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsIssuesCommentsRpc,
   WsIssuesTemplatesRpc,
   WsIssuesCandidatesRpc,
+  WsIssuesLinkedThreadsRpc,
   WsIssuesCreateRpc,
   WsIssuesCommentRpc,
   WsIssuesUpdateRpc,
@@ -2694,6 +2758,9 @@ export const WsRpcGroup = RpcGroup.make(
   WsAgentdCloudSetupRpc,
   WsAgentdCloudReviewRpc,
   WsAgentdCloudConfigureRpc,
+  WsAgentdCloudKeyFileRpc,
+  WsAgentdCloudKeyFileFixRpc,
+  WsAgentdRepairServicesRpc,
   WsAgentdTaskDefaultsRpc,
   WsAgentdTaskOthersRpc,
   WsAgentdSubscribeTeamNodeRpc,
@@ -2701,6 +2768,9 @@ export const WsRpcGroup = RpcGroup.make(
   WsAgentdTeamNodeForegroundRpc,
   WsAgentdEulaRpc,
   WsAgentdSetupStartRpc,
+  WsAgentdSkillsListRpc,
+  WsAgentdSkillsInstallRpc,
+  WsAgentdSkillsRemoveRpc,
   WsAgentdSubscribeSetupRpc,
   WsLibraosGatewayStatusRpc,
   WsLibraosGatewayConnectRpc,

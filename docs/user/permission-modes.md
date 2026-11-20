@@ -17,6 +17,18 @@ and modes you choose in a draft keep their permissions.
 | **Auto**              | Uses the provider's automatic review to approve routine actions and ask about others. |
 | **Full access**       | Allows commands and edits without approval prompts.                                   |
 
+### What Full access covers
+
+**Full access** covers what the agent itself does: commands, file edits, and confirmation requests
+from tools it has connected, such as an MCP server that asks before each action (Computer Use is
+one). On Claude and Codex those requests are approved without a card in **Full access**. In every
+other mode they show a card; where the card offers **Always allow this session**, choosing it
+stops the same request from asking again until the session restarts.
+
+It does not cover prompts from outside the agent. Your operating system can still ask, for example
+for screen recording or accessibility access on macOS, and a tool can still open its own sign-in
+or consent page. Approve those where they appear.
+
 An administrator can cap the modes available on a machine with a
 [managed policy](./managed-policy.md#permission-modes); modes above the cap show who manages them.
 
@@ -27,21 +39,25 @@ the parent conversation with the subagent's name, so you can respond without swi
 ## Provider differences
 
 Providers enforce permissions differently. Some read-only actions can proceed in **Supervised**.
-**Auto** uses automatic review on Codex, Claude, Cursor, Grok, and fx; providers without an equivalent,
-including OpenCode and Antigravity, fall back to asking. On Grok, commands its review blocks come
-to you for approval. On fx, prompts it still sends also come to you.
+**Auto** uses automatic review on Codex, Claude, Cursor, Grok, Antigravity, and fx; providers without
+an equivalent, including OpenCode, fall back to asking. On Grok and Antigravity, actions their review
+does not approve come to you for approval. On fx, prompts it still sends also come to you.
+
+Antigravity offers **Auto** only when your Antigravity sign-in provides its Auto mode; some accounts,
+including some personal Google accounts, do not. Without it, an Antigravity thread already set to
+**Auto** runs in **Supervised**.
 
 Muse Code offers only **Supervised** and **Full access**. A Muse thread already set to another mode
 runs in **Supervised**.
 
-T3 Code offers no **Auto-accept edits** or **Full access** for fx. An fx thread already set to either runs in
-**Supervised**.
+AgentD Next offers no **Auto-accept edits** for fx, and **Full access** only with fx 0.0.14 or later. An fx
+thread set to a mode its fx lacks runs in **Supervised**.
 
 Grok offers no **Auto-accept edits**. A Grok thread already set to it runs in **Supervised**. Grok
 file-change approvals offer **Allow all edits this session**. Its command approvals have no
 session-wide choice, because Grok would remember that command for the whole project.
 
-ACP Registry agents run their own tools in their own mode; T3 Code answers their approval requests
+ACP Registry agents run their own tools in their own mode; AgentD Next answers their approval requests
 by the permission mode. See [ACP Registry permissions](./providers-acp.md#permissions-and-terminals).
 
 Claude can still ask in **Full access** when its settings disable bypass permissions or require

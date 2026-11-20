@@ -347,6 +347,7 @@ describe("rightPanelStore", () => {
       expect(selectThreadRightPanelState(useRightPanelStore.getState().byThreadKey, refA)).toEqual({
         ...chosen,
         isOpen: false,
+        agentWorkPanelsDismissed: true,
       });
     },
   );
@@ -501,6 +502,25 @@ describe("rightPanelStore", () => {
     expect(selectThreadRightPanelState(byThreadKey, refA).maximized).toBe(true);
     expect(selectThreadRightPanelState(byThreadKey, refB).maximized).toBeUndefined();
     expect(store.getUserActionRevision(refA)).toBe(revision);
+  });
+
+  it("shows the agent's work until the user closes the panel, across a reload", async () => {
+    const store = useRightPanelStore.getState();
+    const revision = store.getUserActionRevision(refA);
+    store.reconcileBrowserSurfaces(refA, ["agent-tab"]);
+    expect(store.openForAgentWork(refA, "browser:agent-tab")).toBe(true);
+    expect(selectActiveRightPanelSurface(useRightPanelStore.getState().byThreadKey, refA)?.id).toBe(
+      "browser:agent-tab",
+    );
+    expect(store.getUserActionRevision(refA)).toBe(revision);
+
+    store.close(refA);
+    await reloadRightPanelStore();
+    const reloaded = useRightPanelStore.getState();
+    expect(reloaded.openForAgentWork(refA, "browser:agent-tab")).toBe(false);
+    expect(selectActiveRightPanel(useRightPanelStore.getState().byThreadKey, refA)).toBeNull();
+    reloaded.reconcileBrowserSurfaces(refB, ["agent-tab"]);
+    expect(reloaded.openForAgentWork(refB, "browser:agent-tab")).toBe(true);
   });
 
   it("restores a saved maximized panel during migration", () => {
@@ -1185,6 +1205,7 @@ describe("rightPanelStore", () => {
       isOpen: false,
       activeSurfaceId: null,
       surfaces: [],
+      agentWorkPanelsDismissed: true,
     });
   });
 

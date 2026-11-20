@@ -5,9 +5,9 @@ import { threadRuntimeIsActive } from "@t3tools/client-runtime/state/shell";
 import { type EnvironmentId, type MessageId, type ScopedThreadRef } from "@t3tools/contracts";
 import { Atom } from "effect/reactivity";
 import { T, useGT } from "gt-react";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 
-import { agentdEnvironment } from "~/lib/agentdState";
+import { agentdEnvironment, useAgentdCommands, useAgentdTasks } from "~/lib/agentdState";
 import { useLibraosGatewayConnected } from "~/lib/libraosGatewayState";
 import { newMessageId } from "~/lib/utils";
 import { rightPanelHostRef, useRightPanelStore } from "~/rightPanelStore";
@@ -32,8 +32,10 @@ import { Textarea } from "../ui/textarea";
 import { toastManager } from "../ui/toast";
 import { CloudWorkersSetup } from "./CloudWorkersSetup";
 import { StartTaskCloud, useStartTaskCloud } from "./StartTaskCloud";
+import { PendingCloudKeyFiles } from "./PendingCloudKeyFiles";
 import { StartTaskOthers } from "./StartTaskOthers";
 import {
+  cloudOfferStarted,
   conversationTaskDraft,
   EMPTY_TASK_FIELDS,
   TASK_ACCEPT_LIMIT,
@@ -58,8 +60,54 @@ const dialogState = Atom.make<{
 } | null>(null).pipe(Atom.keepAlive, Atom.withLabel("agentd:start-task-dialog"));
 
 /** Opens Start task for the session, with fields from a task card's draft when given. */
+/** The question for agentd's replaceSubmission refusal, in the user's language. */
+export function replaceQuestion(gt: ReturnType<typeof useGT>): string {
+  return gt(
+    "AgentD hasn’t confirmed your last cloud submission for this project, and it may still start. Replace it with this one? If it started, this one isn’t sent.",
+  );
+}
+
 export function openStartTaskDialog(threadRef: ScopedThreadRef, fields: TaskFields | null = null) {
   appAtomRegistry.set(dialogState, { threadRef, fields });
+}
+
+/**
+ * The refusal shown for a cloud task agentd saved but didn't confirm, until the synced task list
+ * shows it started. Its subscription runs the server's cloud sync fallback, tasks pane closed or
+ * not. taskId is null for no task to follow, such as an earlier submission's.
+ */
+export function OfferedCloudTask(props: {
+  environmentId: EnvironmentId;
+  taskId: string | null;
+  children: ReactNode;
+}) {
+  return props.taskId === null ? (
+    props.children
+  ) : (
+    <SyncedCloudTask {...props} taskId={props.taskId} />
+  );
+}
+
+function SyncedCloudTask({
+  environmentId,
+  taskId,
+  children,
+}: {
+  environmentId: EnvironmentId;
+  taskId: string;
+  children: ReactNode;
+}) {
+  const gt = useGT();
+  const { data } = useAgentdTasks(environmentId);
+  const started = cloudOfferStarted(data, taskId);
+  if (!started) return children;
+  return (
+    <p role="status" className="text-muted-foreground text-sm">
+      {gt("Task {taskId} started in Cloud Workers. Check Background tasks for its progress.", {
+        taskId,
+      })}
+    </p>
+  );
 }
 
 export function useCanStartTask(environmentId: EnvironmentId | null) {
@@ -68,13 +116,18 @@ export function useCanStartTask(environmentId: EnvironmentId | null) {
 
 export function StartTaskDialogHost() {
   const opened = useAtomValue(dialogState);
-  return opened === null ? null : (
-    <StartTaskDialog
-      key={scopedThreadKey(opened.threadRef)}
-      threadRef={opened.threadRef}
-      initialFields={opened.fields}
-      onClose={() => appAtomRegistry.set(dialogState, null)}
-    />
+  return (
+    <>
+      <PendingCloudKeyFiles />
+      {opened === null ? null : (
+        <StartTaskDialog
+          key={scopedThreadKey(opened.threadRef)}
+          threadRef={opened.threadRef}
+          initialFields={opened.fields}
+          onClose={() => appAtomRegistry.set(dialogState, null)}
+        />
+      )}
+    </>
   );
 }
 
@@ -124,9 +177,14 @@ function StartTaskDialog({
   const [draftError, setDraftError] = useState<string | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
   const [offeredId, setOfferedId] = useState<string | null>(null);
+  // An earlier submission's task agentd found: not followed as this draft's start.
+  const [offeredEarlier, setOfferedEarlier] = useState(false);
   // An earlier cloud offer whose outcome is unknown: Start checks agentd before offering again.
   const [outcomeUnknown, setOutcomeUnknown] = useState(false);
   const [replaceSubmission, setReplaceSubmission] = useState<string | null>(null);
+  const [privateFile, setPrivateFile] = useState<string | null>(null);
+  const [fixingFile, setFixingFile] = useState(false);
+  const { cloudKeyFileFix } = useAgentdCommands();
   const projection = useThreadProjection(draft === null ? null : threadRef)?.projection;
   const reply = draft === null ? null : conversationTaskDraft(projection, draft.messageId);
   const drafting = reply?.kind === "waiting";
@@ -162,7 +220,15 @@ function StartTaskDialog({
   const budgetReason =
     validation.budget === "invalid"
       ? gt("Enter a positive budget such as 30m, $2, or 30m,$2.")
-      : null;
+      : validation.budget === "no-prices"
+        ? plan.noPricesReason
+        : null;
+  // Not a problem, so it does not open the inputs: why the default names no dollars.
+  const budgetHint =
+    budgetReason ??
+    (plan.dollarBudgets === false
+      ? gt("No dollar limit: AgentD on this machine has no model prices.")
+      : null);
   const acceptReason = validation.accept
     ? gt(
         "Use at most {limit} acceptance criteria, one per line, with no leading dashes or NUL characters.",
@@ -179,6 +245,7 @@ function StartTaskDialog({
     acceptReason !== null ||
     issueReason !== null ||
     keysMissing ||
+    (cloud.waiting && cloud.unreachable) ||
     (cloud.enabled && !cloud.budgetValid);
   const disabled = starting || drafting || offeredId !== null || !plan.ready;
   const draftDisabled =
@@ -230,12 +297,18 @@ function StartTaskDialog({
       case "failed":
         setOutcomeUnknown(outcome.outcomeUnknown);
         setReplaceSubmission(outcome.replaceSubmission);
-        setStartError(showFailure(outcome.error, gt("AgentD could not start the task.")));
+        setPrivateFile(outcome.privateFile ?? null);
+        setStartError(
+          outcome.replaceSubmission !== null
+            ? replaceQuestion(gt)
+            : showFailure(outcome.error, gt("AgentD could not start the task.")),
+        );
         return;
       case "offered":
         setOutcomeUnknown(false);
         setReplaceSubmission(null);
         setOfferedId(outcome.task.id);
+        setOfferedEarlier(outcome.task.earlier === true);
         setStartError(outcome.task.note ?? gt("AgentD did not dispatch the task."));
         return;
       case "started":
@@ -251,6 +324,7 @@ function StartTaskDialog({
   function submit(replacing: string | null = null) {
     if (disabled) return;
     setStartError(null);
+    setPrivateFile(null);
     void plan.start(replacing).then((outcome) => {
       if (outcome !== null) settle(outcome);
     });
@@ -272,7 +346,7 @@ function StartTaskDialog({
   const acceptProps = fieldProps("accept", acceptReason);
   const checkProps = fieldProps("check", checkReason);
   const workerProps = fieldProps("worker", null);
-  const budgetProps = fieldProps("budget", budgetReason);
+  const budgetProps = fieldProps("budget", budgetHint);
   const issueProps = fieldProps("issue", issueReason);
 
   return (
@@ -370,7 +444,7 @@ function StartTaskDialog({
                 cloud={cloud}
                 disabled={starting || drafting || offeredId !== null || !canStart}
               />
-              {!cloud.enabled ? (
+              {!cloud.enabled && !cloud.waiting ? (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <TaskField label={gt("Worker")} id={workerProps.id}>
                     <Select
@@ -391,7 +465,7 @@ function StartTaskDialog({
                       </SelectPopup>
                     </Select>
                   </TaskField>
-                  <TaskField label={gt("Budget")} id={budgetProps.id} reason={budgetReason}>
+                  <TaskField label={gt("Budget")} id={budgetProps.id} reason={budgetHint}>
                     <Input
                       {...budgetProps}
                       maxLength={TASK_BUDGET_LIMIT}
@@ -424,43 +498,93 @@ function StartTaskDialog({
             </p>
           )}
           {startError !== null && (
-            <div
-              role="alert"
-              className="space-y-1 rounded-lg border border-destructive/30 p-3 text-sm"
+            <OfferedCloudTask
+              environmentId={environmentId}
+              taskId={offeredId !== null && cloud.enabled && !offeredEarlier ? offeredId : null}
             >
-              {offeredId !== null && (
-                <p>
-                  {cloud.enabled
-                    ? gt(
-                        "AgentD saved task {taskId}, but it didn’t start in Cloud Workers. Check Background tasks for updates before trying again.",
-                        { taskId: offeredId },
-                      )
-                    : gt("Task {taskId} was offered but did not start.", { taskId: offeredId })}
-                </p>
-              )}
-              <pre className="wrap-anywhere whitespace-pre-wrap">{startError}</pre>
-              {cloud.enabled && replaceSubmission !== null ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={disabled}
-                  onClick={() => submit(replaceSubmission)}
-                >
-                  <T>Submit this task in its place</T>
-                </Button>
-              ) : null}
-              {cloud.enabled &&
-              cloud.setup?.problem !== "setup" &&
-              /cloud configuration and account key file/.test(startError) ? (
-                <CloudWorkersSetup
-                  environmentId={environmentId}
-                  canConfigure={cloud.setup?.canConfigure === true}
-                  setupUrl={cloud.setup?.setupUrl}
-                  onConfigured={cloud.refresh}
-                />
-              ) : null}
-            </div>
+              <div
+                role="alert"
+                className="space-y-1 rounded-lg border border-destructive/30 p-3 text-sm"
+              >
+                {/* An earlier submission's task: its note says this draft wasn't sent. */}
+                {offeredId !== null && !(cloud.enabled && offeredEarlier) && (
+                  <p>
+                    {cloud.enabled
+                      ? gt(
+                          "AgentD saved task {taskId}, but it didn’t start in Cloud Workers. Check Background tasks for updates before trying again.",
+                          { taskId: offeredId },
+                        )
+                      : gt("Task {taskId} was offered but did not start.", { taskId: offeredId })}
+                  </p>
+                )}
+                <p className="wrap-anywhere whitespace-pre-wrap">{startError}</p>
+                {cloud.enabled && replaceSubmission !== null ? (
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={disabled}
+                      onClick={() => submit(replaceSubmission)}
+                    >
+                      <T>Replace</T>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={disabled}
+                      onClick={() => {
+                        setStartError(null);
+                        setReplaceSubmission(null);
+                      }}
+                    >
+                      <T>Don’t replace</T>
+                    </Button>
+                  </div>
+                ) : null}
+                {cloud.enabled && cloud.canFixKeyFile && privateFile !== null ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={disabled || fixingFile}
+                    onClick={async () => {
+                      setFixingFile(true);
+                      const result = await cloudKeyFileFix({
+                        environmentId,
+                        input: { path: privateFile },
+                      });
+                      setFixingFile(false);
+                      if (result._tag === "Failure") {
+                        setStartError(
+                          showFailure(
+                            squashAtomCommandFailure(result),
+                            gt("Couldn’t change the file’s permissions."),
+                          ),
+                        );
+                        return;
+                      }
+                      setPrivateFile(null);
+                      setStartError(null);
+                      cloud.refreshKeyFiles();
+                    }}
+                  >
+                    <T>Fix permissions</T>
+                  </Button>
+                ) : null}
+                {cloud.enabled &&
+                cloud.setup?.problem !== "setup" &&
+                /cloud configuration and account key file/.test(startError) ? (
+                  <CloudWorkersSetup
+                    environmentId={environmentId}
+                    canConfigure={cloud.setup?.canConfigure === true}
+                    setupUrl={cloud.setup?.setupUrl}
+                    onConfigured={cloud.refresh}
+                  />
+                ) : null}
+              </div>
+            </OfferedCloudTask>
           )}
         </DialogPanel>
         <StartTaskOthers

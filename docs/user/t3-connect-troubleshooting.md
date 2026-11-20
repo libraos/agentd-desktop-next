@@ -1,5 +1,7 @@
 # T3 Connect troubleshooting
 
+> T3 Connect is upstream's hosted relay. It is not part of AgentD Next, and the releases have no relay configured. This page is kept because the relay diagnostics inherited from upstream link to its sections.
+
 A T3 Connect connection goes through four parts, in this order:
 
 1. **This device** reaches T3 Connect over the internet.

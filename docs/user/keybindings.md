@@ -106,10 +106,10 @@ It is a JSON array of rules:
 ]
 ```
 
-T3 Code creates the file with its defaults and adds new defaults on later startups.
+AgentD Next creates the file with its defaults and adds new defaults on later startups.
 New defaults do not replace commands you customized. If a new default overlaps one
 of your shortcuts, [rule order](#precedence) decides which runs.
-Invalid rules are ignored; if the file cannot be parsed, T3 Code uses defaults.
+Invalid rules are ignored; if the file cannot be parsed, AgentD Next uses defaults.
 
 ## Rule shape
 
@@ -161,7 +161,7 @@ and **Escape** to close find.
 `preview.find` (`mod+f` while a browser has focus) searches the open page in the desktop app. It
 is also in the browser's **⋮** menu and the command palette. A page that handles `mod+f` itself,
 such as a code editor, keeps its own find. Use the **⋮** menu to reach the browser's find there.
-Streamed browser tabs and T3 Code in a web browser do not support it.
+Streamed browser tabs and AgentD Next in a web browser do not support it.
 
 ## Precedence
 
@@ -209,6 +209,8 @@ if the browser takes it first.
 
 Many defaults include `!terminalFocus` so they do not intercept terminal input.
 Keep that condition when remapping them if you want the same behavior.
+`sidebar.toggle` never takes a Ctrl chord from a focused terminal, so tmux's `Ctrl+B`
+prefix reaches it. On macOS, `Cmd+B` still toggles the sidebar there.
 
 ## Desktop quit shortcut
 

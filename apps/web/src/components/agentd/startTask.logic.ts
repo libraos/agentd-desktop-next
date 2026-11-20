@@ -2,10 +2,12 @@ import {
   AgentdStartTaskInput,
   AgentdTaskSize,
   AgentdWorkerTool,
+  type AgentdCloudKeyFileCheck,
   type AgentdCloudModelAccess,
   type AgentdCloudPlan,
   type AgentdCloudSubscription,
   type AgentdTaskEstimate,
+  type ClientSettings,
   type MessageId,
   type OrchestrationV2ThreadProjection,
 } from "@t3tools/contracts";
@@ -47,7 +49,20 @@ const isIssue = Schema.is(AgentdStartTaskInput.fields.issue);
 const isTaskText = (text: string) =>
   text.length <= TASK_TEXT_LIMIT && !text.startsWith("-") && !text.includes("\0");
 
-export function prepareTaskFields(fields: TaskFields) {
+/** The dollars of an agentd budget such as `30m,$5`; null when it names none. */
+export function budgetDollarCap(budget: string): number | null {
+  const match = /\$(\d+(?:\.\d+)?)/.exec(budget);
+  return match ? Number(match[1]) : null;
+}
+
+/**
+ * `dollarBudgets` is agentd's answer to whether a local worker can take a dollar budget; with
+ * `false` a budget naming dollars is refused here, before agentd refuses it after Start.
+ */
+export function prepareTaskFields(
+  fields: TaskFields,
+  { dollarBudgets = null }: { readonly dollarBudgets?: boolean | null } = {},
+) {
   const accept = fields.accept
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -70,7 +85,9 @@ export function prepareTaskFields(fields: TaskFields) {
         : !isBudget(input.budget) ||
             input.budget.split(",").some((limit) => parseFloat(limit.replace("$", "")) <= 0)
           ? "invalid"
-          : null,
+          : dollarBudgets === false && budgetDollarCap(input.budget) !== null
+            ? "no-prices"
+            : null,
     accept:
       fields.accept.length > TASK_TEXT_LIMIT ||
       accept.length > TASK_ACCEPT_LIMIT ||
@@ -165,8 +182,7 @@ export function taskDraftReply(
   return asked ? parseTaskDraft(reply.text) : null;
 }
 
-const FALLBACK_MINUTES = 60;
-const FALLBACK_DOLLARS = 5;
+const FALLBACK = { minutes: 60, dollars: 5 } as const;
 
 /** Whole dollars, or cents when the amount has them. */
 export function budgetDollars(amount: number): string {
@@ -175,25 +191,42 @@ export function budgetDollars(amount: number): string {
 
 /**
  * The budget a Start fills in: agentd's high estimate rounded up to a whole dollar (capped by the
- * balance for Cloud Workers), agentd's default minutes or 60; `60m,$5` when there is no estimate.
+ * balance for Cloud Workers), agentd's default minutes or the fallback's; the fallback (Settings →
+ * Workers, else `60m,$5`) when there is no estimate.
  */
 export function autoBudget({
   estimate,
   defaultMinutes,
   balanceUsd,
+  fallback = FALLBACK,
 }: {
   readonly estimate: Pick<AgentdTaskEstimate, "high"> | null;
   readonly defaultMinutes: number | null;
   /** Cloud Workers only: the available credit. */
   readonly balanceUsd: number | null;
+  readonly fallback?: { readonly minutes: number; readonly dollars: number } | null;
 }): { readonly minutes: number; readonly dollars: number } {
-  const minutes = defaultMinutes ?? FALLBACK_MINUTES;
-  const wanted = estimate === null ? FALLBACK_DOLLARS : Math.ceil(estimate.high);
+  const usual = fallback ?? FALLBACK;
+  const minutes = defaultMinutes ?? usual.minutes;
+  const wanted = estimate === null ? usual.dollars : Math.ceil(estimate.high);
   const dollars =
     balanceUsd === null
       ? wanted
       : Math.min(wanted, Math.floor(Math.max(balanceUsd, 0) * 100) / 100);
   return { minutes, dollars };
+}
+
+/**
+ * The budget a local Start fills in: minutes and dollars, or minutes only while agentd has no model
+ * prices to hold a dollar limit with.
+ */
+export function localBudget(
+  budget: { readonly minutes: number; readonly dollars: number },
+  dollarBudgets: boolean | null,
+): string {
+  return dollarBudgets === false
+    ? `${budget.minutes}m`
+    : `${budget.minutes}m,$${budgetDollars(budget.dollars)}`;
 }
 
 /** The minutes of an agentd budget such as `30m,$5`; null when it names none. */
@@ -244,6 +277,59 @@ export function modelAccessChoices(subscription: AgentdCloudSubscription | null 
   ] as const satisfies ReadonlyArray<{ value: AgentdCloudModelAccess; disabled: boolean }>;
 }
 
+/** A key typed or pasted where its file's path belongs. */
+export function looksLikeKey(value: string): boolean {
+  const text = value.trim();
+  return text.startsWith("sk-") || (text.length > 30 && !/[/\\]/.test(text));
+}
+
+export type KeyFileProblem =
+  | "anthropic-key"
+  | "openai-key"
+  | "open-to-others"
+  | "unreadable"
+  | "checking"
+  | "check-failed"
+  | "unchecked";
+
+/**
+ * Why a BYOK key file under `field` can't be submitted yet, from the host's check of it: null
+ * while the check is still running, "failed" when the host couldn't answer.
+ */
+export function keyFileProblem(
+  field: "anthropic" | "openai",
+  check: AgentdCloudKeyFileCheck | null | "failed" | "not-permitted",
+): KeyFileProblem | null {
+  if (check === null) return "checking";
+  if (check === "failed") return "check-failed";
+  // This connection may not read host files: agentd checks the file on Start instead.
+  if (check === "not-permitted") return "unchecked";
+  if (!check.readable) return "unreadable";
+  if (check.provider !== null && check.provider !== field) return `${check.provider}-key`;
+  return check.openToOthers ? "open-to-others" : null;
+}
+
+type RememberedKeyFiles = ClientSettings["agentdCloudKeyFiles"];
+
+/** The BYOK paths agentd accepted at `now`, merged into the latest per-environment record. */
+export function rememberKeyFiles(
+  latest: RememberedKeyFiles,
+  environmentId: string,
+  submitted: { readonly anthropicKeyFile?: string; readonly openaiKeyFile?: string },
+  now: number,
+): RememberedKeyFiles {
+  return {
+    ...latest,
+    [environmentId]: {
+      ...latest[environmentId],
+      ...(submitted.anthropicKeyFile
+        ? { anthropic: submitted.anthropicKeyFile, anthropicSavedAt: now }
+        : {}),
+      ...(submitted.openaiKeyFile ? { openai: submitted.openaiKeyFile, openaiSavedAt: now } : {}),
+    },
+  };
+}
+
 export type TaskStartProblem =
   | "balance"
   | "sign-in"
@@ -280,4 +366,30 @@ export function taskStartProblem(input: {
   if (input.branch !== null) return input.branch;
   if (input.worker === null) return "worker";
   return null;
+}
+
+/** Job states of a cloud task that is under way or done; a failed or stopped one never started well. */
+const CLOUD_STARTED = new Set(["queued", "running", "settling", "completed"]);
+
+/**
+ * The cloud job of a task agentd saved without confirming it is under way, by the synced list. A
+ * job that failed or stopped isn't: the dialog keeps the reason agentd gave.
+ */
+export function cloudOfferStarted(
+  rows: ReadonlyArray<{ readonly id: string; readonly cloudState?: string | null }> | null,
+  id: string,
+): boolean {
+  const state = rows?.find((row) => row.id === id)?.cloudState;
+  return state !== null && state !== undefined && CLOUD_STARTED.has(state);
+}
+
+const CLOUD_ENDED = new Set(["failed", "failed_verification", "cancelled", "budget_exceeded"]);
+
+/** The cloud job of a saved offer failed or stopped before it started well. */
+export function cloudOfferEnded(
+  rows: ReadonlyArray<{ readonly id: string; readonly cloudState?: string | null }> | null,
+  id: string,
+): boolean {
+  const state = rows?.find((row) => row.id === id)?.cloudState;
+  return state !== null && state !== undefined && CLOUD_ENDED.has(state);
 }

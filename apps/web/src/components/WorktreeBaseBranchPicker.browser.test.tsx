@@ -5,7 +5,13 @@ import { page, userEvent } from "vite-plus/test/browser";
 const mocks = vi.hoisted(() => ({ resolvedQueries: new Set<string>() }));
 
 const REFS: VcsRef[] = ["develop", "main", "origin/main", "origin/feature/main-nav"].map(
-  (name) => ({ name, current: false, isDefault: false, worktreePath: null }),
+  (name) => ({
+    name,
+    isRemote: name.startsWith("origin/"),
+    current: false,
+    isDefault: false,
+    worktreePath: null,
+  }),
 );
 
 // Like the real hook, a query has no refs until the server answers it.
@@ -74,4 +80,40 @@ describe("WorktreeBaseBranchPicker", () => {
       expect(onValueChange).toHaveBeenCalledExactlyOnceWith(selected);
     },
   );
+
+  it.each([
+    { name: "main", keys: "{Enter}", startFromOrigin: [false], label: "From main (local)" },
+    {
+      name: "origin/main",
+      keys: "{ArrowDown}{Enter}",
+      startFromOrigin: [],
+      label: "From origin/main",
+    },
+  ])("picking $name turns Start from remote to $startFromOrigin", async (row) => {
+    setup();
+    const onStartFromOriginChange = vi.fn();
+    const picker = (value: string, startFromOrigin: boolean) => (
+      <WorktreeBaseBranchPicker
+        environmentId={EnvironmentId.make("primary")}
+        cwd="/repo"
+        value={value}
+        onValueChange={() => {}}
+        startFromOrigin={startFromOrigin}
+        onStartFromOriginChange={onStartFromOriginChange}
+      />
+    );
+    await using screen = await render(picker("develop", true));
+
+    await userEvent.click(screen.getByRole("combobox"));
+    await expect
+      .element(page.getByRole("option", { name: "develop", exact: true }))
+      .toHaveAttribute("data-highlighted");
+    await userEvent.keyboard("{ArrowDown}" + row.keys);
+    expect(onStartFromOriginChange.mock.calls.map(([checked]) => checked)).toEqual(
+      row.startFromOrigin,
+    );
+
+    await screen.rerender(picker(row.name, row.startFromOrigin[0] ?? true));
+    await expect.element(screen.getByRole("combobox")).toHaveTextContent(row.label);
+  });
 });

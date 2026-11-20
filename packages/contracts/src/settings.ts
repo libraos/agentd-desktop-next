@@ -402,6 +402,23 @@ export const VoiceTranscriptionDestination = Schema.Union([
 ]);
 export type VoiceTranscriptionDestination = typeof VoiceTranscriptionDestination.Type;
 
+/** Where Hand to a worker starts a task by default: this machine or Cloud Workers. */
+export const AgentdRunTasksOn = Schema.Literals(["local", "cloud"]);
+export type AgentdRunTasksOn = typeof AgentdRunTasksOn.Type;
+/** A worker budget in minutes and dollars, such as `60m,$5`, used when agentd has no estimate. */
+export const AgentdDefaultBudget = Schema.String.check(
+  Schema.isPattern(/^[1-9][0-9]{0,3}m,\$(?!0+(?:\.0{1,2})?$)[0-9]{1,4}(?:\.[0-9]{1,2})?$/),
+);
+export const DEFAULT_AGENTD_BUDGET = "60m,$5";
+
+const AgentdCloudKeyFiles = Schema.Struct({
+  anthropic: Schema.optionalKey(Schema.String),
+  openai: Schema.optionalKey(Schema.String),
+  // When each path was remembered (epoch ms): a write keeps the newer path per provider.
+  anthropicSavedAt: Schema.optionalKey(Schema.Number),
+  openaiSavedAt: Schema.optionalKey(Schema.Number),
+});
+
 export const ClientSettingsSchema = Schema.Struct({
   notificationMode: NotificationMode.pipe(
     Schema.withDecodingDefault(Effect.succeed("off" as const)),
@@ -526,6 +543,8 @@ export const ClientSettingsSchema = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed("steer")),
   ),
   proactivePanelsEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  /** Code threads open the browser panel tab when the agent starts using it. */
+  agentWorkPanelsEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   showSkillsInSlashMenu: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   boringSidebarEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   boringSidebarMultilineRows: Schema.Boolean.pipe(
@@ -600,6 +619,19 @@ export const ClientSettingsSchema = Schema.Struct({
   // Opt-in TeX typesetting in rendered Markdown. Off keeps math parsing and
   // KaTeX out of the render path entirely.
   mathRenderingEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  agentdSuggestWorkers: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  agentdRunTasksOn: AgentdRunTasksOn.pipe(Schema.withDecodingDefault(Effect.succeed("local"))),
+  agentdDefaultBudget: AgentdDefaultBudget.pipe(
+    Schema.withDecodingDefault(Effect.succeed(DEFAULT_AGENTD_BUDGET)),
+  ),
+  // Environment ids whose "Try a worker" card was shown or dismissed.
+  agentdFirstTaskShown: Schema.Record(Schema.String, Schema.Boolean).pipe(
+    Schema.withDecodingDefault(Effect.succeed({})),
+  ),
+  // Per environment id: the last BYOK key file paths a cloud task was submitted with.
+  agentdCloudKeyFiles: Schema.Record(Schema.String, AgentdCloudKeyFiles).pipe(
+    Schema.withDecodingDefault(Effect.succeed({})),
+  ),
 });
 export type ClientSettings = typeof ClientSettingsSchema.Type;
 
@@ -1409,6 +1441,8 @@ export const ServerSettings = Schema.Struct({
   enableAgentOrchestrationTools: Schema.Boolean.pipe(
     Schema.withDecodingDefault(Effect.succeed(false)),
   ),
+  /** Lets clients reach this machine's loopback ports over `/api/preview/tunnel`. */
+  enablePreviewTunnel: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   cloudSpeechCredentials: CloudSpeechCredentials.pipe(
     Schema.withDecodingDefault(Effect.succeed({ openai: "", xai: "", openrouter: "" })),
   ),
@@ -1872,6 +1906,7 @@ export const ServerSettingsPatch = Schema.Struct({
   keepAwakeWhileAgentsWork: Schema.optionalKey(Schema.Boolean),
   requireConnectDeviceApproval: Schema.optionalKey(Schema.Boolean),
   enableAgentBrowserAccess: Schema.optionalKey(Schema.Boolean),
+  enablePreviewTunnel: Schema.optionalKey(Schema.Boolean),
   cloudSpeechCredentials: Schema.optionalKey(
     Schema.Struct({
       openai: Schema.optionalKey(SettingsSecretValue),
@@ -2020,7 +2055,7 @@ export function requiredScopesForServerSettingsPatch(
   let changesAccess = false;
   for (const [key, value] of Object.entries(patch)) {
     if (value === undefined) continue;
-    if (key === "requireConnectDeviceApproval") {
+    if (key === "requireConnectDeviceApproval" || key === "enablePreviewTunnel") {
       changesAccess = true;
     } else if (
       key === "providers" ||
@@ -2113,6 +2148,7 @@ export const ClientSettingsPatch = Schema.Struct({
   sendShortcut: Schema.optionalKey(Schema.Literals(["enter", "mod-enter-multiline", "mod-enter"])),
   followUpBehavior: Schema.optionalKey(Schema.Literals(["queue", "steer"])),
   proactivePanelsEnabled: Schema.optionalKey(Schema.Boolean),
+  agentWorkPanelsEnabled: Schema.optionalKey(Schema.Boolean),
   showSkillsInSlashMenu: Schema.optionalKey(Schema.Boolean),
   boringSidebarEnabled: Schema.optionalKey(Schema.Boolean),
   boringSidebarMultilineRows: Schema.optionalKey(Schema.Boolean),
@@ -2150,5 +2186,10 @@ export const ClientSettingsPatch = Schema.Struct({
   snapShotAnimations: Schema.optionalKey(Schema.Boolean),
   wordWrap: Schema.optionalKey(Schema.Boolean),
   mathRenderingEnabled: Schema.optionalKey(Schema.Boolean),
+  agentdSuggestWorkers: Schema.optionalKey(Schema.Boolean),
+  agentdRunTasksOn: Schema.optionalKey(AgentdRunTasksOn),
+  agentdDefaultBudget: Schema.optionalKey(AgentdDefaultBudget),
+  agentdFirstTaskShown: Schema.optionalKey(Schema.Record(Schema.String, Schema.Boolean)),
+  agentdCloudKeyFiles: Schema.optionalKey(Schema.Record(Schema.String, AgentdCloudKeyFiles)),
 });
 export type ClientSettingsPatch = typeof ClientSettingsPatch.Type;

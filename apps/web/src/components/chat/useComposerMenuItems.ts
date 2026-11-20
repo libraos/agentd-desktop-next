@@ -34,6 +34,7 @@ import {
   getProviderSlashCommandsForSlashMenu,
 } from "@t3tools/client-runtime/providerSkills";
 import { searchProviderSkills } from "../../providerSkillSearch";
+import { handToWorkerSlashItem } from "../agentd/handToWorkerSlash";
 import { useVisibleThreadShells } from "~/state/entities";
 import { useEnvironmentIdentities, useEnvironmentMachines } from "~/state/environments";
 import { offersLinkedEnvironmentsAtom } from "~/state/peerLinks";
@@ -262,15 +263,11 @@ export function useComposerMenuItems({
           description: gt("Switch response model for this thread"),
         },
         ...(handToWorkerAvailable
-          ? ([
-              {
-                id: "slash:hand-to-worker",
-                type: "slash-command",
-                command: "hand-to-worker",
-                label: gt("Hand to a worker"),
-                description: gt("Start a background task for this project"),
-              },
-            ] as const)
+          ? [
+              handToWorkerSlashItem(
+                gt("Start a background task, or draft one from this chat as a task card"),
+              ),
+            ]
           : []),
         ...(sideChatAvailable
           ? ([

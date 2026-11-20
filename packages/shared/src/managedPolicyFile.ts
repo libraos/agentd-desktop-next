@@ -114,6 +114,8 @@ export const WINDOWS_POLICY_VALUES = {
   WebhookTasks: { type: "boolean", path: ["limits", "webhookTasks"] },
   Telemetry: { type: "boolean", path: ["limits", "telemetry"] },
   BrowserCookieImport: { type: "boolean", path: ["limits", "browserCookieImport"] },
+  SkillCatalog: { type: "boolean", path: ["limits", "skillCatalog"] },
+  PreviewTunnel: { type: "boolean", path: ["limits", "previewTunnel"] },
   ProviderInstances: { type: "json", path: ["limits", "providers", "instances"] },
   UpdatesMode: { type: "string", path: ["limits", "updates", "mode"] },
   UpdatesFeedUrl: { type: "string", path: ["limits", "updates", "feedUrl"] },

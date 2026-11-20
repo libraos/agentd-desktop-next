@@ -192,6 +192,8 @@ export function AgentdPage() {
                     {(data) => (
                       <AgentdStatusDetails
                         status={data}
+                        environmentId={environmentId}
+                        onRepaired={status.refresh}
                         onSetUp={
                           canSetUp && environmentId !== null
                             ? () => openAgentdSetupDialog(environmentId)

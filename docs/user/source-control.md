@@ -1,6 +1,6 @@
 # Source control
 
-T3 Code integrates with GitHub, GitLab, Forgejo, Gitea, Bitbucket, Azure DevOps, GitCafe, and Cursor
+AgentD Next integrates with GitHub, GitLab, Forgejo, Gitea, Bitbucket, Azure DevOps, GitCafe, and Cursor
 Origin to clone and publish repositories, create pull requests, and review changes.
 
 ## Review turn changes
@@ -16,19 +16,19 @@ shows its changes against its first parent.
 
 A commit link from a supported code host opens in the Diff pane when the thread's repository has
 that commit locally, on any branch. Otherwise a pull request commit link opens the pull request. Other
-commit links follow your **Open links in** setting; on web, when that opens a new tab, T3 Code first
-shows an **Open link** button. Command/Ctrl+Click always opens the link in your browser. Commit links follow the **Open pull requests in T3 Code**
+commit links follow your **Open links in** setting; on web, when that opens a new tab, AgentD Next first
+shows an **Open link** button. Command/Ctrl+Click always opens the link in your browser. Commit links follow the **Open pull requests in AgentD Desktop**
 setting in **Settings → Diffs**.
 
 ## Connect an account
 
-Install Git and configure authentication on the machine running your T3 Code server. For a remote
+Install Git and configure authentication on the machine running your AgentD Next server. For a remote
 environment, do this on the remote machine. After signing in, open **Settings → Source control & issues**
 and choose **Rescan**.
 
 ### GitHub
 
-T3 Code talks to GitHub's API directly and only needs a token. Any of these works, in this
+AgentD Next talks to GitHub's API directly and only needs a token. Any of these works, in this
 order of precedence:
 
 1. A token saved in **Settings → Source control & issues → GitHub**. It is kept in the server's secret
@@ -41,17 +41,17 @@ If `gh` is signed in to several accounts or hosts, expand **GitHub** in the same
 the account each host uses or turn a host off. A saved token or `GH_TOKEN` takes precedence
 over that choice; a host turned off stays off either way.
 
-For GitHub Enterprise, sign in with `gh auth login --hostname YOUR_HOST`. T3 Code treats a
+For GitHub Enterprise, sign in with `gh auth login --hostname YOUR_HOST`. AgentD Next treats a
 custom server name as GitHub once it has a credential for that host.
 
 ### Forgejo and Gitea
 
 Install [Forgejo CLI (`fj`)](https://codeberg.org/forgejo-contrib/forgejo-cli) or
-[Gitea CLI (`tea`)](https://gitea.com/gitea/tea) 0.16 or later on your T3 Code server.
+[Gitea CLI (`tea`)](https://gitea.com/gitea/tea) 0.16 or later on your AgentD Next server.
 Sign in with `fj --host https://your-server auth add-token` or `tea login add`.
 Repeat for each server you use, including Codeberg.
 
-T3 Code prefers a matching `fj` login and falls back to `tea` when `fj` is unavailable
+AgentD Next prefers a matching `fj` login and falls back to `tea` when `fj` is unavailable
 or has no login for that server. Once an account is selected, failed actions stay on that
 account. Settings shows the detected CLI. Forgejo and Gitea share one integration entry.
 Servers hosted under a URL subpath, such as `https://example.com/forgejo`, use `tea` because
@@ -87,7 +87,7 @@ Credentials are saved on the environment's server, so select a remote environmen
 it. Saved tokens can't be viewed again; enter a new one to replace it, or choose **Remove** to clear
 everything saved for Bitbucket.
 
-If no credentials are saved, T3 Code falls back to these variables in the server's environment.
+If no credentials are saved, AgentD Next falls back to these variables in the server's environment.
 Restart the server after changing them:
 
 ```bash
@@ -99,7 +99,7 @@ export T3CODE_BITBUCKET_API_TOKEN="your-token"
 
 For a background service, put these `KEY=VALUE` entries in
 [`service.env`](./background-service.md#configure-the-service-environment)
-under T3 home, then run `t3 service restart`. Service installation and updates
+under the AgentD Next home directory, then run `t3 service restart`. Service installation and updates
 preserve that file.
 
 ### Azure DevOps
@@ -146,8 +146,8 @@ from GitHub keep their pull requests on GitHub; open those from the GitHub remot
 ## Start, clone, or publish a project
 
 To start from nothing, choose **New project** in the command palette (`Cmd/Ctrl+K`), or
-**New project** under **Add Project** on any client, and type a name. T3 Code makes a Git
-repository in `~/.t3/projects` (the `projects` folder of your T3 data directory) with a README,
+**New project** under **Add Project** on any client, and type a name. AgentD Next makes a Git
+repository in `~/.t3/projects` (the `projects` folder of your AgentD Next data directory) with a README,
 an icon, and a first commit, then opens a new thread in it. Until the project has a thread, new
 threads work in its folder, even when your default is a new worktree. The folder is named after the project,
 like `pinball-stats` for "Pinball Stats". Turn on **Create private repository on GitHub** to also
@@ -158,11 +158,11 @@ Use **Add Project** in the command palette (`Cmd/Ctrl+K`) to clone a repository.
 provider or paste a Git URL, then choose where to save it. Only GitHub is listed at first. To list
 another provider here and in **Publish Repository**, turn on its switch under
 **Settings → Source control & issues**. A branch or file page copied from GitHub,
-GitLab, GitCafe, Codeberg or Bitbucket also works: T3 Code clones that repository's default branch.
+GitLab, GitCafe, Codeberg or Bitbucket also works: AgentD Next clones that repository's default branch.
 On other hosts, paste the repository's clone URL. The project opens right away while the
 clone runs in the background: you can write your first prompt, and sending waits until the files
 are in place. A toast tracks progress and lets you cancel; if the clone fails, retry it from the
-toast or from the banner above the composer. When the host refuses the machine's SSH key, T3 Code
+toast or from the banner above the composer. When the host refuses the machine's SSH key, AgentD Next
 clones over HTTPS with Git's credentials for that host instead, and the project's remote uses the
 HTTPS URL.
 
@@ -177,7 +177,7 @@ make your first commit before pushing.
 
 ## Create a pull request
 
-Use a thread's Git actions to commit, push, and create a pull request. T3 Code can generate commit
+Use a thread's Git actions to commit, push, and create a pull request. AgentD Next can generate commit
 messages, review titles, and descriptions from your changes. Descriptions also draw on the work in
 the thread, including the checks it ran.
 
@@ -290,10 +290,10 @@ Tick a file off in the **Code** tab once you have read it and it collapses; the 
 running count. A tick belongs to the pull request rather than to a commit, so scoping the tab to a
 single commit keeps them. A file pushed to after you cleared it comes back marked **Changed**.
 
-On GitHub these are GitHub's own viewed marks, so a review carries between T3 Code and github.com
+On GitHub these are GitHub's own viewed marks, so a review carries between AgentD Next and github.com
 in either direction. Forgejo, GitLab, Bitbucket, Azure DevOps, and Cursor Origin expose no record
-T3 Code can read, so the server you are connected to keeps them instead: they follow you across the
-apps connected to that server, but the host's own site will not show them, and the count reads **viewed in T3 Code**.
+AgentD Next can read, so the server you are connected to keeps them instead: they follow you across the
+apps connected to that server, but the host's own site will not show them, and the count reads **viewed in AgentD Desktop**.
 
 On mobile, open a changed file and mark it viewed from its header. Viewed files collapse,
 and their marks follow the same rules as on web and desktop.
@@ -312,20 +312,25 @@ and their marks follow the same rules as on web and desktop.
 ## Linked pull requests
 
 A thread can hold several pull requests, including reviews from another repository on the same host.
-Use **Link pull request** in the command palette or **Linked pull requests** panel, or right-click a
+Use **Link pull request** in the command palette or **Linked items** panel, or right-click a
 pull request link in the conversation. Creating a pull request from Git actions links it automatically,
 and so does an agent creating one with `gh pr create` or `glab mr create`. Agents can link other
 pull requests with the `link_pull_request` tool.
+
+Agents can also read, open, update, reply on, and merge pull requests in the thread's repository
+through AgentD Next's own tools, which use the same sign-in as the Pull requests page. An agent merges
+only the commit it last read: if someone pushed since, the merge is refused. On github.com an
+agent can also land a GitHub stack in one merge, like **Merge stack** below.
 
 Use **Link pull request to thread** in the command palette to keep a pull request with the thread. From a review
 on the Pull requests page, **Link to thread** lets you search for an active thread. The review header
 also lists the threads that link to it, including archived threads, so you can return to their context.
 
 Thread badges show a stack's layer count or the current review number with a count of additional
-links. Clicking a badge with more than one review opens the **Linked pull requests** panel. On mobile, the Git overview lists linked reviews and their stacks; tap a review to open it.
+links. Clicking a badge with more than one review opens the **Linked items** panel. On mobile, the Git overview lists linked reviews and their stacks; tap a review to open it.
 Linking and unlinking are available in the web and desktop clients.
 
-The **Linked pull requests** panel lists every review and groups stacks. Unlink a review from its
+The **Linked items** panel lists every review and groups stacks. Unlink a review from its
 row menu. An unlinked stack layer stays out of later syncs. Open linked reviews refresh on the server;
 closed reviews refresh periodically so reopening one on the host is detected. Merged reviews refresh
 when requested. Settling a thread refreshes its open and closed reviews once; after that they stop refreshing until you unsettle it. With **Auto-settle merged threads** enabled, a thread can settle after every linked
@@ -337,21 +342,24 @@ check fails or waits for a maintainer's approval, the required checks pass, some
 conflict. On github.com it also wakes the agent, with GitHub's reason, when the merge queue drops
 the pull request without merging it. Threads in a project that watch the same pull request share one check. On GitHub, a check
 first asks whether anything changed and reads the pull request only when it did, which keeps
-watching inside GitHub's rate limit. Comments from your own account do not wake it. Watching ends
-when the pull request merges or closes, after 10 wakes in a row that bring only comments, after 8
+watching inside GitHub's rate limit. Comments from your own account do not wake it. When the pull
+request merges or closes, watching ends, and the agent is woken once unless it merged or closed the
+pull request itself with the host's CLI. A reopened pull request needs a new watch. Watching also ends after 10 wakes in a row that bring only comments, after 8
 failed reads in a row, or when you press Stop on the thread. A rate limit only pauses watching.
 Settling or archiving a thread also ends all its watches. Unsettle the thread before starting a new
 watch. Watching a pull request again does not repeat check or conflict news its last
 watch already reported; unlinking the pull request clears that. Subagents cannot watch pull requests; the thread that delegated to them does. To start or stop
-it yourself, use the row menu in the **Linked pull requests** panel. In the thread details card, a
+it yourself, use the row menu in the **Linked items** panel. In the thread details card, a
 watched pull request shows an eye; click it to stop watching.
 
 A watched thread counts as working while the pull request still has checks running, so it stays in
 the **Working** section, including after the agent pushes a fix. Once every check has finished,
 including review bots that report as checks, the thread returns to your inbox: what happens next is
 up to a person. That includes a workflow waiting for a maintainer to approve it, which runs only
-once someone does. The watch stays on and still wakes the agent on new comments, failed checks or
-conflicts, and a watched thread never auto-settles.
+once someone does. If you ask the agent to act on the pull request itself, such as merging it once
+a teammate approves, the thread stays in **Working** until the pull request merges or closes. The
+watch stays on and still wakes the agent on new comments, failed checks or conflicts, and a watched
+thread never auto-settles.
 
 Cross-repository links use a project on the same host. Azure DevOps reviews require a project checked
 out from the matching organization and repository.
@@ -361,8 +369,9 @@ out from the matching organization and repository.
 The Issues page lists the issues of every project whose remote is on GitHub, GitLab, Azure
 DevOps or Forgejo, grouped per tracker account. Open it from the sidebar's utility row or with
 **Open issues** in the command palette. Filter by open or closed, by your involvement
-(assigned, opened by you, mentioning you), and by tracker; the search box asks the tracker
-itself where it can search. Press **Load more** at the end of a group to read further back.
+(assigned, opened by you, mentioning you), and by tracker. Under **Projects**, uncheck the
+projects you do not want to see; the list remembers them, and a project you add later shows.
+The search box asks the tracker itself where it can search. Press **Load more** at the end of a group to read further back.
 The **Views** menu saves and restores a search, filter, and sort setup, as it does for pull
 requests.
 
@@ -377,8 +386,9 @@ allow it. An issue read through a project that does not own its repository is sh
 
 An issue can be kept with a thread the way a pull request can: open it beside the thread (issue
 links in the conversation open there) and use **Link to this thread** in its header; **Unlink**
-undoes it. Linked issues are listed in the thread's details beside its pull requests. Agents link the
-issues they work on with the `link_issue` tool.
+undoes it. Click the issue badge in the thread sidebar to see its issues and pull requests in
+**Linked items**. Select an issue there to open it beside the thread. Agents link the issues they
+work on with the `link_issue` tool.
 
 Writing to a tracker over a remote connection requires the `source-control:write` scope.
 

@@ -85,10 +85,17 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   [WS_METHODS.agentdJoinTeam]: AuthEnvironmentMaintainScope,
   // Cloud setup writes agentd's account key and [cloud] settings on this host.
   [WS_METHODS.agentdCloudConfigure]: AuthEnvironmentMaintainScope,
+  // Making a key file private changes a mode anywhere the server user can, not only in a workspace.
+  [WS_METHODS.agentdCloudKeyFileFix]: AuthEnvironmentMaintainScope,
+  // Repair rewrites agentd's services on this host with this app's agentd install.
+  [WS_METHODS.agentdRepairServices]: AuthEnvironmentMaintainScope,
   // Working for the team runs agents on this host for the team server.
   [WS_METHODS.agentdSetTeamNode]: AuthEnvironmentMaintainScope,
   // Setting agentd up accepts its EULA and writes its services on this host.
   [WS_METHODS.agentdSetupStart]: AuthEnvironmentMaintainScope,
+  // Skills are written into, and removed from, the agents' Skills folders on this host.
+  [WS_METHODS.agentdSkillsInstall]: AuthEnvironmentMaintainScope,
+  [WS_METHODS.agentdSkillsRemove]: AuthEnvironmentMaintainScope,
   // The Gateway key goes to this host's agentd and its agents' sessions.
   [WS_METHODS.libraosGatewayConnect]: AuthEnvironmentMaintainScope,
   [WS_METHODS.libraosGatewayDisconnect]: AuthEnvironmentMaintainScope,

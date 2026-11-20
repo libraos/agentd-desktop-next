@@ -31,6 +31,7 @@ import {
   ShieldCheckIcon,
   SmartphoneIcon,
   UsersIcon,
+  WorkflowIcon,
   WrenchIcon,
   XIcon,
 } from "lucide-react";
@@ -100,6 +101,7 @@ const SETTINGS_SECTION_ICONS: Readonly<
   "/settings/keybindings": KeyboardIcon,
   "/settings/snap-shot": SnapShotIcon,
   "/settings/providers": BotIcon,
+  "/settings/workers": WorkflowIcon,
   "/settings/threads": MessagesSquareIcon,
   "/settings/browser": GlobeIcon,
   "/settings/devices": SmartphoneIcon,
@@ -128,7 +130,7 @@ function scrollResultIntoView(row: HTMLElement | null) {
 
 function SettingsSectionIcon({ to }: { to: SettingsPath }) {
   const Icon = SETTINGS_SECTION_ICONS[to];
-  return <Icon className="size-4 shrink-0 text-(--sidebar-icon-color)" />;
+  return <Icon className="size-4 h-5 shrink-0 text-(--sidebar-icon-color)" />;
 }
 
 export function SettingsSidebarNav({ pathname }: { pathname: string }) {

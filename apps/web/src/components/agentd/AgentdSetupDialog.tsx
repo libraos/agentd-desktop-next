@@ -3,10 +3,12 @@ import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime"
 import type { AgentdSetupState, EnvironmentId } from "@t3tools/contracts";
 import { Atom } from "effect/reactivity";
 import { T, useGT, Var } from "gt-react";
+import { ChevronRightIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
   agentdEnvironment,
+  useAgentdCloudAccount,
   useAgentdEula,
   useAgentdSetup,
   useAgentdStatus,
@@ -15,22 +17,34 @@ import { appAtomRegistry } from "~/rpc/atomRegistry";
 import { usePrimaryEnvironmentId } from "~/state/environments";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { Button } from "../ui/button";
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import {
   Dialog,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogPanel,
   DialogPopup,
   DialogTitle,
 } from "../ui/dialog";
+import { offerAccountLink } from "./agentdVisibility.logic";
+import { CloudWorkersSetup } from "./CloudWorkersSetup";
 
 const EULA_URL = "https://libraos.com/eula";
+
+// On a short window the benefit lines would push the agreement off screen, so it starts open.
+function openAgreementFirst() {
+  return typeof window !== "undefined" && window.matchMedia("(max-height: 640px)").matches;
+}
 
 // The environment the person opened the dialog for, and those they answered Not now for, this run.
 const openedFor = Atom.make<EnvironmentId | null>(null).pipe(
   Atom.keepAlive,
   Atom.withLabel("agentd:setup-dialog"),
+);
+// The environment the person asked to link a LibraOS account for, from the indicator or Settings.
+const linkOpenedFor = Atom.make<EnvironmentId | null>(null).pipe(
+  Atom.keepAlive,
+  Atom.withLabel("agentd:link-dialog"),
 );
 const notNow = Atom.make<Readonly<Record<EnvironmentId, true>>>({}).pipe(
   Atom.keepAlive,
@@ -42,12 +56,18 @@ export function openAgentdSetupDialog(environmentId: EnvironmentId) {
   appAtomRegistry.set(openedFor, environmentId);
 }
 
+/** Opens the link step alone, with the same Cloud Workers key form as after setup. */
+export function openAgentdLinkDialog(environmentId: EnvironmentId) {
+  appAtomRegistry.set(linkOpenedFor, environmentId);
+}
+
 export function useCanSetUpAgentd(environmentId: EnvironmentId | null) {
   return useAtomValue(agentdEnvironment.setupStart.permissionAtom(environmentId));
 }
 
 function closeDialog(environmentId: EnvironmentId) {
   appAtomRegistry.set(openedFor, null);
+  appAtomRegistry.set(linkOpenedFor, null);
   appAtomRegistry.set(notNow, { ...appAtomRegistry.get(notNow), [environmentId]: true });
 }
 
@@ -57,6 +77,7 @@ function closeDialog(environmentId: EnvironmentId) {
  */
 export function AgentdSetupDialogHost() {
   const opened = useAtomValue(openedFor);
+  const linkOnly = useAtomValue(linkOpenedFor);
   const dismissed = useAtomValue(notNow);
   const primary = usePrimaryEnvironmentId();
   const status = useAgentdStatus(primary);
@@ -65,13 +86,21 @@ export function AgentdSetupDialogHost() {
     primary !== null && status.data?.setUp === false && canSetUp && dismissed[primary] !== true
       ? primary
       : null;
+  if (opened === null && linkOnly !== null)
+    return <AgentdSetupDialog key={`link:${linkOnly}`} environmentId={linkOnly} linkOnly />;
   const environmentId = opened ?? automatic;
   return environmentId === null ? null : (
-    <AgentdSetupDialog key={environmentId} environmentId={environmentId} />
+    <AgentdSetupDialog key={environmentId} environmentId={environmentId} linkOnly={false} />
   );
 }
 
-function AgentdSetupDialog({ environmentId }: { readonly environmentId: EnvironmentId }) {
+function AgentdSetupDialog({
+  environmentId,
+  linkOnly,
+}: {
+  readonly environmentId: EnvironmentId;
+  readonly linkOnly: boolean;
+}) {
   const gt = useGT();
   const eula = useAgentdEula(environmentId);
   const setup = useAgentdSetup(environmentId);
@@ -90,13 +119,72 @@ function AgentdSetupDialog({ environmentId }: { readonly environmentId: Environm
   const finished = ours?.phase === "succeeded" || ours?.phase === "failed";
   const succeeded = ours?.phase === "succeeded";
   const refreshStatus = status.refresh;
+  // After setup, or when asked for alone, the dialog offers linking the LibraOS account.
+  const linkStep = linkOnly || succeeded;
+  const account = useAgentdCloudAccount(linkStep ? environmentId : null);
+  const offerLink = account.error !== null ? false : offerAccountLink(account.data);
+  // The person linked in this dialog: it stays to show the result until they close it.
+  const [linkedHere, setLinkedHere] = useState(false);
+  const refreshAccount = account.refresh;
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- re-reads agentd's status once the server's init run ends, and closes after a success
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- re-reads agentd's status and account once the server's init run ends
   useEffect(() => {
     if (!finished) return;
     refreshStatus();
-    if (succeeded) closeDialog(environmentId);
-  }, [finished, succeeded, refreshStatus, environmentId]);
+    if (succeeded) refreshAccount();
+  }, [finished, succeeded, refreshStatus, refreshAccount]);
+
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- closes once agentd says there is nothing to link: a linked account never sees the step
+  useEffect(() => {
+    if (linkStep && offerLink === false && !linkedHere) closeDialog(environmentId);
+  }, [linkStep, offerLink, linkedHere, environmentId]);
+
+  if (linkStep) {
+    const setup = account.data;
+    return (
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open) closeDialog(environmentId);
+        }}
+      >
+        <DialogPopup className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>
+              {succeeded ? <T>AgentD is set up</T> : <T>Link your LibraOS account</T>}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogPanel>
+            {setup === null || (offerLink !== true && !linkedHere) ? (
+              <p role="status" className="text-muted-foreground text-sm">
+                <T>Checking your LibraOS account…</T>
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm">
+                  <T>Optional: link your LibraOS account to run tasks on Cloud Workers.</T>
+                </p>
+                <CloudWorkersSetup
+                  environmentId={environmentId}
+                  canConfigure={setup.canConfigure === true}
+                  setupUrl={setup.setupUrl}
+                  onConfigured={() => {
+                    setLinkedHere(true);
+                    refreshAccount();
+                  }}
+                />
+              </div>
+            )}
+          </DialogPanel>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => closeDialog(environmentId)}>
+              {linkedHere ? <T>Done</T> : <T>Skip</T>}
+            </Button>
+          </DialogFooter>
+        </DialogPopup>
+      </Dialog>
+    );
+  }
 
   const accept = async () => {
     // From here the dialog stays until the person closes it, whatever the status says.
@@ -144,57 +232,80 @@ function AgentdSetupDialog({ environmentId }: { readonly environmentId: Environm
           <DialogTitle>
             <T>Set up AgentD</T>
           </DialogTitle>
-          <DialogDescription>
-            <T>
-              AgentD runs tasks and workers for your agents. To set it up, accept its End User
-              Agreement: Accept runs <code>agentd init</code> on this environment, which records
-              your acceptance and sets agentd up. Chat and code work without it.
-            </T>
-          </DialogDescription>
         </DialogHeader>
         <DialogPanel>
           <div className="space-y-3">
             {shown === null ? (
               <>
-                <p className="font-medium text-sm">
-                  {eula.data?.version ? (
+                <ul className="list-disc space-y-1 pl-5 text-sm">
+                  <li>
                     <T>
-                      AgentD End User Agreement, version <Var>{eula.data.version}</Var>
+                      Hand a task to a worker with a goal, a check and a budget, and keep working
+                      while it runs.
                     </T>
-                  ) : (
-                    <T>AgentD End User Agreement</T>
-                  )}
+                  </li>
+                  <li>
+                    <T>Run it on this machine, a team machine or in the cloud.</T>
+                  </li>
+                  <li>
+                    <T>See results, approvals and cost in one place.</T>
+                  </li>
+                </ul>
+                <p className="text-sm">
+                  <T>Chat and Code work without it.</T>
                 </p>
-                {eula.error ? (
-                  <p role="alert" className="text-destructive text-sm">
-                    <T>
-                      Couldn&apos;t read the agreement from agentd: <Var>{eula.error}</Var>
-                    </T>
-                  </p>
-                ) : (
-                  <div
-                    role="document"
-                    aria-label={gt("AgentD End User Agreement")}
-                    tabIndex={0}
-                    className="max-h-72 overflow-y-auto rounded-lg border border-border p-3"
-                  >
-                    <pre className="wrap-anywhere whitespace-pre-wrap font-sans text-xs">
-                      {eula.data?.text ?? gt("Loading…")}
-                    </pre>
-                  </div>
-                )}
-                <p className="text-muted-foreground text-sm">
+                <Collapsible defaultOpen={openAgreementFirst()}>
+                  <CollapsibleTrigger className="group inline-flex items-center gap-1.5 text-sm font-medium underline-offset-4 hover:underline">
+                    <ChevronRightIcon className="size-3.5 group-data-panel-open:rotate-90" />
+                    {eula.data?.version ? (
+                      <T>
+                        Read the agreement (version <Var>{eula.data.version}</Var>)
+                      </T>
+                    ) : (
+                      <T>Read the agreement</T>
+                    )}
+                  </CollapsibleTrigger>
+                  <CollapsiblePanel>
+                    <div className="mt-2 space-y-2">
+                      {eula.error ? (
+                        <p role="alert" className="text-destructive text-sm">
+                          <T>
+                            Couldn&apos;t read the agreement from agentd: <Var>{eula.error}</Var>
+                          </T>
+                        </p>
+                      ) : (
+                        <div
+                          role="document"
+                          aria-label={gt("AgentD End User Agreement")}
+                          tabIndex={0}
+                          className="max-h-72 overflow-y-auto rounded-lg border border-border p-3"
+                        >
+                          <pre className="wrap-anywhere whitespace-pre-wrap font-sans text-xs">
+                            {eula.data?.text ?? gt("Loading…")}
+                          </pre>
+                        </div>
+                      )}
+                      <p className="text-muted-foreground text-sm">
+                        <T>
+                          Also at{" "}
+                          <a
+                            className="underline"
+                            href={EULA_URL}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                          >
+                            libraos.com/eula
+                          </a>
+                          .
+                        </T>
+                      </p>
+                    </div>
+                  </CollapsiblePanel>
+                </Collapsible>
+                <p className="text-muted-foreground text-xs">
                   <T>
-                    Also at{" "}
-                    <a
-                      className="underline"
-                      href={EULA_URL}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                    >
-                      libraos.com/eula
-                    </a>
-                    .
+                    Accept records that you accept the AgentD End User Agreement and runs{" "}
+                    <code>agentd init</code> on this environment.
                   </T>
                 </p>
                 {!canSetUp && (

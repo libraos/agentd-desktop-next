@@ -100,6 +100,7 @@ import * as DeviceService from "./device/DeviceService.ts";
 import * as DeviceHubProxy from "./device/DeviceHubProxy.ts";
 import * as PreviewManager from "./preview/Manager.ts";
 import * as PortScanner from "./preview/PortScanner.ts";
+import * as PreviewTunnel from "./preview/PreviewTunnel.ts";
 import * as ServerBrowser from "./preview/ServerBrowser.ts";
 import * as PreviewAgentActivity from "./preview/PreviewAgentActivity.ts";
 import * as DesktopBrowserChannel from "./preview/DesktopBrowserChannel.ts";
@@ -199,6 +200,7 @@ import * as ServiceLauncherClient from "./cloud/serviceLauncherClient.ts";
 import * as AgentdBridge from "./agentd/AgentdBridge.ts";
 import * as AgentdTeamNode from "./agentd/AgentdTeamNode.ts";
 import * as AgentdInit from "./agentd/agentdInit.ts";
+import * as AgentdSkills from "./agentd/AgentdSkills.ts";
 import * as LibraosGateway from "./gateway/LibraosGateway.ts";
 import * as ProcessDiagnostics from "./diagnostics/ProcessDiagnostics.ts";
 import * as HostResources from "./resourceTelemetry/HostResources.ts";
@@ -334,6 +336,8 @@ const layerResourceDiagnostics = Layer.mergeAll(
 const layerAgentd = Layer.mergeAll(
   AgentdTeamNode.layer,
   AgentdInit.layer,
+  // Layers memoize by reference, so this is the same policy the settings layer reads.
+  AgentdSkills.layer.pipe(Layer.provide(ManagedPolicy.layer)),
   LibraosGateway.layer.pipe(
     Layer.provide(layerServerSettings),
     Layer.provide(ServerSecretStore.layer),
@@ -472,6 +476,7 @@ const layerThreadIssueService = ThreadIssueService.layer;
 
 const layerGitManager = GitManager.layer.pipe(
   Layer.provide(Layer.merge(ProjectionStoreV2.layer, ProjectStore.layer)),
+  Layer.provide(layerPullRequestService.pipe(Layer.provide(RuntimeLayer.layerProjectService))),
   Layer.provideMerge(RuntimeLayer.layerProjectSetupScriptRunner),
   Layer.provideMerge(WorktreeSetupTracker.layer),
   Layer.provideMerge(GitVcsDriver.layer),
@@ -549,6 +554,7 @@ const layerTerminal = TerminalManager.layer(
 );
 
 const layerPreview = Layer.empty.pipe(
+  Layer.provideMerge(PreviewTunnel.layer),
   Layer.provideMerge(PreviewManager.layer),
   Layer.provideMerge(layerPortScanner),
 );
@@ -873,6 +879,7 @@ const layerMakeRoutes = Layer.mergeAll(
     GuestHttp.layer,
     DeviceHubProxy.layer,
     ServerBrowserStream.routeLayer,
+    PreviewTunnel.routeLayer,
     ServerHttp.layerStaticAndDevRoute,
     Ws.layer,
     speechStreamRouteLayer,
@@ -880,6 +887,7 @@ const layerMakeRoutes = Layer.mergeAll(
   McpHttpServer.layer.pipe(
     Layer.provide(ProviderAdapterRegistry.layerFromProviderInstanceRegistry),
     Layer.provide(McpOAuth.layerMcpClientAuthenticator),
+    Layer.provide(ProjectionStoreV2.layer),
   ),
   // Follows delegated tasks running in linked environments, including after a restart.
   Layer.effectDiscard(
@@ -924,6 +932,7 @@ const layerMakeRoutes = Layer.mergeAll(
   Layer.provide(layerCommandReadiness),
   Layer.provide(ServerHttp.layerBrowserApiCors),
   Layer.provide(ServerHttp.layerHttpCompression),
+  Layer.provide(ServerHttp.layerUnloggedSignedRequests),
 );
 
 const layerMakeServer = Layer.unwrap(

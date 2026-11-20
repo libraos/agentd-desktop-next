@@ -31,6 +31,7 @@ import {
   AuthAccessStreamError,
   type AuthAccessStreamEvent,
   AuthOrchestrationOperateScope,
+  AuthFilesystemReadScope,
   AuthProvidersManageScope,
   isLibraosGatewayInstanceId,
   type AuthEnvironmentScope,
@@ -244,6 +245,8 @@ import { RpcInstrumentation, rpcInstrumentationLayer } from "./observability/Rpc
 import * as AgentdBridge from "./agentd/AgentdBridge.ts";
 import * as AgentdTeamNode from "./agentd/AgentdTeamNode.ts";
 import * as AgentdInit from "./agentd/agentdInit.ts";
+import * as AgentdSkills from "./agentd/AgentdSkills.ts";
+import { enteredKeyFiles, startErrorFor } from "./agentd/cloudFailure.ts";
 import * as LibraosGateway from "./gateway/LibraosGateway.ts";
 import * as ProcessDiagnostics from "./diagnostics/ProcessDiagnostics.ts";
 import * as ProcessResourceMonitor from "./diagnostics/ProcessResourceMonitor.ts";
@@ -257,6 +260,7 @@ import * as TraceDiagnostics from "./diagnostics/TraceDiagnostics.ts";
 import * as TriageService from "./triage/TriageService.ts";
 import * as PullRequestService from "./pullRequest/PullRequestService.ts";
 import * as IssueService from "./issue/IssueService.ts";
+import * as ThreadIssueService from "./orchestration-v2/ThreadIssueService.ts";
 import * as IssueTrackerConnections from "./issue/IssueTrackerConnections.ts";
 import * as PullRequestReviewGuideService from "./pullRequest/PullRequestReviewGuideService.ts";
 import { listLinkedPullRequestThreads } from "./pullRequest/linkedThreads.ts";
@@ -1491,6 +1495,7 @@ export const layerWsRpc = (
       const guestShares = yield* GuestShareService.GuestShareService;
       const pullRequests = yield* PullRequestService.PullRequestService;
       const issues = yield* IssueService.IssueService;
+      const threadIssues = yield* ThreadIssueService.ThreadIssueService;
       const issueTrackers = yield* IssueTrackerConnections.IssueTrackerConnections;
       const reviewGuides = yield* PullRequestReviewGuideService.PullRequestReviewGuideService;
       const pullRequestSync = yield* PullRequestSyncReactor.PullRequestSyncReactor;
@@ -1599,6 +1604,7 @@ export const layerWsRpc = (
       const agentd = yield* AgentdBridge.AgentdBridge;
       const teamNode = yield* AgentdTeamNode.AgentdTeamNode;
       const agentdInit = yield* AgentdInit.AgentdInit;
+      const agentdSkills = yield* AgentdSkills.AgentdSkillsService;
       const libraosGateway = yield* LibraosGateway.LibraosGateway;
       const triage = yield* TriageService.TriageService;
       const hostResources = yield* HostResources.HostResources;
@@ -1990,6 +1996,7 @@ export const layerWsRpc = (
         [WS_METHODS.issuesComments]: (input) => issues.comments(input),
         [WS_METHODS.issuesTemplates]: (input) => issues.templates(input),
         [WS_METHODS.issuesCandidates]: (input) => issues.candidates(input),
+        [WS_METHODS.issuesLinkedThreads]: (input) => threadIssues.linkedThreads(input),
         [WS_METHODS.issuesCreate]: (input) => issues.create(input),
         [WS_METHODS.issuesComment]: (input) => issues.comment(input),
         [WS_METHODS.issuesUpdate]: (input) => issues.update(input),
@@ -2027,6 +2034,10 @@ export const layerWsRpc = (
                           creationSource:
                             "creationSource" in command ? command.creationSource : "web",
                         }),
+                        {
+                          managesProviders:
+                            currentSession.scopes.includes(AuthProvidersManageScope),
+                        },
                       )
                   ).pipe(Effect.provide(intakeContext)),
                 )
@@ -2036,6 +2047,7 @@ export const layerWsRpc = (
                   ),
                   Effect.map((result) => ({ sequence: result.sequence })),
                   Effect.mapError((cause) => {
+                    if (cause._tag === "EnvironmentAuthorizationError") return cause;
                     const detail = userFacingDispatchErrorMessage(cause);
                     return new OrchestrationV2DispatchCommandError({
                       commandId: command.commandId,
@@ -3610,7 +3622,18 @@ export const layerWsRpc = (
         [WS_METHODS.agentdTask]: (input) => agentd.task(input),
         [WS_METHODS.agentdSubscribeTaskOutput]: (input) => agentd.subscribeTaskOutput(input),
         [WS_METHODS.agentdStopTask]: (input) => agentd.stopTask(input),
-        [WS_METHODS.agentdStartTask]: (input) => agentd.startTask(input),
+        [WS_METHODS.agentdStartTask]: (input) =>
+          agentd
+            .startTask(input)
+            .pipe(
+              Effect.mapError((error) =>
+                startErrorFor(
+                  error,
+                  currentSession.scopes.includes(AuthFilesystemReadScope),
+                  enteredKeyFiles(input),
+                ),
+              ),
+            ),
         [WS_METHODS.agentdApprovals]: (_input) => agentd.approvals,
         [WS_METHODS.agentdInbox]: (_input) => agentd.inbox,
         [WS_METHODS.agentdPeople]: (input) => agentd.people(input),
@@ -3619,6 +3642,9 @@ export const layerWsRpc = (
         [WS_METHODS.agentdCloudSetup]: (input) => agentd.cloudSetup(input),
         [WS_METHODS.agentdCloudReview]: (input) => agentd.cloudReview(input),
         [WS_METHODS.agentdCloudConfigure]: (input) => agentd.cloudConfigure(input),
+        [WS_METHODS.agentdCloudKeyFile]: (input) => agentd.cloudKeyFile(input, false),
+        [WS_METHODS.agentdCloudKeyFileFix]: (input) => agentd.cloudKeyFile(input, true),
+        [WS_METHODS.agentdRepairServices]: (input) => agentd.repairServices(input),
         [WS_METHODS.agentdTaskDefaults]: (input) => agentd.taskDefaults(input),
         [WS_METHODS.agentdTaskOthers]: (input) => agentd.taskOthers(input),
         [WS_METHODS.agentdSubscribeTeamNode]: (_input) => teamNode.subscribe,
@@ -3627,6 +3653,9 @@ export const layerWsRpc = (
         [WS_METHODS.agentdEula]: (_input) => agentd.eula,
         [WS_METHODS.agentdSetupStart]: (_input) => agentdInit.start,
         [WS_METHODS.agentdSubscribeSetup]: (_input) => agentdInit.subscribe,
+        [WS_METHODS.agentdSkillsList]: (_input) => agentdSkills.list,
+        [WS_METHODS.agentdSkillsInstall]: (input) => agentdSkills.install(input),
+        [WS_METHODS.agentdSkillsRemove]: (input) => agentdSkills.remove(input),
         [WS_METHODS.libraosGatewayStatus]: (_input) => libraosGateway.status,
         [WS_METHODS.libraosGatewayConnect]: (input) => libraosGateway.connect(input.key),
         [WS_METHODS.libraosGatewayDisconnect]: (_input) => libraosGateway.disconnect,
@@ -3654,6 +3683,7 @@ export const layer = Layer.unwrap(
     const npmRelease = yield* NpmRelease.NpmRelease;
     const pullRequests = yield* PullRequestService.PullRequestService;
     const issues = yield* IssueService.IssueService;
+    const threadIssues = yield* ThreadIssueService.ThreadIssueService;
     const issueTrackers = yield* IssueTrackerConnections.IssueTrackerConnections;
     const reviewGuides = yield* PullRequestReviewGuideService.PullRequestReviewGuideService;
     const peerLinks = yield* PeerLinks.PeerLinks;
@@ -3745,6 +3775,7 @@ export const layer = Layer.unwrap(
               // Share server-lifetime PR caches so WS mutations invalidate every client's HTTP diffs.
               Layer.provide(Layer.succeed(PullRequestService.PullRequestService, pullRequests)),
               Layer.provide(Layer.succeed(IssueService.IssueService, issues)),
+              Layer.provide(Layer.succeed(ThreadIssueService.ThreadIssueService, threadIssues)),
               Layer.provide(
                 Layer.succeed(IssueTrackerConnections.IssueTrackerConnections, issueTrackers),
               ),

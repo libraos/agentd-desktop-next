@@ -29,6 +29,7 @@ export type SettingsPath =
   | "/settings/keybindings"
   | "/settings/snap-shot"
   | "/settings/providers"
+  | "/settings/workers"
   | "/settings/threads"
   | "/settings/browser"
   | "/settings/devices"
@@ -105,6 +106,7 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/keybindings": msg("Keybindings"),
   "/settings/snap-shot": msg("SnapShots"),
   "/settings/providers": msg("Providers"),
+  "/settings/workers": msg("Workers"),
   "/settings/threads": msg("Threads"),
   "/settings/browser": msg("Browser"),
   "/settings/devices": msg("Devices"),
@@ -155,6 +157,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
     heading: msg("Agents"),
     paths: [
       "/settings/providers",
+      "/settings/workers",
       "/settings/threads",
       "/settings/browser",
       "/settings/devices",
@@ -504,6 +507,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     // Shown inside the boring sidebar row only while it is on, so search lands on the parent.
     targetId: "boring-sidebar",
     searchTerms: [msg("beta boring sidebar folder rows multiline branch pull request details")],
+  },
+  {
+    id: "agent-work-panels",
+    title: msg("Open the browser as the agent uses it"),
+    to: "/settings/chat",
+    searchTerms: [msg("automatically open right panel browser code layout agent")],
   },
   {
     id: "tool-call-visibility",
@@ -1077,6 +1086,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     providerSettingsOnly: true,
   },
   {
+    id: "workers",
+    title: msg("Workers"),
+    to: "/settings/workers",
+    searchTerms: [msg("agentd suggest workers run tasks on cloud workers default budget")],
+  },
+  {
     id: "scheduled-tasks",
     title: msg("Scheduled tasks"),
     to: "/settings/scheduled-tasks",
@@ -1401,6 +1416,15 @@ export const SETTINGS_SEARCH_ITEMS = [
     cloudOnly: true,
   },
   {
+    id: "preview-tunnel",
+    title: msg("Preview tunnel"),
+    to: "/settings/access",
+    targetId: "connections-environment",
+    searchTerms: [
+      msg("localhost loopback port forwarding open on this device browser tabs stream security"),
+    ],
+  },
+  {
     id: "connections-environment",
     title: msg("This machine"),
     to: "/settings/access",
@@ -1488,6 +1512,7 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   "/settings/snap-shot": null,
   "/settings/keybindings": null,
   "/settings/providers": null,
+  "/settings/workers": null,
   "/settings/threads": null,
   "/settings/browser": null,
   "/settings/devices": null,

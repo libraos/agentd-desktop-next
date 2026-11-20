@@ -7,7 +7,7 @@ import { rightPanelHostRef, useRightPanelStore } from "~/rightPanelStore";
 import { Button } from "../ui/button";
 import { toastManager } from "../ui/toast";
 import { useStartTaskCloud } from "./StartTaskCloud";
-import { openStartTaskDialog } from "./StartTaskDialog";
+import { OfferedCloudTask, openStartTaskDialog, replaceQuestion } from "./StartTaskDialog";
 import type { TaskFields } from "./startTask.logic";
 import { TaskPlanSummary, useTaskDefaults, useTaskDirectory, useTaskPlan } from "./taskPlan";
 
@@ -30,10 +30,14 @@ export function TaskDraftCard({
   const plan = useTaskPlan({ threadRef, cwd, fields, checkEdited: true, defaults, cloud });
   const [result, setResult] = useState<string | null>(null);
   const [startedId, setStartedId] = useState<string | null>(null);
+  // A cloud task agentd saved but didn't confirm: followed until the synced list shows it started.
+  const [offered, setOffered] = useState<string | null>(null);
+  const [replaceSubmission, setReplaceSubmission] = useState<string | null>(null);
 
-  async function start() {
+  async function start(replacing: string | null = null) {
     setResult(null);
-    const outcome = await plan.start();
+    setReplaceSubmission(null);
+    const outcome = await plan.start(replacing);
     switch (outcome?.kind) {
       case undefined:
         return;
@@ -47,6 +51,8 @@ export function TaskDraftCard({
         return;
       case "offered":
         setStartedId(outcome.task.id);
+        // An earlier submission's task agentd found is not this draft's to follow.
+        if (cloud.enabled && outcome.task.earlier !== true) setOffered(outcome.task.id);
         setResult(
           outcome.task.note ??
             gt("Task {taskId} was offered but did not start.", { taskId: outcome.task.id }),
@@ -56,10 +62,13 @@ export function TaskDraftCard({
         setResult(outcome.reason);
         return;
       case "failed":
+        setReplaceSubmission(outcome.replaceSubmission);
         setResult(
-          outcome.error instanceof Error
-            ? outcome.error.message
-            : gt("AgentD could not start the task."),
+          outcome.replaceSubmission !== null
+            ? replaceQuestion(gt)
+            : outcome.error instanceof Error
+              ? outcome.error.message
+              : gt("AgentD could not start the task."),
         );
     }
   }
@@ -72,11 +81,36 @@ export function TaskDraftCard({
       <p className="wrap-anywhere text-sm font-medium">{plan.filled.goal}</p>
       <TaskPlanSummary plan={plan} />
       {result !== null ? (
-        <p role="status" className="wrap-anywhere whitespace-pre-wrap text-xs">
-          {result}
-        </p>
+        <OfferedCloudTask environmentId={threadRef.environmentId} taskId={offered}>
+          <p role="status" className="wrap-anywhere whitespace-pre-wrap text-xs">
+            {result}
+          </p>
+        </OfferedCloudTask>
       ) : null}
-      {startedId === null ? (
+      {startedId === null && cloud.enabled && replaceSubmission !== null ? (
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            disabled={!plan.ready || plan.starting}
+            onClick={() => void start(replaceSubmission)}
+          >
+            {plan.starting ? <T>Starting…</T> : <T>Replace</T>}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={plan.starting}
+            onClick={() => {
+              setResult(null);
+              setReplaceSubmission(null);
+            }}
+          >
+            <T>Don’t replace</T>
+          </Button>
+        </div>
+      ) : startedId === null ? (
         <div className="flex gap-2">
           <Button
             type="button"
@@ -86,6 +120,17 @@ export function TaskDraftCard({
           >
             {plan.starting ? <T>Starting…</T> : <T>Start</T>}
           </Button>
+          {cloud.waiting && cloud.unreachable ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={plan.starting}
+              onClick={cloud.refresh}
+            >
+              <T>Retry</T>
+            </Button>
+          ) : null}
           <Button
             type="button"
             size="sm"

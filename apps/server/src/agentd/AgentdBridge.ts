@@ -19,6 +19,11 @@ import {
   type AgentdCloudSetupInput,
   type AgentdCloudConfigureInput,
   type AgentdCloudConfigured,
+  type AgentdCloudKeyFileCheck,
+  type AgentdCloudKeyFileInput,
+  type AgentdServicesProblem,
+  type AgentdServicesRepairResult,
+  type AgentdServicesRepairInput,
   type AgentdTaskDefaults,
   type AgentdTaskDefaultsInput,
   type AgentdCloudTaskInput,
@@ -42,6 +47,7 @@ import {
 } from "@t3tools/contracts";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import { resolveCommandPath } from "@t3tools/shared/shell";
+import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -50,6 +56,7 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
+import * as Scope from "effect/Scope";
 import * as Stream from "effect/Stream";
 
 import * as BackgroundPolicy from "../background/BackgroundPolicy.ts";
@@ -58,7 +65,15 @@ import { makeAgentdCloud } from "./agentdCloud.ts";
 import { makeCloudReview } from "./agentdCloudReview.ts";
 import { AgentdArgumentError, agentdArgs, agentdTicket } from "./agentdCommands.ts";
 import * as AgentdJson from "./agentdJson.ts";
-import { estimateType, PROJECT_FILES, readEstimate, suggestCheck } from "./taskDefaults.ts";
+import { detectServices, repairServices, serviceAgentd } from "./agentdServices.ts";
+import { makeCloudKeyFile } from "./cloudKeyFile.ts";
+import {
+  estimateType,
+  PROJECT_FILES,
+  readDollarBudgets,
+  readEstimate,
+  suggestCheck,
+} from "./taskDefaults.ts";
 import { joinedPerson, mergeTaskHolders, repositoryTargets } from "./taskOthers.ts";
 
 export class AgentdBridge extends Context.Service<
@@ -93,6 +108,15 @@ export class AgentdBridge extends Context.Service<
     readonly cloudConfigure: (
       input: AgentdCloudConfigureInput,
     ) => Effect.Effect<AgentdCloudConfigured, AgentdError>;
+    /** A chosen key file's provider and privacy; with makePrivate, chmod 600 first. */
+    readonly cloudKeyFile: (
+      input: AgentdCloudKeyFileInput,
+      makePrivate: boolean,
+    ) => Effect.Effect<AgentdCloudKeyFileCheck, AgentdError>;
+    /** Re-registers services on a missing or old agentd with this app's; only on the user's say. */
+    readonly repairServices: (
+      input: AgentdServicesRepairInput,
+    ) => Effect.Effect<AgentdServicesRepairResult, AgentdError>;
     readonly taskDefaults: (
       input: AgentdTaskDefaultsInput,
     ) => Effect.Effect<AgentdTaskDefaults, AgentdError>;
@@ -117,6 +141,26 @@ const OUTPUT_TAIL_BYTES = 64 * 1024;
 // agentd reads are host reads a client asks for while it shows them, as diagnostics are.
 const POLL_SCOPE = { type: "diagnostics" } as const;
 const RUNNING_STATES = new Set(["offered", "claimed"]);
+// A cloud job past these has nothing more for `cloud sync` to mirror.
+const CLOUD_FINAL_STATES = new Set([
+  "completed",
+  "failed",
+  "failed_verification",
+  "budget_exceeded",
+  "cancelled",
+  "settlement_conflict",
+  "expired",
+]);
+// The watchdog syncs cloud jobs each pass; while one may not run, a shown list syncs this often.
+const CLOUD_SYNC_INTERVAL = Duration.seconds(30);
+
+/** A listed cloud job whose state agentd still has to mirror from the Job API. */
+function hasOpenCloudJob(rows: ReadonlyArray<AgentdTaskRow>): boolean {
+  return rows.some(
+    (row) =>
+      row.cloudState != null && row.cloudState !== "" && !CLOUD_FINAL_STATES.has(row.cloudState),
+  );
+}
 
 function sameRows(a: ReadonlyArray<AgentdTaskRow>, b: ReadonlyArray<AgentdTaskRow>): boolean {
   return (
@@ -237,6 +281,12 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     return output.stdout;
   });
 
+  const cloudKeyFile = makeCloudKeyFile({
+    isAbsolute: pathService.isAbsolute,
+    platform,
+    uid: process.getuid?.(),
+  });
+
   const cloud = yield* makeAgentdCloud({
     binary,
     run,
@@ -244,6 +294,11 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     isAbsolute: pathService.isAbsolute,
     args,
     platform,
+    keyProvider: (path) =>
+      cloudKeyFile({ path }, false).pipe(
+        Effect.map((check) => check.provider),
+        Effect.orElseSucceed(() => null),
+      ),
   });
 
   const readShow = (id: string) =>
@@ -258,6 +313,95 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     originProject: cloud.originProject,
   });
 
+  // The desktop app's last pass installing agentd for the terminal and agents, when it ran one.
+  const recordPath = env.AGENTD_DESKTOP_INSTALL_RECORD?.trim();
+  const readInstallRecord = recordPath
+    ? fs.readFileString(recordPath).pipe(
+        Effect.flatMap(decodeInstallRecord),
+        Effect.orElseSucceed(() => null),
+      )
+    : Effect.succeed(null);
+
+  // agentd's services on a missing or old agentd: checked on start and after a Repair, never moved
+  // unless the user confirms Repair.
+  let servicesProblem: AgentdServicesProblem | null = null;
+  const bundledBinary = env.AGENTD_DESKTOP_BUNDLED === "1" ? env.AGENTD_BIN?.trim() : undefined;
+  const home = bundledBinary ? yield* HostProcess.HomeDirectory : "";
+  const serviceDeps = bundledBinary
+    ? readInstallRecord.pipe(
+        Effect.map((installed) => ({
+          bundled: bundledBinary,
+          target: serviceAgentd(bundledBinary, env.APPDIR, installed),
+          platform,
+          home,
+          root: env.AGENTD_ROOT,
+          run: runner.run,
+        })),
+      )
+    : null;
+  const provideFiles = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    effect.pipe(
+      Effect.provideService(FileSystem.FileSystem, fs),
+      Effect.provideService(Path.Path, pathService),
+    );
+  const checkServices = Effect.fn("AgentdBridge.checkServices")(function* () {
+    if (serviceDeps === null) return null;
+    const problem = yield* provideFiles(detectServices(yield* serviceDeps));
+    servicesProblem = problem;
+    if (problem !== null)
+      yield* Effect.logWarning("agentd services run a missing or old agentd", problem);
+    return problem;
+  });
+  if (serviceDeps !== null) yield* checkServices().pipe(Effect.ignore, Effect.forkScoped);
+
+  const repairAgentdServices = Effect.fn("AgentdBridge.repairServices")(function* (
+    input: AgentdServicesRepairInput,
+  ) {
+    const problem = serviceDeps === null ? null : yield* checkServices();
+    if (serviceDeps === null || problem === null) return { ok: true };
+    if (problem.moves.length === 0)
+      return yield* commandError(
+        "Repair isn’t available for these services. Run agentd install in a terminal.",
+      );
+    const confirmed = new Set(input.moves);
+    if (problem.moves.length !== confirmed.size || problem.moves.some((n) => !confirmed.has(n)))
+      return yield* commandError(
+        "AgentD’s background services changed since you confirmed Repair. Check what it changes now and confirm again.",
+      );
+    const installed = yield* provideFiles(repairServices(yield* serviceDeps, problem));
+    // A service still on a missing or old agentd, or a watchdog systemd hasn't enabled, after
+    // install is no repair.
+    const after = yield* checkServices();
+    const result = installed.ok && after !== null ? { ...installed, ok: false } : installed;
+    if (result.ok) yield* Effect.logInfo("agentd services repaired on request");
+    else yield* Effect.logWarning("agentd services repair fell short", { result, after });
+    return result;
+  });
+
+  // Until the watchdog runs a working agentd, the listed cloud jobs are synced here, never often.
+  // One sync at a time, beside the list: a slow Job API never holds up the local tasks.
+  const bridgeScope = yield* Scope.Scope;
+  let lastCloudSync = 0;
+  let syncing = false;
+  const syncCloud = Effect.fn("AgentdBridge.syncCloud")(function* (
+    rows: ReadonlyArray<AgentdTaskRow>,
+  ) {
+    if (syncing || !hasOpenCloudJob(rows)) return;
+    const now = yield* Clock.currentTimeMillis;
+    if (now - lastCloudSync < Duration.toMillis(CLOUD_SYNC_INTERVAL)) return;
+    lastCloudSync = now;
+    syncing = true;
+    yield* run(agentdArgs.cloudSync()).pipe(
+      Effect.ignore,
+      Effect.ensuring(
+        Effect.sync(() => {
+          syncing = false;
+        }),
+      ),
+      Effect.forkIn(bridgeScope),
+    );
+  });
+
   const readTasks = run(agentdArgs.list()).pipe(
     Effect.flatMap(decodeList),
     Effect.map((rows) => rows.map(AgentdJson.agentdTaskRow)),
@@ -268,13 +412,36 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     Effect.withSpan("AgentdBridge.eula"),
   );
 
+  const readDoctor = run(agentdArgs.doctor(), { jsonOnFailure: true }).pipe(
+    Effect.flatMap(decodeDoctor),
+  );
+
+  // Once per agent per server run: a registration left pointing at an agentd that moved (another
+  // install folder) is written again by the agentd this server runs. A failed try stays failed.
+  const repairTried = new Set<AgentdWorkerTool>();
+  const repairStaleRegistrations = Effect.fn("AgentdBridge.repairStaleRegistrations")(function* (
+    doctor: AgentdDoctorJson,
+  ) {
+    if (doctor.set_up === false) return doctor;
+    const stale = AgentdJson.staleRegistrations(doctor).filter((tool) => !repairTried.has(tool));
+    if (stale.length === 0) return doctor;
+    for (const tool of stale) repairTried.add(tool);
+    yield* Effect.forEach(
+      stale,
+      (agent) => run(agentdArgs.connectAgent({ agent, dryRun: false })).pipe(Effect.ignore),
+      { discard: true },
+    );
+    return yield* readDoctor.pipe(Effect.orElseSucceed(() => doctor));
+  });
+
   const status: AgentdBridge["Service"]["status"] = Effect.gen(function* () {
-    const [version, doctor] = yield* Effect.all(
-      [run(agentdArgs.version()), run(agentdArgs.doctor(), { jsonOnFailure: true })],
-      { concurrency: 2 },
-    ).pipe(
+    // A problem shown is read again, so services the user fixed by hand stop showing on Refresh.
+    if (servicesProblem !== null) yield* checkServices().pipe(Effect.ignore);
+    const [version, doctor] = yield* Effect.all([run(agentdArgs.version()), readDoctor], {
+      concurrency: 2,
+    }).pipe(
       Effect.flatMap(([version, doctor]) =>
-        Effect.map(decodeDoctor(doctor), (d) => [version, d] as const),
+        Effect.map(repairStaleRegistrations(doctor), (d) => [version, d] as const),
       ),
     );
     // Only a saved acceptance needs the carried version, to see whether agentd would ask again.
@@ -286,24 +453,33 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
           )
         : null;
     const status = AgentdJson.agentdStatus(version, doctor, carried);
-    const defaultWorker = status.setUp
-      ? yield* run(agentdArgs.defaultWorker()).pipe(
-          Effect.map((stdout) => {
-            const worker = stdout.trim();
-            return isDefaultWorker(worker) ? worker : null;
-          }),
-          Effect.orElseSucceed(() => null),
+    const [defaultWorker, dollarBudgets] = status.setUp
+      ? yield* Effect.all(
+          [
+            run(agentdArgs.defaultWorker()).pipe(
+              Effect.map((stdout) => {
+                const worker = stdout.trim();
+                return isDefaultWorker(worker) ? worker : null;
+              }),
+              Effect.orElseSucceed(() => null),
+            ),
+            run(agentdArgs.budgetPrices()).pipe(
+              Effect.map(readDollarBudgets),
+              Effect.orElseSucceed(() => null),
+            ),
+          ],
+          { concurrency: 2 },
         )
-      : null;
-    // The desktop app's last pass installing agentd for the terminal and agents, when it ran one.
-    const recordPath = env.AGENTD_DESKTOP_INSTALL_RECORD?.trim();
-    const install = recordPath
-      ? yield* fs.readFileString(recordPath).pipe(
-          Effect.flatMap(decodeInstallRecord),
-          Effect.orElseSucceed(() => null),
-        )
-      : null;
-    return { ...status, defaultWorker, binary: yield* binary, install };
+      : [null, null];
+    const install = yield* readInstallRecord;
+    return {
+      ...status,
+      defaultWorker,
+      dollarBudgets,
+      binary: yield* binary,
+      install,
+      ...(servicesProblem === null ? {} : { servicesProblem }),
+    };
   }).pipe(Effect.withSpan("AgentdBridge.status"));
 
   // The first read fails the stream; a later failed read keeps the last list until agentd answers.
@@ -319,6 +495,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
         if (!(yield* backgroundPolicy.shouldRunScopeWork(POLL_SCOPE))) {
           return [[], Option.some(previous)] as const;
         }
+        yield* syncCloud(previous);
         const rows = yield* readTasks.pipe(Effect.option);
         if (Option.isNone(rows) || sameRows(previous, rows.value)) {
           return [[], Option.some(previous)] as const;
@@ -470,9 +647,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
 
   const taskOthers = Effect.fn("AgentdBridge.taskOthers")(
     function* ({ cwd, issue }: AgentdTaskOthersInput) {
-      const doctor = yield* run(agentdArgs.doctor(), { jsonOnFailure: true }).pipe(
-        Effect.flatMap(decodeDoctor),
-      );
+      const doctor = yield* readDoctor;
       const team = joinedPerson(doctor);
       if (doctor.set_up === false || team === null) return [];
       const namedUser = env.AGENTD_USER?.trim();
@@ -582,6 +757,8 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     cloudSetup: cloud.cloudSetup,
     cloudReview,
     cloudConfigure: cloud.cloudConfigure,
+    cloudKeyFile,
+    repairServices: repairAgentdServices,
     taskDefaults,
     taskOthers,
     binary,
