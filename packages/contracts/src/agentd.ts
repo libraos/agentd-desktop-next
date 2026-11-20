@@ -244,10 +244,18 @@ export const AgentdServicesProblem = Schema.Struct({
   moves: Schema.Array(AgentdServiceName),
   /** Services on another working agentd that install would also move, so Repair isn't offered. */
   kept: Schema.optionalKey(Schema.Array(AgentdServiceName)),
+  /** Services whose registration couldn't be read (macOS, Windows): install would rewrite them too. */
+  unread: Schema.optionalKey(Schema.Array(AgentdServiceName)),
+  /** Stale services whose program a systemd drop-in sets, which install doesn't rewrite. */
+  overridden: Schema.optionalKey(Schema.Array(AgentdServiceName)),
   /** What agentd install asked the user to run first, before it would enable the services. */
   command: Schema.optionalKey(Schema.String),
 });
 export type AgentdServicesProblem = typeof AgentdServicesProblem.Type;
+
+/** What the user confirmed Repair re-registers: refused when a fresh check would move others. */
+export const AgentdServicesRepairInput = Schema.Struct({ moves: Schema.Array(AgentdServiceName) });
+export type AgentdServicesRepairInput = typeof AgentdServicesRepairInput.Type;
 
 export const AgentdServicesRepairResult = Schema.Struct({
   ok: Schema.Boolean,

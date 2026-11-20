@@ -81,7 +81,10 @@ it("repairs the services only once the user confirms what changes", async () => 
   await page.getByRole("button", { name: "Repair…" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Repair", exact: true }).click();
   await vi.waitFor(() => expect(onRepaired).toHaveBeenCalledOnce());
-  expect(state.repair).toHaveBeenCalledExactlyOnceWith({ environmentId, input: {} });
+  expect(state.repair).toHaveBeenCalledExactlyOnceWith({
+    environmentId,
+    input: { moves: ["watchdog", "dash"] },
+  });
 });
 
 it("offers no Repair when it would also move a service on the user's own AgentD", async () => {
@@ -99,5 +102,23 @@ it("offers no Repair when it would also move a service on the user's own AgentD"
     />,
   );
   await expect.element(page.getByText(/another runs your own AgentD/)).toBeVisible();
+  await expect.element(page.getByRole("button", { name: "Repair…" })).not.toBeInTheDocument();
+});
+
+it("says why there is no Repair for a service it couldn't read", async () => {
+  setup();
+  await using _screen = await render(
+    <AgentdInstallStatus
+      status={status({
+        services: [{ name: "watchdog", program: OLD }],
+        agentd: NEXT,
+        moves: [],
+        unread: ["dash"],
+      })}
+      environmentId={environmentId}
+      onRepaired={vi.fn()}
+    />,
+  );
+  await expect.element(page.getByText(/couldn’t read how one of its background/)).toBeVisible();
   await expect.element(page.getByRole("button", { name: "Repair…" })).not.toBeInTheDocument();
 });

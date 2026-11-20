@@ -402,6 +402,7 @@ import {
   AgentdCloudConfigured,
   AgentdCloudKeyFileCheck,
   AgentdServicesRepairResult,
+  AgentdServicesRepairInput,
   AgentdCloudKeyFileInput,
   AgentdCloudReview,
   AgentdCloudReviewInput,
@@ -2415,7 +2416,7 @@ const WsAgentdCloudKeyFileFixRpc = Rpc.make(WS_METHODS.agentdCloudKeyFileFix, {
 });
 
 const WsAgentdRepairServicesRpc = Rpc.make(WS_METHODS.agentdRepairServices, {
-  payload: Schema.Struct({}),
+  payload: AgentdServicesRepairInput,
   success: AgentdServicesRepairResult,
   error: AgentdRpcError,
 });

@@ -23,6 +23,7 @@ import {
   type AgentdCloudKeyFileInput,
   type AgentdServicesProblem,
   type AgentdServicesRepairResult,
+  type AgentdServicesRepairInput,
   type AgentdTaskDefaults,
   type AgentdTaskDefaultsInput,
   type AgentdCloudTaskInput,
@@ -107,7 +108,9 @@ export class AgentdBridge extends Context.Service<
       makePrivate: boolean,
     ) => Effect.Effect<AgentdCloudKeyFileCheck, AgentdError>;
     /** Re-registers services on a missing or old agentd with this app's; only on the user's say. */
-    readonly repairServices: Effect.Effect<AgentdServicesRepairResult, AgentdError>;
+    readonly repairServices: (
+      input: AgentdServicesRepairInput,
+    ) => Effect.Effect<AgentdServicesRepairResult, AgentdError>;
     readonly taskDefaults: (
       input: AgentdTaskDefaultsInput,
     ) => Effect.Effect<AgentdTaskDefaults, AgentdError>;
@@ -345,16 +348,27 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
   });
   if (serviceDeps !== null) yield* checkServices().pipe(Effect.ignore, Effect.forkScoped);
 
-  const repairAgentdServices = Effect.fn("AgentdBridge.repairServices")(function* () {
+  const repairAgentdServices = Effect.fn("AgentdBridge.repairServices")(function* (
+    input: AgentdServicesRepairInput,
+  ) {
     const problem = serviceDeps === null ? null : yield* checkServices();
     if (serviceDeps === null || problem === null) return { ok: true };
     if (problem.moves.length === 0)
       return yield* commandError(
         "Repair isn’t available for these services. Run agentd install in a terminal.",
       );
-    const result = yield* provideFiles(repairServices(yield* serviceDeps, problem));
-    yield* Effect.logInfo("agentd services repaired on request", result);
-    yield* checkServices();
+    const confirmed = new Set(input.moves);
+    if (problem.moves.length !== confirmed.size || problem.moves.some((n) => !confirmed.has(n)))
+      return yield* commandError(
+        "AgentD’s background services changed since you confirmed Repair. Check what it changes now and confirm again.",
+      );
+    const installed = yield* provideFiles(repairServices(yield* serviceDeps, problem));
+    // A service still on a missing or old agentd after install is no repair.
+    const after = yield* checkServices();
+    const result =
+      installed.ok && (after?.services.length ?? 0) > 0 ? { ...installed, ok: false } : installed;
+    if (result.ok) yield* Effect.logInfo("agentd services repaired on request");
+    else yield* Effect.logWarning("agentd services repair fell short", { result, after });
     return result;
   });
 
@@ -707,7 +721,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     cloudReview,
     cloudConfigure: cloud.cloudConfigure,
     cloudKeyFile,
-    repairServices: repairAgentdServices(),
+    repairServices: repairAgentdServices,
     taskDefaults,
     taskOthers,
     binary,

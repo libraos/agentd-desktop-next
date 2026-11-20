@@ -3086,38 +3086,40 @@
     },
     ", que falta o pertenece al antiguo AgentD Desktop."
   ],
+  "6a59746b82dd08fb": "AgentD no pudo leer cómo está registrado uno de sus servicios en segundo plano, y agentd install también lo reescribiría, así que no se ofrece Reparar. Inténtalo más tarde o ejecuta agentd install en una terminal con el AgentD que usas.",
+  "b2a2dba155789771": "Un drop-in de systemd establece el programa que ejecuta este servicio, y agentd install no cambia los drop-ins, así que no se ofrece Reparar para él. Quita las líneas ExecStart del drop-in en ~/.config/systemd/user y luego ejecuta systemctl --user daemon-reload.",
   "74d5bd28e284fa57": "Uno de los servicios en segundo plano de AgentD ejecuta un AgentD que falta o pertenece al antiguo AgentD Desktop, y otro ejecuta tu propio AgentD. Esta app no tocó ninguno: ejecuta agentd install con el AgentD que usas. Reescribe ambos servicios con el AGENTD_ROOT y AGENTD_DB definidos donde lo ejecutes; si el panel usa los suyos, ejecuta después agentd dash install con ellos.",
   "feed1033187aadc9": "Los servicios en segundo plano de AgentD ejecutan un AgentD que falta o que pertenece al antiguo AgentD Desktop. El AgentD de esta app desaparece al cerrarla, así que no se tocaron: instala agentd para la terminal y luego ejecuta agentd install.",
   "e5409921bb75522c": "Los servicios en segundo plano de AgentD aún no ejecutan el AgentD de esta app: AgentD no los iniciará mientras haya servicios antiguos de AgentD activos. Ejecuta esto y luego agentd install en una terminal.",
   "ef7c30f129576625": "Reparando…",
   "afb4c74d1cc655a7": "Reparar…",
   "dc26fcb837031237": "¿Reparar los servicios en segundo plano de AgentD?",
-  "61ef16efc02ec666": [
-    "Esto ejecuta agentd install con el AgentD de esta app (",
+  "b67927339f1854f8": [
+    "Esto ejecuta agentd install desde el AgentD de esta app (",
     {
       "i": 1,
       "k": "_gt_value_1",
       "v": "v"
     },
-    "). Vuelve a registrar el panel y el watchdog con el AgentD de esta app y su raíz predeterminada; no se conserva el AGENTD_ROOT ni el AGENTD_DB que tengan ahora."
+    "). Vuelve a registrar el panel y el watchdog con el AgentD de esta app y la raíz que usa esta app; no se conserva un AGENTD_ROOT o AGENTD_DB que tengan ahora."
   ],
-  "35559a884c5b7c0e": [
-    "Esto ejecuta agentd dash install con el AgentD de esta app (",
+  "0e47cafe3b9470e4": [
+    "Esto ejecuta agentd dash install desde el AgentD de esta app (",
     {
       "i": 1,
       "k": "_gt_value_1",
       "v": "v"
     },
-    "). Vuelve a registrar el panel con el AgentD de esta app y su raíz predeterminada; no se conserva el AGENTD_ROOT ni el AGENTD_DB que tenga ahora."
+    "). Vuelve a registrar el panel con el AgentD de esta app y la raíz que usa esta app; no se conserva un AGENTD_ROOT o AGENTD_DB que tenga ahora."
   ],
-  "a1427ddb00f318dd": [
-    "Esto ejecuta agentd install con el AgentD de esta app (",
+  "0c8c50c77ace3fcf": [
+    "Esto ejecuta agentd install desde el AgentD de esta app (",
     {
       "i": 1,
       "k": "_gt_value_1",
       "v": "v"
     },
-    "). Vuelve a registrar el watchdog con el AgentD de esta app y su raíz predeterminada; no se conserva el AGENTD_ROOT ni el AGENTD_DB que tenga ahora."
+    "). Vuelve a registrar el watchdog con el AgentD de esta app y la raíz que usa esta app; no se conserva un AGENTD_ROOT o AGENTD_DB que tenga ahora."
   ],
   "97848e9a3bfa3bf6": "Reparar",
   "001d17590be2a445": "AgentD",

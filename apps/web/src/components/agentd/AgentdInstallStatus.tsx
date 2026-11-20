@@ -128,7 +128,7 @@ function ServicesNotice({
     setConfirming(false);
     setRepairing(true);
     setFailure(null);
-    const result = await repairServices({ environmentId, input: {} });
+    const result = await repairServices({ environmentId, input: { moves: problem.moves } });
     setRepairing(false);
     if (result._tag === "Failure") {
       const error = squashAtomCommandFailure(result);
@@ -158,6 +158,24 @@ function ServicesNotice({
           )}
         </p>
       ))}
+      {problem.unread !== undefined && problem.unread.length > 0 ? (
+        <p>
+          <T>
+            AgentD couldn’t read how one of its background services is registered, and agentd
+            install would rewrite it too, so Repair isn’t offered. Try again later, or run agentd
+            install in a terminal with the AgentD you use.
+          </T>
+        </p>
+      ) : null}
+      {problem.overridden !== undefined && problem.overridden.length > 0 ? (
+        <p>
+          <T>
+            A systemd drop-in sets the program this service runs, and agentd install doesn’t change
+            drop-ins, so Repair isn’t offered for it. Remove the ExecStart lines from the drop-in in
+            ~/.config/systemd/user, then run systemctl --user daemon-reload.
+          </T>
+        </p>
+      ) : null}
       {problem.kept !== undefined && problem.kept.length > 0 ? (
         <p>
           <T>
@@ -217,19 +235,19 @@ function ServicesNotice({
               {both ? (
                 <T>
                   This runs agentd install from this app’s AgentD (<Var>{agentd}</Var>). It
-                  re-registers both the dashboard and the watchdog with this app’s AgentD and its
-                  default root; an AGENTD_ROOT or AGENTD_DB they set now isn’t kept.
+                  re-registers both the dashboard and the watchdog with this app’s AgentD and the
+                  root this app uses; an AGENTD_ROOT or AGENTD_DB they set now isn’t kept.
                 </T>
               ) : problem.moves[0] === "dash" ? (
                 <T>
                   This runs agentd dash install from this app’s AgentD (<Var>{agentd}</Var>). It
-                  re-registers the dashboard with this app’s AgentD and its default root; an
+                  re-registers the dashboard with this app’s AgentD and the root this app uses; an
                   AGENTD_ROOT or AGENTD_DB it sets now isn’t kept.
                 </T>
               ) : (
                 <T>
                   This runs agentd install from this app’s AgentD (<Var>{agentd}</Var>). It
-                  re-registers the watchdog with this app’s AgentD and its default root; an
+                  re-registers the watchdog with this app’s AgentD and the root this app uses; an
                   AGENTD_ROOT or AGENTD_DB it sets now isn’t kept.
                 </T>
               )}

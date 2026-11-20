@@ -239,6 +239,18 @@ describe("agentd services", () => {
       });
       expect(yield* repairServices(deps, kept!)).toEqual({ ok: false });
       expect(runs).toEqual([]);
+      // A dash plist that is there but can't be read is not an absent one: install would rewrite it.
+      yield* fs.remove(dashPlist);
+      yield* fs.makeDirectory(dashPlist);
+      expect(yield* detectServices(deps)).toEqual({
+        services: [{ name: "watchdog", program: OLD }],
+        agentd: bundled,
+        moves: [],
+        unread: ["dash"],
+      });
+      yield* fs.remove(dashPlist, { recursive: true });
+      // An absent dash is one install registers too: the confirmation names both.
+      expect(yield* detectServices(deps)).toMatchObject({ moves: ["watchdog", "dash"] });
       yield* fs.writeFileString(dashPlist, plist(bundled));
 
       // Linux: each stale service on its own, the program in effect over the unit's drop-ins.
@@ -263,6 +275,18 @@ describe("agentd services", () => {
       );
       yield* fs.makeDirectory(path.join(units, "agentd-dash.service.d"));
       yield* fs.writeFileString(path.join(units, "agentd-dash.service.d", "exec.conf"), "");
+      // install rewrites only the unit file, so it can't move a program a drop-in sets: no Repair.
+      expect(yield* detectServices(linux)).toEqual({
+        services: [{ name: "watchdog", program: "/gone/agentd" }],
+        agentd: bundled,
+        moves: [],
+        overridden: ["watchdog"],
+      });
+      yield* fs.remove(path.join(units, "agentd-.service.d"), { recursive: true });
+      yield* fs.writeFileString(
+        path.join(units, "agentd-watchdog.service"),
+        "[Service]\nExecStart=/gone/agentd watchdog\n",
+      );
       const watchdog = yield* detectServices(linux);
       expect(watchdog).toEqual({
         services: [{ name: "watchdog", program: "/gone/agentd" }],
@@ -276,7 +300,10 @@ describe("agentd services", () => {
         ["systemctl", "--user", "daemon-reload"],
         ["systemctl", "--user", "enable", "--now", "agentd-watchdog.timer"],
       ]);
-      yield* fs.remove(path.join(units, "agentd-.service.d"), { recursive: true });
+      yield* fs.writeFileString(
+        path.join(units, "agentd-watchdog.service"),
+        `[Service]\nExecStart=${bundled} watchdog\n`,
+      );
 
       // A stale dash alone: Repair runs dash install, and leaves the working watchdog.
       yield* fs.writeFileString(
@@ -344,9 +371,15 @@ describe("agentd services", () => {
       // finding it only queries schtasks. A profile folder with a non-ASCII name, in UTF-16.
       const root = path.join(home, "Work", "..", "José");
       let legacyEnv = path.join(home, "José", "services", "agentd-watchdog.env");
+      let listing: string | null =
+        '"\\Microsoft\\x","N/A","Ready"\r\n"\\LibraOS\\agentd-watchdog","N/A","Ready"\r\n';
+      let dashQuery = "";
       const windowsRun: ProcessRunner.ProcessRunner["Service"]["run"] = (input) => {
         runs.push([input.command, ...input.args]);
         if (input.command !== "schtasks") return Effect.succeed(output(""));
+        if (input.args[1] === "/FO")
+          return Effect.succeed(listing === null ? output("", 1) : output(listing));
+        if (input.args[2]?.includes("agentd-dash")) return Effect.succeed(output(dashQuery, 1));
         const plain = input.args[2] === "\\LibraOS\\agentd-watchdog";
         if (!plain) return Effect.succeed(output("", 1));
         const bytes = Buffer.from(`\uFEFF${task("C:\\gone\\agentd.exe", legacyEnv)}`, "utf16le");
@@ -359,8 +392,18 @@ describe("agentd services", () => {
       expect(stale).toEqual({
         services: [{ name: "watchdog", program: "C:\\gone\\agentd.exe" }],
         agentd: bundled,
-        moves: ["watchdog"],
+        moves: ["watchdog", "dash"],
       });
+      // A dash task that is listed but whose query fails, or no listing at all, isn't taken as
+      // absent: install would re-register it unseen, so no Repair.
+      dashQuery = "ERROR: The RPC server is unavailable.";
+      listing += '"\\LibraOS\\AGENTD-DASH","N/A","Running"\r\n';
+      expect(yield* detectServices(windows)).toMatchObject({ moves: [], unread: ["dash"] });
+      // Without a listing not even the watchdog's per-root name can be ruled out: nothing to say.
+      listing = null;
+      expect(yield* detectServices(windows)).toBe(null);
+      listing = '"\\LibraOS\\agentd-watchdog","N/A","Ready"\r\n';
+      dashQuery = "";
       expect(runs.every(([command]) => command === "schtasks")).toBe(true);
       expect(yield* repairServices(windows, stale!)).toEqual({ ok: true });
       expect(runs.at(-1)).toEqual([bundled, "install"]);

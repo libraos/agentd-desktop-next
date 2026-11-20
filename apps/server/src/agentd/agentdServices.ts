@@ -20,6 +20,7 @@ import type { ProcessRunner } from "../processRunner.ts";
 // install` for a Linux dash). An AppImage's agentd is never registered: its mount goes with the app.
 
 type ServiceName = AgentdServiceName;
+const UNREAD = Symbol("unread");
 const SERVICES: ReadonlyArray<ServiceName> = ["watchdog", "dash"];
 
 /** The old AgentD Desktop's install folder on macOS, Windows or Linux; not AgentD Next's. */
@@ -254,6 +255,16 @@ export function taskProgram(xml: string): string | null {
   return command === undefined ? null : unescapeXml(command.trim()).replace(/^"(.*)"$/, "$1");
 }
 
+/** Whether a `schtasks /Query /FO CSV /NH` listing names the task (names compare without case). */
+function listsTask(listing: string, task: string): boolean {
+  const name = `"${task.toLowerCase()}"`;
+  return listing
+    .replaceAll("\0", "")
+    .toLowerCase()
+    .split(/\r?\n/)
+    .some((line) => line.trimStart().startsWith(name));
+}
+
 /** A Windows root as agentd's task names compare it (schtasksRootKey): cleaned, lower case. */
 function windowsRootKey(root: string): string {
   const cleaned = NodePathPosix.normalize(root.replaceAll("\\", "/"));
@@ -335,38 +346,61 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
   const exec = runner(deps.run);
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const read = (file: string) => fs.readFileString(file).pipe(Effect.option);
+  // A service file that is there but can't be read is UNREAD, never taken as absent.
+  const readService = (file: string) =>
+    fs.readFileString(file).pipe(
+      Effect.map((text): string | null | typeof UNREAD => text),
+      Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(null)),
+      Effect.orElseSucceed(() => UNREAD),
+    );
   const unitDir = path.join(home, ".config", "systemd", "user");
   const names = (dir: string) => fs.readDirectory(dir).pipe(Effect.orElseSucceed(() => []));
   // A unit with its drop-ins, which systemd reads after it: the program it runs in effect.
   const unitText = Effect.fn("AgentdServices.unit")(function* (file: string) {
-    const unit = yield* read(path.join(unitDir, file));
-    if (unit._tag === "None") return null;
+    const unit = yield* readService(path.join(unitDir, file));
+    if (unit === null || unit === UNREAD) return unit;
     // A drop-in file name taken from the most specific folder that has it, read in name order.
     const dropIns = new Map<string, string>();
     for (const dir of dropInDirs(file).toReversed())
       for (const name of yield* names(path.join(unitDir, dir)))
         if (name.endsWith(".conf")) dropIns.set(name, path.join(unitDir, dir, name));
-    let text = unit.value;
+    let text = unit;
     for (const name of [...dropIns.keys()].toSorted()) {
-      const conf = yield* read(dropIns.get(name)!);
-      if (conf._tag === "Some") text += `\n${conf.value}`;
+      const conf = yield* readService(dropIns.get(name)!);
+      if (conf === UNREAD) return UNREAD;
+      if (conf !== null) text += `\n${conf}`;
     }
-    return text;
+    return { unit, text };
   });
+  // Every task Task Scheduler has, read once: a failed query is an absent task only when this
+  // listing reads and doesn't name it (schtasks' own error text is in the system's language).
+  let listing: string | null | undefined;
+  const listed = Effect.fn("AgentdServices.listTasks")(function* (task: string) {
+    if (listing === undefined) {
+      const all = yield* exec("schtasks", ["/Query", "/FO", "CSV", "/NH"]);
+      listing = all.ok ? all.text : null;
+    }
+    return listing === null ? UNREAD : listsTask(listing, task);
+  });
+  // Services whose program a drop-in sets: agentd install rewrites only the unit file itself.
+  const overridden: ServiceName[] = [];
   const program = Effect.fn("AgentdServices.program")(function* (name: ServiceName) {
     if (platform === "darwin") {
-      const plist = yield* read(
+      const plist = yield* readService(
         path.join(home, "Library", "LaunchAgents", `com.libraos.agentd.${name}.plist`),
       );
-      return plist._tag === "None" ? null : plistProgram(plist.value);
+      return plist === null || plist === UNREAD ? plist : plistProgram(plist);
     }
     if (platform === "win32") {
       const names = taskNames(name, root);
       const legacy = names[1];
       for (const task of names) {
         const query = yield* exec("schtasks", ["/Query", "/TN", task, "/XML"]);
-        if (!query.ok) continue;
+        if (!query.ok) {
+          const there = yield* listed(task);
+          if (there === false) continue;
+          return UNREAD;
+        }
         const envFile = taskEnvFile(query.text);
         // The plain legacy name may be another root's task: only one whose env file is this root's.
         const owner =
@@ -383,19 +417,22 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
       return null;
     }
     const unit = yield* unitText(`agentd-${name}.service`);
-    return unit === null ? null : unitProgram(unit, home);
+    if (unit === null || unit === UNREAD) return unit;
+    const runs = unitProgram(unit.text, home);
+    if (runs !== null && runs !== unitProgram(unit.unit, home)) overridden.push(name);
+    return runs;
   });
 
   const agentd = target ?? bundled;
-  const found: ServiceName[] = [];
   const services: Array<{ name: ServiceName; program: string }> = [];
   // Services on another working agentd, the user's own: never moved.
   const kept: ServiceName[] = [];
+  const unread: ServiceName[] = [];
   let watchdogOnTarget = false;
   for (const name of SERVICES) {
     const runs = yield* program(name);
-    if (runs === null) continue;
-    found.push(name);
+    if (runs === UNREAD) unread.push(name);
+    if (runs === null || runs === UNREAD) continue;
     const exists = yield* fs.exists(runs).pipe(Effect.orElseSucceed(() => false));
     if (isStaleProgram(runs, exists, agentd)) services.push({ name, program: runs });
     else if (runs !== agentd) kept.push(name);
@@ -419,24 +456,29 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
       command = `systemctl --user disable --now ${legacy.join(" ")}`;
   }
   if (services.length === 0 && command === null) return null;
-  // install rewrites both services on macOS and Windows, so it would move one kept on the user's
-  // agentd too: no Repair then. On Linux each service is re-registered on its own.
+  // install registers both services on macOS and Windows, absent ones included, so it would move
+  // one kept on the user's agentd or one it couldn't read too: no Repair then, and the user
+  // confirms both. On Linux each service is re-registered on its own, unless a drop-in sets it.
   const linux = platform !== "darwin" && platform !== "win32";
-  const blocked = target === null || (!linux && kept.length > 0);
+  const blocked = target === null || (!linux && (kept.length > 0 || unread.length > 0));
+  const stuck = overridden.filter((name) => services.some((service) => service.name === name));
   const moves = blocked
     ? []
     : linux
       ? SERVICES.filter(
           (name) =>
-            services.some((service) => service.name === name) ||
-            (name === "watchdog" && command !== null),
+            !stuck.includes(name) &&
+            (services.some((service) => service.name === name) ||
+              (name === "watchdog" && command !== null)),
         )
-      : found;
+      : SERVICES;
   return {
     services,
     agentd: target,
     moves,
     ...(kept.length > 0 ? { kept } : {}),
+    ...(!linux && unread.length > 0 ? { unread } : {}),
+    ...(stuck.length > 0 ? { overridden: stuck } : {}),
     ...(command === null ? {} : { command }),
   } satisfies AgentdServicesProblem;
 });

@@ -446,6 +446,46 @@ describe("AgentdBridge", () => {
     }),
   );
 
+  it.effect("repairs services only as confirmed, and says so only once they run this agentd", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const home = yield* fs.makeTempDirectoryScoped();
+      const units = path.join(home, ".config", "systemd", "user");
+      yield* fs.makeDirectory(units, { recursive: true });
+      const unit = path.join(units, "agentd-watchdog.service");
+      yield* fs.writeFileString(unit, "[Service]\nExecStart=/gone/agentd watchdog\n");
+      let rewrites = false;
+      const runs: Array<string> = [];
+      const bridge = yield* makeBridge(
+        { PATH: "", AGENTD_BIN: process.execPath, AGENTD_DESKTOP_BUNDLED: "1" },
+        (input) => {
+          runs.push([input.command, ...input.args].join(" "));
+          if (input.args[0] !== "install") return Effect.succeed(output(""));
+          const written = rewrites
+            ? fs.writeFileString(unit, `[Service]\nExecStart=${process.execPath} watchdog\n`)
+            : Effect.void;
+          return written.pipe(
+            Effect.orDie,
+            Effect.as(output("then: systemctl --user enable --now agentd-watchdog.timer\n")),
+          );
+        },
+      ).pipe(
+        Effect.provideService(HostProcess.Platform, "linux"),
+        Effect.provideService(HostProcess.HomeDirectory, home),
+      );
+      // A scope other than the one confirmed now: refused, nothing run.
+      expect(
+        yield* Effect.flip(bridge.repairServices({ moves: ["watchdog", "dash"] })),
+      ).toMatchObject({ _tag: "AgentdCommandError" });
+      expect(runs.filter((run) => run.includes("install"))).toEqual([]);
+      // An install that leaves the stale program in effect is no repair.
+      expect(yield* bridge.repairServices({ moves: ["watchdog"] })).toEqual({ ok: false });
+      rewrites = true;
+      expect(yield* bridge.repairServices({ moves: ["watchdog"] })).toEqual({ ok: true });
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
   it.effect("answers every method with AgentdNotFoundError when there is no agentd", () =>
     Effect.gen(function* () {
       const bridge = yield* makeBridge({ PATH: "" }, () => Effect.die("agentd must not run"));
