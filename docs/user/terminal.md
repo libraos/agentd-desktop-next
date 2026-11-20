@@ -27,14 +27,6 @@ This setting belongs to the machine hosting the server, including when you
 connect from another device. It does not change provider-run commands or the
 shell used by automatic project setup and settle scripts.
 
-## Opening beside the agent's work
-
-In a Code thread, the right panel opens on the terminal when the agent runs a
-command and on the browser when it uses the app's browser. The terminal is a
-shell of your own in the project; the agent's command output stays in the
-conversation. If you close the panel, that thread stops opening it. Turn this
-off in **Settings > Chat > Open the terminal and browser as the agent uses them**.
-
 ## Terminal history
 
 Each terminal keeps up to 5,000 lines and 8 MiB of scrollback on its environment

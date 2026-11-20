@@ -510,9 +510,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "agent-work-panels",
-    title: msg("Open the terminal and browser as the agent uses them"),
+    title: msg("Open the browser as the agent uses it"),
     to: "/settings/chat",
-    searchTerms: [msg("automatically open right panel terminal browser code layout agent command")],
+    searchTerms: [msg("automatically open right panel browser code layout agent")],
   },
   {
     id: "tool-call-visibility",

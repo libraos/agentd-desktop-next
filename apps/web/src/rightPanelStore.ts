@@ -157,10 +157,7 @@ interface RightPanelStoreState {
     activateExisting?: boolean,
   ) => boolean;
   /** Shows a tab for the agent's work without moving focus; refused once the user closed the panel. */
-  openForAgentWork: (
-    ref: ScopedThreadRef,
-    target: { kind: "surface"; surfaceId: string } | { kind: "terminal"; terminalId: string },
-  ) => boolean;
+  openForAgentWork: (ref: ScopedThreadRef, surfaceId: string) => boolean;
   open: (
     ref: ScopedThreadRef,
     kind: Exclude<RightPanelKind, "file" | "terminal" | "pull-request" | "issue" | "side-chat">,
@@ -802,16 +799,12 @@ export const useRightPanelStore = create<RightPanelStoreState>()(
         });
         return opened;
       },
-      openForAgentWork: (ref, target) => {
+      openForAgentWork: (ref, surfaceId) => {
         let opened = false;
         set((state) =>
           automaticUpdate(state, scopedThreadKey(ref), (current) => {
             if (current.agentWorkPanelsDismissed) return current;
-            if (target.kind === "terminal") {
-              opened = true;
-              return upsertSurface(current, terminalSurface(target.terminalId));
-            }
-            const next = activated(current, target.surfaceId);
+            const next = activated(current, surfaceId);
             opened = next !== current;
             return next;
           }),

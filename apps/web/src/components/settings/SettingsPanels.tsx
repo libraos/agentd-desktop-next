@@ -570,7 +570,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       ? [gt("Open pull requests and changes panels proactively")]
       : []),
     ...(settings.agentWorkPanelsEnabled !== DEFAULT_UNIFIED_SETTINGS.agentWorkPanelsEnabled
-      ? [gt("Open the terminal and browser as the agent uses them")]
+      ? [gt("Open the browser as the agent uses it")]
       : []),
     ...(settings.showSkillsInSlashMenu !== DEFAULT_UNIFIED_SETTINGS.showSkillsInSlashMenu
       ? [gt("Show skills in slash menu")]
@@ -1404,12 +1404,12 @@ export function ChatSettingsPanel() {
         <SettingsRow
           {...setting("agent-work-panels")}
           description={gt(
-            "In Code threads, show the terminal when the agent runs a command and the browser when it uses one. Closing the panel stops this for that thread.",
+            "In Code threads, show the browser beside the conversation when the agent uses it. Closing the panel stops this for that thread.",
           )}
           resetAction={
             settings.agentWorkPanelsEnabled !== DEFAULT_UNIFIED_SETTINGS.agentWorkPanelsEnabled ? (
               <SettingResetButton
-                ariaLabel={gt("Reset opening the terminal and browser to default")}
+                ariaLabel={gt("Reset opening the browser for the agent to default")}
                 onClick={() =>
                   updateSettings({
                     agentWorkPanelsEnabled: DEFAULT_UNIFIED_SETTINGS.agentWorkPanelsEnabled,
@@ -1424,7 +1424,7 @@ export function ChatSettingsPanel() {
               onCheckedChange={(checked) =>
                 updateSettings({ agentWorkPanelsEnabled: Boolean(checked) })
               }
-              aria-label={gt("Open the terminal and browser as the agent uses them")}
+              aria-label={gt("Open the browser as the agent uses it")}
             />
           }
         />
