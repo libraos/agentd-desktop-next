@@ -13,6 +13,7 @@ import * as TestClock from "effect/testing/TestClock";
 import * as BackgroundPolicy from "../background/BackgroundPolicy.ts";
 import * as ProcessRunner from "../processRunner.ts";
 import * as AgentdBridge from "./AgentdBridge.ts";
+import { RESERVE_ATTEMPT, releaseRecord } from "./agentdCloudSubmissions.ts";
 
 // Recorded from agentd v0.1.13 (`handoff list --json`, `handoff show ID --json`, `doctor --json`),
 // trimmed; unknown keys stay to show they are ignored.
@@ -620,6 +621,33 @@ describe("AgentdBridge", () => {
       );
       yield* Effect.flip(bridge.startTask({ ...input, cloud: { ...byok, budget: "20m" } }));
       expect(JSON.stringify(runs)).not.toContain(pastedKey);
+      // A key file in the other provider's field is refused here, for callers that can't check it.
+      const keys = yield* Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const dir = yield* fs.makeTempDirectoryScoped();
+        const anthropic = path.join(dir, "anthropic.key");
+        const openai = path.join(dir, "openai.key");
+        yield* fs.writeFileString(anthropic, "sk-ant-api03-example\n");
+        yield* fs.writeFileString(openai, "  sk-proj-example\n");
+        return { anthropic, openai };
+      }).pipe(Effect.provide(NodeServices.layer));
+      const before = offers().length;
+      expect(
+        (yield* Effect.flip(
+          bridge.startTask({ ...input, cloud: { ...byok, openaiKeyFile: keys.anthropic } }),
+        )).message,
+      ).toBe(
+        "The file in the OpenAI key field holds an Anthropic key, so nothing was submitted. Put each key file in its own provider’s field.",
+      );
+      expect(
+        (yield* Effect.flip(
+          bridge.startTask({
+            ...input,
+            cloud: { modelAccess: "byok", budget: "20m,$8", anthropicKeyFile: keys.openai },
+          }),
+        )).message,
+      ).toContain("Anthropic key field holds an OpenAI key");
+      expect(offers()).toHaveLength(before);
 
       receipt =
         '{"handoff":"hof-abc123","cloud":{"state":"submitting","error":"402: insufficient credit"}}';
@@ -1130,6 +1158,34 @@ describe("AgentdBridge", () => {
       yield* Effect.flip(bridge.startTask(input));
       expect(keys()).toHaveLength(3);
       expect(new Set(keys()).size).toBe(1);
+
+      // A refused draft retried after a top-up, whose answer is lost: the release of the refused
+      // offer says nothing of the retry, so a different draft must ask before replacing it.
+      ledger = cloudLedger();
+      runs.length = 0;
+      offerSays = "error: 402: insufficient credit";
+      yield* Effect.flip(bridge.startTask(input));
+      offerSays = "error: runner unavailable";
+      expect(yield* Effect.flip(bridge.startTask(input))).toMatchObject({ outcomeUnknown: true });
+      expect(
+        yield* Effect.flip(bridge.startTask({ ...input, goal: "Retry aftermath" })),
+      ).toMatchObject({ replaceSubmission: keys()[0] });
+      expect(keys()).toHaveLength(2);
+      // A release written late, by a server whose earlier offer was refused, doesn't apply either.
+      ledger.pins.push({
+        session: ledger.pins[0]!.session,
+        text: releaseRecord(keys()[0]!, RESERVE_ATTEMPT),
+      });
+      expect(
+        yield* Effect.flip(bridge.startTask({ ...input, goal: "Retry aftermath" })),
+      ).toMatchObject({ replaceSubmission: keys()[0] });
+      ledger = cloudLedger();
+      runs.length = 0;
+      yield* Effect.flip(bridge.startTask(input));
+      offerSays = "error: 402: insufficient credit";
+      yield* Effect.flip(bridge.startTask(input));
+      yield* Effect.flip(bridge.startTask(input));
+      offerSays = "error: runner unavailable";
 
       // After a refusal, a different draft whose outcome is lost is the one a third must replace.
       offerSays = "error: runner unavailable";

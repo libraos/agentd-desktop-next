@@ -1022,7 +1022,7 @@ it.each([
     await using _screen = await render(
       <AppAtomRegistryProvider>
         <ToastProvider>
-          <TaskDraftCard threadRef={threadRef} fields={drafted} />
+          <TaskDraftCard threadRef={threadRef} fields={{ ...drafted, budget: "30m,$2" }} />
           <StartTaskDialogHost />
         </ToastProvider>
       </AppAtomRegistryProvider>,
@@ -1030,6 +1030,10 @@ it.each([
     const card = page.getByRole("region", { name: "Drafted task" });
     await expect.element(card.getByText(reason)).toBeVisible();
     await expect.element(card.getByRole("button", { name: "Start" })).toBeDisabled();
+    // The cap shown is the cloud's, never the drafted local budget.
+    await expect
+      .element(card.getByText("Cloud Workers · budget up to $5.00 · check: pnpm test"))
+      .toBeVisible();
     await card.getByRole("button", { name: "Retry" }).click();
     expect(state.cloudRefresh).toHaveBeenCalled();
 

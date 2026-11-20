@@ -239,8 +239,8 @@ export const AgentdServicesRepair = Schema.Struct({
   /** What agentd install asked the user to run first, before it would enable the services. */
   command: Schema.optionalKey(Schema.String),
   /**
-   * Why nothing was moved: the services name two ledgers, the Linux watchdog names a ledger its
-   * new unit would drop, or the app's agentd is in an AppImage mount gone when the app quits.
+   * Why nothing was moved: Windows services name two ledgers, a Linux service names a ledger its
+   * new unit would drop or one the app can't tell, or the app's agentd is in an AppImage mount.
    */
   reason: Schema.optionalKey(Schema.Literals(["ledgers", "ledger", "transient"])),
 });

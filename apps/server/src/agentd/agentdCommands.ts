@@ -214,18 +214,18 @@ export const agentdArgs = {
     session,
     "--json",
   ],
-  attemptSubmission: (session: string, id: string, fingerprint: string) => [
+  attemptSubmission: (session: string, id: string, fingerprint: string, nonce: string) => [
     "pin",
     "add",
-    attemptRecord(id, fingerprint),
+    attemptRecord(id, fingerprint, nonce),
     "--session",
     session,
     "--json",
   ],
-  releaseSubmission: (session: string, id: string) => [
+  releaseSubmission: (session: string, id: string, nonce: string) => [
     "pin",
     "add",
-    releaseRecord(id),
+    releaseRecord(id, nonce),
     "--session",
     session,
     "--json",

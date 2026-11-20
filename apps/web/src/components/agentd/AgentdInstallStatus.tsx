@@ -39,15 +39,15 @@ export function AgentdInstallStatus({ status }: { status: AgentdStatus }) {
             <T>
               AgentD’s background services run an AgentD that is missing or belongs to the old
               AgentD Desktop, and they use two different AgentD ledgers. This app left them alone:
-              run agentd install for each ledger, with its AGENTD_ROOT and AGENTD_DB set as that
-              service has them.
+              in a terminal, run agentd install with the watchdog’s AGENTD_ROOT and AGENTD_DB set,
+              then agentd dash install with the dashboard’s.
             </T>
           ) : repair.reason === "ledger" ? (
             <T>
-              AgentD’s watchdog runs an AgentD that is missing or belongs to the old AgentD Desktop,
-              and its service sets its own AGENTD_ROOT or AGENTD_DB, which agentd install would not
-              keep. This app left it alone: run agentd install in a terminal, then set those for the
-              agentd-watchdog service again.
+              One of AgentD’s background services runs an AgentD that is missing or belongs to the
+              old AgentD Desktop, and it sets its own AGENTD_ROOT or AGENTD_DB in a way agentd
+              install would not keep. This app left it alone: run agentd install and agentd dash
+              install in a terminal, then set those for that service again.
             </T>
           ) : repair.reason === "transient" ? (
             <T>
@@ -58,9 +58,9 @@ export function AgentdInstallStatus({ status }: { status: AgentdStatus }) {
           ) : repair.command !== undefined ? (
             <>
               <T>
-                AgentD’s background services run an AgentD that is missing or belongs to the old
-                AgentD Desktop. AgentD won’t start them while older AgentD services are on: run
-                this, then agentd install, in a terminal.
+                AgentD’s background services aren’t running this app’s AgentD yet: AgentD won’t
+                start them while older AgentD services are on. Run this, then agentd install, in a
+                terminal.
               </T>
               <code className="mt-1 block whitespace-pre-wrap break-words rounded-md bg-muted px-2 py-1 text-xs text-foreground">
                 {repair.command}

@@ -187,9 +187,11 @@ export function useTaskPlan({
     ? cloud.checkingBalance
     : cloud.waiting || (cwd !== null && git.data === null);
 
-  const capText = cloud.enabled
-    ? money(Number(cloud.dollars) || 0)
-    : money(Number(/\$([\d.]+)/.exec(validation.input.budget)?.[1] ?? 0));
+  // Still asked for the cloud while its probe is unanswered: the cap is the cloud's, not the local one.
+  const capText =
+    cloud.enabled || cloud.waiting
+      ? money(Number(cloud.dollars) || 0)
+      : money(Number(/\$([\d.]+)/.exec(validation.input.budget)?.[1] ?? 0));
   const models = cloud.enabled
     ? cloud.modelAccess === "libraos"
       ? gt("LibraOS models")

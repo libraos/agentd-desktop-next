@@ -22,7 +22,9 @@ import type { ProcessRunner } from "../processRunner.ts";
 import {
   currentReservation,
   foundHandoffs,
+  newAttempt,
   nextSubmissionId,
+  RESERVE_ATTEMPT,
   type Reservation,
   submissionFingerprint,
   submissionMarker,
@@ -248,8 +250,10 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
     build: () => ReadonlyArray<string>,
   ) => Effect.Effect<ReadonlyArray<string>, AgentdError>;
   readonly platform: string;
+  /** Whose key a file on this host holds; null when it can't be read or told. */
+  readonly keyProvider: (path: string) => Effect.Effect<"anthropic" | "openai" | null>;
 }) {
-  const { binary, run, runProcess, isAbsolute, args, platform } = deps;
+  const { binary, run, runProcess, isAbsolute, args, platform, keyProvider } = deps;
   // A second Start for a project waits on agentd's answer to the first, in this server too.
   const inFlight = new Set<string>();
   const capabilities = yield* Cache.makeWith(
@@ -490,6 +494,23 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
           "Enter at least one absolute provider key-file path on the selected machine.",
         );
       }
+      // agentd reads either field's file as a key, so a swapped file fails only on the worker.
+      // Checked here too, for callers that can't read files: only a recognised other provider's
+      // key is refused, and an unreadable file stays agentd's to report.
+      const fields = [
+        ["anthropic", input.cloud.anthropicKeyFile],
+        ["openai", input.cloud.openaiKeyFile],
+      ] as const;
+      for (const [field, file] of fields) {
+        if (file === undefined) continue;
+        const holds = yield* keyProvider(file);
+        if (holds !== null && holds !== field)
+          return yield* commandError(
+            field === "openai"
+              ? "The file in the OpenAI key field holds an Anthropic key, so nothing was submitted. Put each key file in its own provider’s field."
+              : "The file in the Anthropic key field holds an OpenAI key, so nothing was submitted. Put each key file in its own provider’s field.",
+          );
+      }
     }
     const found = yield* cloudAgentd;
     if (found === null)
@@ -556,8 +577,8 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
     // agentd refused the offer before making a task, so the next Start need not ask before reusing
     // its key. The key itself is never given up: another server sharing this ledger may be offering
     // under it right now, and only one key per reservation keeps that to one paid job.
-    const release = (id: string) =>
-      agentd(() => agentdArgs.releaseSubmission(session, id)).pipe(Effect.ignore);
+    const release = (id: string, attempt: string) =>
+      agentd(() => agentdArgs.releaseSubmission(session, id, attempt)).pipe(Effect.ignore);
     const remember = (id: string, handoff: string) =>
       agentd(() => agentdArgs.rememberSubmission(session, id, handoff)).pipe(Effect.ignore);
     const alreadyRecorded = (handoff: string): AgentdStartTaskResult => ({
@@ -568,6 +589,8 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
 
     const current = yield* reservation;
     let submission: string;
+    // This offer, which a refusal releases: never an earlier or later one under the same key.
+    let attempt = RESERVE_ATTEMPT;
     if (current !== null && current.handoff === null) {
       const handoff = yield* recorded(current.id);
       if (handoff !== null) {
@@ -588,15 +611,18 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       // The same key again: agentd's --idem makes this the earlier offer, never a second one; a
       // different draft under it is refused once the earlier one made a task, and found above.
       submission = current.id;
-      // Recorded first, so a lost answer for this draft asks the next different one to replace it.
-      if (current.fingerprint !== fingerprint)
-        yield* agentd(() => agentdArgs.attemptSubmission(session, submission, fingerprint)).pipe(
-          Effect.mapError(() =>
-            commandError(
-              "AgentD couldn’t reserve this Cloud Workers submission, so nothing was submitted.",
-            ),
+      // Recorded first, so a lost answer for this offer, even a retry of the same draft, asks the
+      // next different one to replace it.
+      attempt = newAttempt();
+      yield* agentd(() =>
+        agentdArgs.attemptSubmission(session, submission, fingerprint, attempt),
+      ).pipe(
+        Effect.mapError(() =>
+          commandError(
+            "AgentD couldn’t reserve this Cloud Workers submission, so nothing was submitted.",
           ),
-        );
+        ),
+      );
     } else {
       if (current !== null && current.handoff !== null) {
         const holder = current.handoff;
@@ -662,7 +688,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
           if (reason === null || said === null || !refusedBeforeTask(said))
             return Effect.fail(unknownOutcome());
           const privateFile = said ? openKeyFile(said) : null;
-          return release(submission).pipe(
+          return release(submission, attempt).pipe(
             Effect.andThen(
               Effect.fail(
                 new AgentdCommandError({
@@ -680,7 +706,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       const error = offered.failure;
       if (error._tag !== "AgentdCommandError") return yield* error;
       if (error.notSetUp) {
-        yield* release(submission);
+        yield* release(submission, attempt);
         return yield* offerError(error.message, true);
       }
       return yield* reconcile(error.message);

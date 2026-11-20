@@ -5,13 +5,17 @@ import type { AgentdCloudTaskInput } from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
 
 // A paid cloud offer is reserved per GitHub project as pins, in order: `{id, after, fingerprint}`,
-// `{id, attempt: fingerprint}` before a different draft goes under it, `{id, released: true}` after
-// a refusal of the latest draft, `{id, handoff}` once agentd names the task. The id is the offer's
-// --idem and --state marker; a refusal keeps it, as another server may still offer under it.
+// `{id, attempt: fingerprint, nonce}` before each later offer, `{id, released: true, nonce}` after
+// agentd refused that offer ("reserve" for the first), `{id, handoff}` once agentd names the task.
+// The id is the offer's --idem and --state marker; a refusal keeps it for other servers' offers.
 
 const SUBMISSION_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-8[a-f0-9]{3}-8[a-f0-9]{3}-[a-f0-9]{12}$/;
 const HANDOFF_ID = /^hof-[0-9a-f]{6,32}$/;
 const FINGERPRINT = /^[a-f0-9]{64}$/;
+const NONCE = /^[a-z0-9-]{1,64}$/;
+/** The attempt a reservation's own offer is, which its release names. */
+export const RESERVE_ATTEMPT = "reserve";
+export const newAttempt = () => NodeCrypto.randomUUID();
 
 const isSubmissionId = (value: string) => SUBMISSION_ID.test(value);
 
@@ -67,8 +71,16 @@ const decodeRecord = Schema.decodeUnknownOption(
   Schema.fromJsonString(
     Schema.Union([
       Schema.Struct({ id: Schema.String, handoff: Schema.String }),
-      Schema.Struct({ id: Schema.String, released: Schema.Literal(true) }),
-      Schema.Struct({ id: Schema.String, attempt: Schema.String }),
+      Schema.Struct({
+        id: Schema.String,
+        released: Schema.Literal(true),
+        nonce: Schema.optionalKey(Schema.String),
+      }),
+      Schema.Struct({
+        id: Schema.String,
+        attempt: Schema.String,
+        nonce: Schema.optionalKey(Schema.String),
+      }),
       Schema.Struct({
         id: Schema.String,
         after: Schema.NullOr(Schema.String),
@@ -85,15 +97,17 @@ export function reserveRecord(id: string, after: string | null, fingerprint: str
   return JSON.stringify({ id, after, fingerprint });
 }
 
-export function releaseRecord(id: string): string {
+export function releaseRecord(id: string, nonce: string): string {
   if (!isSubmissionId(id)) throw new Error("not a cloud submission id");
-  return JSON.stringify({ id, released: true });
+  if (!NONCE.test(nonce)) throw new Error("not a submission attempt");
+  return JSON.stringify({ id, released: true, nonce });
 }
 
-export function attemptRecord(id: string, fingerprint: string): string {
+export function attemptRecord(id: string, fingerprint: string, nonce: string): string {
   if (!isSubmissionId(id)) throw new Error("not a cloud submission id");
   if (!FINGERPRINT.test(fingerprint)) throw new Error("not a submission fingerprint");
-  return JSON.stringify({ id, attempt: fingerprint });
+  if (!NONCE.test(nonce) || nonce === RESERVE_ATTEMPT) throw new Error("not a submission attempt");
+  return JSON.stringify({ id, attempt: fingerprint, nonce });
 }
 
 export function handoffRecord(id: string, handoff: string): string {
@@ -115,8 +129,11 @@ export function currentReservation(
   const successors = new Map<string | null, { id: string; fingerprint: string }>();
   const handoffs = new Map<string, string>();
   const released = new Set<string>();
-  // Each id's latest different draft, which a release after it applies to.
+  // Each id's latest draft, which a release after it applies to.
   const attempts = new Map<string, string>();
+  // Each id's latest attempt: a release naming another attempt is about an earlier offer. An
+  // attempt pin without a nonce (older versions) can be released only by a release without one.
+  const latest = new Map<string, string | null>();
   for (const raw of pins.value) {
     const pin = decodePin(raw);
     if (pin._tag === "None" || (pin.value.session !== undefined && pin.value.session !== session))
@@ -125,10 +142,12 @@ export function currentReservation(
     if (record._tag === "None" || !isSubmissionId(record.value.id)) continue;
     const value = record.value;
     if ("released" in value) {
-      released.add(value.id);
+      const attempt = latest.has(value.id) ? latest.get(value.id) : RESERVE_ATTEMPT;
+      if (value.nonce === undefined || value.nonce === attempt) released.add(value.id);
     } else if ("attempt" in value) {
       if (FINGERPRINT.test(value.attempt)) {
         attempts.set(value.id, value.attempt);
+        latest.set(value.id, value.nonce ?? null);
         released.delete(value.id);
       }
     } else if ("handoff" in value) {

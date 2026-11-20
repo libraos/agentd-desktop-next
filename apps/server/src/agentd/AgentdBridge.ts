@@ -269,6 +269,12 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     return output.stdout;
   });
 
+  const cloudKeyFile = makeCloudKeyFile({
+    isAbsolute: pathService.isAbsolute,
+    platform,
+    uid: process.getuid?.(),
+  });
+
   const cloud = yield* makeAgentdCloud({
     binary,
     run,
@@ -276,12 +282,11 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     isAbsolute: pathService.isAbsolute,
     args,
     platform,
-  });
-
-  const cloudKeyFile = makeCloudKeyFile({
-    isAbsolute: pathService.isAbsolute,
-    platform,
-    uid: process.getuid?.(),
+    keyProvider: (path) =>
+      cloudKeyFile({ path }, false).pipe(
+        Effect.map((check) => check.provider),
+        Effect.orElseSucceed(() => null),
+      ),
   });
 
   const readShow = (id: string) =>
