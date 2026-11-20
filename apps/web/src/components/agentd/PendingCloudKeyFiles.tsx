@@ -6,22 +6,23 @@ import { useEffect } from "react";
 import { useAgentdTasks } from "~/lib/agentdState";
 import { appAtomRegistry } from "~/rpc/atomRegistry";
 import { rememberCloudKeyFiles } from "./rememberKeyFiles";
+import {
+  type PendingKeyFiles,
+  samePending,
+  storedPendingKeyFiles,
+  storePendingKeyFiles,
+} from "./pendingKeyFiles.logic";
 import { cloudOfferEnded, cloudOfferStarted } from "./startTask.logic";
 
-interface PendingKeyFiles {
-  readonly environmentId: EnvironmentId;
-  readonly taskId: string;
-  readonly submitted: AgentdCloudTaskInput["cloud"];
-}
-
-const pendingKeyFiles = Atom.make<ReadonlyArray<PendingKeyFiles>>([]).pipe(
+const pendingKeyFiles = Atom.make<ReadonlyArray<PendingKeyFiles>>(storedPendingKeyFiles()).pipe(
   Atom.keepAlive,
   Atom.withLabel("agentd:pending-cloud-key-files"),
 );
 
 /**
  * The BYOK paths sent with a cloud task agentd saved but didn't confirm: saved once the synced
- * task list shows it started, whether or not the dialog or card that started it is still open.
+ * task list shows it started, whether or not the dialog or card that started it is still open,
+ * and after a reload too.
  */
 export function followCloudKeyFiles(
   environmentId: EnvironmentId,
@@ -29,16 +30,20 @@ export function followCloudKeyFiles(
   submitted: AgentdCloudTaskInput["cloud"],
 ) {
   if (submitted.modelAccess !== "byok") return;
-  const others = appAtomRegistry
-    .get(pendingKeyFiles)
-    .filter((entry) => entry.environmentId !== environmentId || entry.taskId !== taskId);
-  appAtomRegistry.set(pendingKeyFiles, [...others, { environmentId, taskId, submitted }]);
+  const entry = { environmentId, taskId, submitted };
+  appAtomRegistry.set(
+    pendingKeyFiles,
+    storePendingKeyFiles((stored) => [
+      ...stored.filter((other) => !samePending(other, entry)),
+      entry,
+    ]),
+  );
 }
 
 function settle(entry: PendingKeyFiles) {
   appAtomRegistry.set(
     pendingKeyFiles,
-    appAtomRegistry.get(pendingKeyFiles).filter((other) => other !== entry),
+    storePendingKeyFiles((stored) => stored.filter((other) => !samePending(other, entry))),
   );
 }
 
