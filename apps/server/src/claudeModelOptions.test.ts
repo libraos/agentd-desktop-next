@@ -105,6 +105,29 @@ describe("compileClaudeModelSelection", () => {
     ).toMatchObject({ effort: "high", promptEffort: "ultrathink" });
   });
 
+  it("compiles a Gateway's family-prefixed catalog id with that catalog model's options", () => {
+    const catalog = scopeClaudeModelCatalog(BUNDLED_CLAUDE_MODEL_CATALOG, [
+      { slug: "anthropic/claude-opus-5-5", subProvider: "anthropic" },
+    ]);
+    const options = [
+      { id: "effort", value: "high" },
+      { id: "thinking", value: false },
+    ];
+    const {
+      apiModelId,
+      queryIdentity: _full,
+      ...compiled
+    } = compileClaudeModelSelection(selection("anthropic/claude-opus-5-5", options), catalog);
+    expect(apiModelId).toBe("anthropic/claude-opus-5-5");
+    const {
+      apiModelId: _bare,
+      queryIdentity: _own,
+      ...own
+    } = compileClaudeModelSelection(selection("claude-opus-5-5", options), catalog);
+    expect(compiled).toEqual(own);
+    expect(compiled.settings).not.toHaveProperty("alwaysThinkingEnabled");
+  });
+
   it("ignores thinking for catalog models without a thinking option", () => {
     expect(
       compileClaudeModelSelection(selection("claude-opus-5-5", [{ id: "thinking", value: false }]))

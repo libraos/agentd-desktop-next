@@ -9,6 +9,7 @@ import {
 import type { ModelInfo as ClaudeModelInfo } from "@anthropic-ai/claude-agent-sdk";
 import * as Option from "effect/Option";
 import {
+  familyCatalogSlug,
   getModelSelectionStringOptionValue,
   getProviderOptionCurrentValue,
   getProviderOptionDescriptors,
@@ -147,13 +148,17 @@ export function scopeClaudeModelCatalog(
   const builtInSlugs = new Set(builtInModels.map((entry) => entry.model.slug));
   const customCatalogModels: Array<ClaudeCatalogModel> = [];
   for (const entry of customEntries) {
-    if (!entry.capabilities || builtInSlugs.has(entry.slug)) continue;
+    const capabilities =
+      entry.capabilities ??
+      builtInModels.find((built) => built.model.slug === familyCatalogSlug(entry))?.model
+        .capabilities;
+    if (!capabilities || builtInSlugs.has(entry.slug)) continue;
     customCatalogModels.push({
       model: {
         slug: entry.slug,
         name: entry.name,
         isCustom: true,
-        capabilities: withUltracodeToggle(entry.capabilities),
+        capabilities: withUltracodeToggle(capabilities),
       },
       runtime: {},
       compatibility: {},

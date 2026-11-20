@@ -427,6 +427,16 @@ export interface CustomModelDefinition {
   readonly capabilities: ModelCapabilities | null;
 }
 
+/**
+ * The catalog slug a family-prefixed entry with no options of its own stands for (`gpt-5.5` for
+ * `openai/gpt-5.5` under `openai`), whose options it then offers.
+ */
+export function familyCatalogSlug(entry: CustomModelDefinition): string | undefined {
+  if (entry.capabilities !== null || !entry.subProvider) return undefined;
+  const prefix = `${entry.subProvider}/`;
+  return entry.slug.startsWith(prefix) ? entry.slug.slice(prefix.length) : undefined;
+}
+
 const decodeCustomModelCapabilities = Schema.decodeUnknownOption(ModelCapabilities);
 
 export function readCustomModelEntries(value: unknown): CustomModelDefinition[] {

@@ -42,10 +42,12 @@ describe("gatewaySetup", () => {
       { id: "gemini/gemini-2.5-pro", name: "Gemini 2.5 Pro" },
       { id: "Qwen/Qwen3.5-Plus" },
     ]);
-    // The own family drops its prefix to keep its catalog entry; the rest keep the Gateway's id.
+    // The own family drops its prefix to keep its catalog entry, and its full id is a row too
+    // (options from that entry); the rest keep the Gateway's id.
     expect(claude?.instance.config).toEqual({
       customModels: [
         { slug: "claude-opus-5-5", name: "Claude Opus 5.5" },
+        { slug: "anthropic/claude-opus-5-5", name: "Claude Opus 5.5", subProvider: "anthropic" },
         otherFamily("openai/gpt-5.5"),
         otherFamily("google/gemini-3"),
         otherFamily("gemini/gemini-2.5-pro", "Gemini 2.5 Pro"),
@@ -56,6 +58,7 @@ describe("gatewaySetup", () => {
     expect(codex?.instance.config).toMatchObject({
       customModels: [
         { slug: "gpt-5.5" },
+        { slug: "openai/gpt-5.5", subProvider: "openai" },
         otherFamily("anthropic/claude-opus-5-5", "Claude Opus 5.5"),
         otherFamily("google/gemini-3"),
         otherFamily("gemini/gemini-2.5-pro", "Gemini 2.5 Pro"),
@@ -84,38 +87,42 @@ describe("gatewaySetup", () => {
     }
   });
 
-  it("keeps a model's slug when the key adds a bare id equal to its own-family name", () => {
+  it("keeps both rows of a model when the key adds or drops its bare id", () => {
     const key = "lk_test_key_123456";
-    const before = Object.fromEntries(
-      gatewayProviderInstances(key, [
-        { id: "openai/gpt-5.5", name: "GPT 5.5" },
-        { id: "anthropic/claude-opus-5-5" },
-      ]).map(({ instanceId, instance }) => [instanceId, instance]),
-    );
-    const after = withGatewayModels(before, [
+    const fullOnly = [
+      { id: "openai/gpt-5.5", name: "GPT 5.5" },
+      { id: "anthropic/claude-opus-5-5" },
+    ];
+    const both = [
       { id: "openai/gpt-5.5", name: "GPT 5.5" },
       { id: "gpt-5.5", name: "Standalone GPT route" },
       { id: "anthropic/claude-opus-5-5" },
       { id: "claude-opus-5-5" },
-    ]);
-    const entries = (instanceId: keyof typeof after) =>
-      readCustomModelEntries(
-        (after[instanceId]?.config as { customModels?: unknown } | undefined)?.customModels,
-      ).map(({ slug, subProvider }) => [slug, subProvider]);
-    // A thread, favorite or hidden model saved as `gpt-5.5` still names the GPT 5.5 row, and the
-    // full id the key also lists stays reachable as itself.
-    expect(entries(GATEWAY_INSTANCE_IDS.codex)).toEqual([
-      ["gpt-5.5", undefined],
-      ["openai/gpt-5.5", "openai"],
-      ["anthropic/claude-opus-5-5", "anthropic"],
-      ["claude-opus-5-5", undefined],
-    ]);
-    expect(entries(GATEWAY_INSTANCE_IDS.claude)).toEqual([
-      ["claude-opus-5-5", undefined],
-      ["openai/gpt-5.5", "openai"],
-      ["gpt-5.5", undefined],
-      ["anthropic/claude-opus-5-5", "anthropic"],
-    ]);
+    ];
+    const initial = Object.fromEntries(
+      gatewayProviderInstances(key, both).map(({ instanceId, instance }) => [instanceId, instance]),
+    );
+    const entries = (config: unknown) =>
+      readCustomModelEntries((config as { customModels?: unknown } | undefined)?.customModels).map(
+        ({ slug, subProvider }) => [slug, subProvider],
+      );
+    // A thread, favorite or hidden model saved as `gpt-5.5` or `openai/gpt-5.5` names the same row
+    // whether or not the key also lists the bare id.
+    for (const models of [fullOnly, both, fullOnly]) {
+      const after = withGatewayModels(initial, models);
+      expect(entries(after[GATEWAY_INSTANCE_IDS.codex]?.config)).toEqual([
+        ["gpt-5.5", undefined],
+        ["openai/gpt-5.5", "openai"],
+        ["anthropic/claude-opus-5-5", "anthropic"],
+        ...(models === both ? [["claude-opus-5-5", undefined]] : []),
+      ]);
+      expect(entries(after[GATEWAY_INSTANCE_IDS.claude]?.config)).toEqual([
+        ["claude-opus-5-5", undefined],
+        ["anthropic/claude-opus-5-5", "anthropic"],
+        ["openai/gpt-5.5", "openai"],
+        ...(models === both ? [["gpt-5.5", undefined]] : []),
+      ]);
+    }
   });
 
   it("changes only the model lists of the Gateway agents still present", () => {
@@ -149,7 +156,7 @@ describe("gatewaySetup", () => {
     expect(next[GATEWAY_INSTANCE_IDS.codex]?.config).toEqual({
       setupMode: "existing",
       launchArgs: userArgs,
-      customModels: [{ slug: "gpt-6-luna" }],
+      customModels: [{ slug: "gpt-6-luna" }, { slug: "openai/gpt-6-luna", subProvider: "openai" }],
       onlyCustomModels: true,
     });
     expect(next[GATEWAY_INSTANCE_IDS.codex]?.environment).toEqual(
@@ -205,6 +212,8 @@ describe("gatewaySetup", () => {
     expect(slugs(claude?.instance.config)).toEqual([
       "opus",
       "claude-opus-4-1",
+      "anthropic/opus",
+      "anthropic/claude-opus-4-1",
       "anthropic/opusplan",
       "haiku",
     ]);

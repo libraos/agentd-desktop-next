@@ -46,7 +46,9 @@ agent later in **Settings → Providers**.
 use it with, then paste a **LibraOS API key** and press **Connect**. The key stays
 on that environment; **Disconnect** removes it. Claude Code and Codex on the Gateway
 each list every model the key allows, other families too: a Gemini model under
-Claude Code shows with `gemini` beside its name. Claude Code leaves out the few ids
+Claude Code shows with `gemini` beside its name. An agent's own models show twice,
+by catalog name and by full Gateway id (`openai/gpt-5.5`), with the same options;
+both run that model. Claude Code leaves out the few ids
 it would run as another model, such as `best` or a name ending in `[1m]`; Codex
 still lists them. Other gateways show **Not available
 yet** on that screen; use a provider instance's environment variables for those

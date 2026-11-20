@@ -27,6 +27,8 @@ const otherFamily = (slug: string, name?: string) => ({
   subProvider: slug.split("/")[0],
   capabilities: { optionDescriptors: [] },
 });
+// The agent's own family by its full id: options come from the catalog model it names.
+const ownFullId = (slug: string) => ({ slug, subProvider: slug.split("/")[0] });
 
 const KEY = "lk_codex_key_0123456789";
 const CONNECTED = "lk_connected_key_5555";
@@ -65,6 +67,7 @@ it.effect("an agent's own Gateway key decides its models", () => {
 
     const allowed = [
       { slug: "gpt-6-astra" },
+      ownFullId("openai/gpt-6-astra"),
       otherFamily("anthropic/claude-opus-5-5"),
       otherFamily("gemini/gemini-2.5-pro"),
     ];

@@ -28,6 +28,8 @@ const otherFamily = (slug: string, name?: string) => ({
   subProvider: slug.split("/")[0],
   capabilities: { optionDescriptors: [] },
 });
+// The agent's own family by its full id: options come from the catalog model it names.
+const ownFullId = (slug: string) => ({ slug, subProvider: slug.split("/")[0] });
 
 const GOOD_KEY = "lk_good_key_0123456789";
 // A key the user put on the opencode Gateway agent instead of the connected one.
@@ -223,7 +225,12 @@ it.effect("a refresh gives the Gateway agents the key's models as they are now",
     assert.deepStrictEqual(instances[GATEWAY_INSTANCE_IDS.codex]?.config, {
       setupMode: "existing",
       launchArgs: userLaunchArgs,
-      customModels: [{ slug: "gpt-5.5" }, { slug: "gpt-6-luna" }],
+      customModels: [
+        { slug: "gpt-5.5" },
+        { slug: "gpt-6-luna" },
+        ownFullId("openai/gpt-5.5"),
+        ownFullId("openai/gpt-6-luna"),
+      ],
       onlyCustomModels: true,
     });
     assert.deepStrictEqual(instances[GATEWAY_INSTANCE_IDS.claude]?.config, {
@@ -266,7 +273,7 @@ it.effect("a refresh after the key is revoked leaves the agents no models and sa
     assert.deepStrictEqual(
       (instances[GATEWAY_INSTANCE_IDS.codex]?.config as { customModels?: unknown } | undefined)
         ?.customModels,
-      [{ slug: "gpt-5.5" }, otherFamily("anthropic/claude-opus-5-5")],
+      [{ slug: "gpt-5.5" }, ownFullId("openai/gpt-5.5"), otherFamily("anthropic/claude-opus-5-5")],
     );
     assert.isNull((yield* gateway.status).refusal);
 
@@ -307,7 +314,7 @@ it.effect(
       assert.deepStrictEqual(instances[GATEWAY_INSTANCE_IDS.codex]?.config, {
         setupMode: "existing",
         launchArgs: codexGatewayLaunchArgs(),
-        customModels: [{ slug: "gpt-5.5" }],
+        customModels: [{ slug: "gpt-5.5" }, ownFullId("openai/gpt-5.5")],
         onlyCustomModels: true,
       });
       assert.deepStrictEqual(instances[GATEWAY_INSTANCE_IDS.claude]?.config, {
