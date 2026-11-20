@@ -4872,7 +4872,7 @@ it.layer(
         // the key still decides, the agent stays known as the Gateway's, and no update is offered.
         const unverified = yield* checkClaudeProviderStatus(
           defaultClaudeSettings,
-          () => Effect.succeed(undefined),
+          () => Effect.undefined,
           { ANTHROPIC_BASE_URL: "https://api.libraos.com", ANTHROPIC_API_KEY: "lk_claude_key_123" },
           undefined,
           {

@@ -653,9 +653,9 @@ it.layer(layerTest)("checkOpenCodeProviderStatus", (it) => {
     () =>
       Effect.gen(function* () {
         const model = (id: string) => ({ id, name: id, variants: {} });
-        runtimeMock.state.inventory = {
+        const inventory = (connected: ReadonlyArray<string>) => ({
           providerList: {
-            connected: ["libraos", "openai"],
+            connected,
             all: [
               {
                 id: "libraos",
@@ -678,7 +678,8 @@ it.layer(layerTest)("checkOpenCodeProviderStatus", (it) => {
           },
           agents: [],
           skills: [],
-        };
+        });
+        runtimeMock.state.inventory = inventory(["libraos", "openai"]);
         const asked: Array<{ readonly endpoint: string; readonly key: string | undefined }> = [];
         const status = yield* checkProvider(
           makeOpenCodeSettings(),
@@ -723,10 +724,7 @@ it.layer(layerTest)("checkOpenCodeProviderStatus", (it) => {
         ]);
 
         // Only the Gateway is connected and the key lost its last model: the empty list is final.
-        runtimeMock.state.inventory = {
-          ...runtimeMock.state.inventory,
-          providerList: { ...runtimeMock.state.inventory.providerList, connected: ["libraos"] },
-        };
+        runtimeMock.state.inventory = inventory(["libraos"]);
         const revoked = yield* checkProvider(
           makeOpenCodeSettings({ customModels: ["libraos/openai/gpt-6-astra"] }),
           undefined,
