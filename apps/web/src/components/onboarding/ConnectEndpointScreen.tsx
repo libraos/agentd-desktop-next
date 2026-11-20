@@ -5,11 +5,17 @@ import { msg, T, useGT, useMessages, Var } from "gt-react";
 import { CheckIcon, ServerIcon, Settings2Icon } from "lucide-react";
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 
-import { useLibraosGateway, useLibraosGatewayCommands } from "../../lib/libraosGatewayState";
+import {
+  useGatewayEnvironment,
+  useLibraosGateway,
+  useLibraosGatewayCommands,
+} from "../../lib/libraosGatewayState";
 import { AnthropicIcon, OllamaIcon, OpenAI } from "../Icons";
 import { T3Wordmark } from "../T3Wordmark";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { CustomGatewayForm } from "./CustomGatewayForm";
+import { CustomGatewayList } from "./CustomGatewayList";
 
 const agents = ["Claude Code", "Codex", "opencode"] as const;
 type Agent = (typeof agents)[number];
@@ -45,6 +51,8 @@ export function ConnectEndpointScreen({
 }) {
   const [agent, setAgent] = useState<Agent | null>(null);
   const [gatewayOpen, setGatewayOpen] = useState(gatewayChosen);
+  const [customOpen, setCustomOpen] = useState(false);
+  const gatewayEnvironment = useGatewayEnvironment(environmentId);
   const gt = useGT();
   const m = useMessages();
   const id = useId();
@@ -93,7 +101,9 @@ export function ConnectEndpointScreen({
           {endpoints.map((endpoint) => {
             if (!endpoint.agents.includes(agent)) return null;
             const isGateway = endpoint.id === "gateway";
-            const selected = isGateway && gatewayOpen;
+            const isCustom = endpoint.id === "custom";
+            const available = isGateway || isCustom;
+            const selected = isGateway ? gatewayOpen : isCustom && customOpen;
             const labelId = `${id}-${endpoint.id}`;
             const descriptionId = `${labelId}-description`;
             const detail = isGateway
@@ -106,11 +116,17 @@ export function ConnectEndpointScreen({
               <li key={endpoint.id}>
                 <button
                   type="button"
-                  disabled={!isGateway}
+                  disabled={!available}
                   aria-labelledby={labelId}
                   aria-describedby={descriptionId}
-                  aria-pressed={isGateway ? selected : undefined}
-                  onClick={isGateway ? () => setGatewayOpen((open) => !open) : undefined}
+                  aria-pressed={available ? selected : undefined}
+                  onClick={
+                    isGateway
+                      ? () => setGatewayOpen((open) => !open)
+                      : isCustom
+                        ? () => setCustomOpen((open) => !open)
+                        : undefined
+                  }
                   className="flex w-full items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left not-disabled:hover:bg-accent/50 disabled:cursor-not-allowed aria-pressed:border-primary/60"
                 >
                   <endpoint.Icon className="size-5 shrink-0" aria-hidden />
@@ -120,7 +136,7 @@ export function ConnectEndpointScreen({
                     </span>
                     <span id={descriptionId} className="block text-xs text-muted-foreground">
                       {detail === null ? null : <span className="block">{detail}</span>}
-                      {isGateway ? null : <T>Not available yet</T>}
+                      {available ? null : <T>Not available yet</T>}
                     </span>
                   </span>
                   {selected ? (
@@ -133,6 +149,18 @@ export function ConnectEndpointScreen({
         </ul>
       ) : null}
       {gatewayOpen ? <GatewayConnectPanel environmentId={environmentId} /> : null}
+      {customOpen ? (
+        gatewayEnvironment === null ? (
+          <p className="text-center text-sm text-muted-foreground">
+            <T>Connect to an environment first.</T>
+          </p>
+        ) : (
+          <CustomGatewayForm environmentId={gatewayEnvironment} />
+        )
+      ) : null}
+      {gatewayEnvironment === null ? null : (
+        <CustomGatewayList environmentId={gatewayEnvironment} />
+      )}
       <div className="text-center text-sm underline underline-offset-4">{back}</div>
     </div>
   );
