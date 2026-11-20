@@ -255,6 +255,27 @@ const make = Effect.gen(function* () {
         `${folder} was not installed from the catalogue; replace it to install.`,
       );
     }
+    if (before.state === "managed" && input.replace !== true) {
+      // An update swaps the whole folder, so files someone added there would go with it.
+      const ours = new Set([MANIFEST_FILE, ...before.manifest.files]);
+      for (const file of before.manifest.files) {
+        for (let at = file.lastIndexOf("/"); at > 0; at = file.lastIndexOf("/", at - 1)) {
+          ours.add(file.slice(0, at));
+        }
+      }
+      const present = yield* fs
+        .readDirectory(folder, { recursive: true })
+        .pipe(Effect.mapError(filesystem(`read ${folder}`)));
+      const added = present
+        .map((entry) => entry.split(path.sep).join("/"))
+        .filter((entry) => !ours.has(entry));
+      if (added.length > 0) {
+        return yield* fail(
+          "conflict",
+          `${folder} holds files the catalogue did not install (${added[0]}); replace it to update.`,
+        );
+      }
+    }
 
     const files = yield* download(entry);
 

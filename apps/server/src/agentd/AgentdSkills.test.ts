@@ -90,7 +90,10 @@ const harness = (document?: ManagedPolicyDocument) =>
           Layer.provide(
             Layer.mergeAll(
               Layer.succeed(HttpClient.HttpClient, client),
-              Layer.mock(ManagedPolicy.ManagedPolicy)({ document }),
+              Layer.effect(
+                ManagedPolicy.ManagedPolicy,
+                ManagedPolicy.fromDocument("policy.json", document).pipe(Effect.orDie),
+              ),
               Layer.succeed(HostProcess.HomeDirectory, home),
               Layer.succeed(HostProcess.Environment, {}),
             ),
@@ -304,6 +307,20 @@ it.effect("an update keeps a managed install whole when its download fails", () 
     h.routes.set(rawUrl("skills/demo/SKILL.md"), { status: 500, body: "" });
     yield* h.service.install({ name: "demo", agent: "claude" }).pipe(Effect.flip);
     expect(yield* h.filesUnder(h.claude)).toEqual(before);
+  }).pipe(Effect.provide(dependencies)),
+);
+
+it.effect("an update does not drop files added to a managed install without replace", () =>
+  Effect.gen(function* () {
+    const h = yield* harness();
+    yield* h.service.install({ name: "demo", agent: "claude" });
+    // Reinstalling an untouched install is fine.
+    yield* h.service.install({ name: "demo", agent: "claude" });
+    const added = h.path.join(h.claude, "demo", "scripts", "notes.txt");
+    yield* h.fs.writeFileString(added, "mine\n");
+    const refused = yield* h.service.install({ name: "demo", agent: "claude" }).pipe(Effect.flip);
+    expect(refused.reason).toBe("conflict");
+    expect(yield* h.fs.readFileString(added)).toBe("mine\n");
   }).pipe(Effect.provide(dependencies)),
 );
 

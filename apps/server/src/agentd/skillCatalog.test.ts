@@ -38,7 +38,7 @@ describe("safeRelativePath", () => {
 
 describe("resolveInside", () => {
   it.each([
-    ["linux", "/home/u/.claude/skills", "pdf", "/home/u/.claude/skills/pdf"],
+    ["linux", "/usr/u/.claude/skills", "pdf", "/usr/u/.claude/skills/pdf"],
     [
       "darwin",
       "/Users/u/.agents/skills",
@@ -52,7 +52,7 @@ describe("resolveInside", () => {
       "C:\\Users\\u\\.claude\\skills\\pdf\\scripts\\a.py",
     ],
     ["win32", "C:\\Users\\u\\.claude\\skills", "../pdf", null],
-    ["linux", "/home/u/.claude/skills", "../../.bashrc", null],
+    ["linux", "/usr/u/.claude/skills", "../../.bashrc", null],
   ] as const)("%s %s + %s", (platform, root, relative, expected) => {
     expect(resolveInside(platform, root, relative)).toBe(expected);
   });
@@ -60,7 +60,7 @@ describe("resolveInside", () => {
 
 describe("skillsDirectory", () => {
   it.each([
-    ["linux", "/home/u", {}, "/home/u/.claude/skills", "/home/u/.agents/skills"],
+    ["linux", "/usr/u", {}, "/usr/u/.claude/skills", "/usr/u/.agents/skills"],
     ["darwin", "/Users/u", {}, "/Users/u/.claude/skills", "/Users/u/.agents/skills"],
     ["win32", "C:\\Users\\u", {}, "C:\\Users\\u\\.claude\\skills", "C:\\Users\\u\\.agents\\skills"],
     [
@@ -72,10 +72,10 @@ describe("skillsDirectory", () => {
     ],
     [
       "linux",
-      "/home/u",
+      "/usr/u",
       { CLAUDE_CONFIG_DIR: "/srv/claude" },
       "/srv/claude/skills",
-      "/home/u/.agents/skills",
+      "/usr/u/.agents/skills",
     ],
   ] as const)("%s %s %j", (platform, home, env, claude, codex) => {
     const host = { platform, home, env };
@@ -114,9 +114,9 @@ describe("fetchDue", () => {
   const day = 24 * 60 * 60 * 1000;
   it.each([
     [null, 0, true],
-    [{ attemptedAt: new Date(0).toISOString() }, day - 1, false],
-    [{ attemptedAt: new Date(0).toISOString() }, day, true],
-    [{ attemptedAt: new Date(10 * day).toISOString() }, day, true],
+    [{ attemptedAt: "1970-01-01T00:00:00.000Z" }, day - 1, false],
+    [{ attemptedAt: "1970-01-01T00:00:00.000Z" }, day, true],
+    [{ attemptedAt: "1970-01-11T00:00:00.000Z" }, day, true],
   ] as const)("cache %j at %s: %s", (cache, now, due) => {
     expect(fetchDue(cache, now)).toBe(due);
   });
