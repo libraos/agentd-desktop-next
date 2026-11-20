@@ -6,9 +6,7 @@ PostHog and fetches nothing from upstream's servers.
 
 The app still uses the network. Some requests start on their own: it checks which
 providers are installed and signed in, and checks for provider updates unless you turn
-that setting off. Listing the Skills catalogue fetches `catalog.json` from the
-`libraos/skills` repository on GitHub at most once a day, and installing a Skill fetches
-its files from its source repository on GitHub. The rest follow from what you do: your
+that setting off. Listing, installing or removing Skills can fetch `catalog.json` from `libraos/skills` at `raw.githubusercontent.com`, normally no more than once every 24 hours for each server. Installing a Skill also fetches its source repository's file listing from `api.github.com` and its files from `raw.githubusercontent.com`. GitHub receives the server's outgoing IP address, the request time and the requested paths, along with HTTP headers including a User-Agent and tracing identifiers. An administrator can block these requests with the [managed policy](./managed-policy.md) limit `skillCatalog: false`. The rest follow from what you do: your
 providers' CLIs talking to their vendors, source control, provider installs, speech
 model downloads, and similar actions.
 
