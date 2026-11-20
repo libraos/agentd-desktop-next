@@ -3046,16 +3046,8 @@
   "e9530c0bbdc98bd2": "LibraOS account",
   "2c73362a57a1dff5": "AgentD page",
   "19ccb9ca234d58ce": "Worker settings",
+  "f456f04a3de8783d": "Die Hintergrunddienste von AgentD laufen mit einem AgentD, das fehlt oder zum alten AgentD Desktop gehört, und sie auf das AgentD dieser App umzustellen ist fehlgeschlagen. Führe agentd install in einem Terminal aus.",
   "8b9fa521cecb4f8d": "Uses",
-  "74d5bd28e284fa57": "Einer der Hintergrunddienste von AgentD führt ein AgentD aus, das fehlt oder zum alten AgentD Desktop gehört, und ein anderer führt dein eigenes AgentD aus. Diese App hat beide unverändert gelassen: Führe agentd install mit dem AgentD aus, das du verwendest. Es schreibt beide Dienste mit dem AGENTD_ROOT und AGENTD_DB neu, die dort gesetzt sind, wo du es ausführst; wenn das Dashboard eigene verwendet, führe danach agentd dash install mit diesen aus.",
-  "a6679080269d6abc": "Die Hintergrunddienste von AgentD verwenden ein AgentD, das fehlt oder zum alten AgentD Desktop gehört, und sie nutzen zwei verschiedene AgentD-Ledger. Diese App hat sie unverändert gelassen: Führe in einem Terminal agentd install mit AGENTD_ROOT und AGENTD_DB des Watchdogs aus, danach agentd dash install mit denen des Dashboards.",
-  "3699758ab3139312": "Einer der Hintergrunddienste von AgentD verwendet ein AgentD, das fehlt oder zum alten AgentD Desktop gehört, und er setzt ein eigenes AGENTD_ROOT oder AGENTD_DB auf eine Weise, die agentd install nicht beibehalten würde. Diese App hat ihn unverändert gelassen: Führe agentd install und agentd dash install in einem Terminal aus und setze diese Werte danach erneut für diesen Dienst.",
-  "519f26ed4d1e0664": "Einer der Hintergrunddienste von AgentD führt ein AgentD aus, das fehlt oder zum alten AgentD Desktop gehört, und diese App konnte die Einstellungsdatei nicht lesen, die sein AgentD-Ledger nennt. Sie hat die Dienste unverändert gelassen und prüft beim nächsten Start erneut; oder führe agentd install in einem Terminal mit AGENTD_ROOT und AGENTD_DB dieses Dienstes aus.",
-  "27a56601919e53d0": "Einer der Hintergrunddienste von AgentD führt ein AgentD aus, das fehlt oder zum alten AgentD Desktop gehört, und ein systemd-Drop-in dafür legt das Programm fest, das er ausführt, was agentd install nicht ändert. Diese App hat ihn unverändert gelassen: Entferne dieses ExecStart aus dem Drop-in und führe dann agentd install in einem Terminal aus, oder agentd dash install für das Dashboard.",
-  "feed1033187aadc9": "Die Hintergrunddienste von AgentD verwenden ein AgentD, das fehlt oder zum alten AgentD Desktop gehört. Das AgentD dieser App ist weg, sobald die App geschlossen wird, daher wurden sie unverändert gelassen: Installiere agentd für das Terminal und führe dann agentd install aus.",
-  "e5409921bb75522c": "Die Hintergrunddienste von AgentD verwenden noch nicht das AgentD dieser App: AgentD startet sie nicht, solange ältere AgentD-Dienste aktiv sind. Führe dies und danach agentd install in einem Terminal aus.",
-  "d1934c355b387dbd": "Die Hintergrunddienste von AgentD liefen mit einem AgentD, das fehlt oder zum alten AgentD Desktop gehört. Sie nutzen jetzt das AgentD dieser App, sodass Cloud-Ergebnisse wieder synchronisiert werden.",
-  "e94ad00e323f4971": "Die Hintergrunddienste von AgentD laufen mit einem AgentD, das fehlt oder zum alten AgentD Desktop gehört, und sie auf das AgentD dieser App umzustellen ist fehlgeschlagen. Führe agentd install in einem Terminal aus.",
   "803dbf99343f4441": "Installed for the terminal",
   "b21f66984690c19a": [
     {
@@ -3075,6 +3067,58 @@
   ],
   "c86e02018b5fd3b3": "To run agentd in a terminal, add this line to your shell profile:",
   "a28dff6e4d10f8e1": "Got it",
+  "39ec3f59be4e055c": [
+    "Der Watchdog-Dienst von AgentD führt ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " aus, das fehlt oder zum alten AgentD Desktop gehört."
+  ],
+  "e32b73bb21bcacb0": [
+    "Der Dashboard-Dienst von AgentD führt ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " aus, das fehlt oder zum alten AgentD Desktop gehört."
+  ],
+  "74d5bd28e284fa57": "Einer der Hintergrunddienste von AgentD führt ein AgentD aus, das fehlt oder zum alten AgentD Desktop gehört, und ein anderer führt dein eigenes AgentD aus. Diese App hat beide unverändert gelassen: Führe agentd install mit dem AgentD aus, das du verwendest. Es schreibt beide Dienste mit dem AGENTD_ROOT und AGENTD_DB neu, die dort gesetzt sind, wo du es ausführst; wenn das Dashboard eigene verwendet, führe danach agentd dash install mit diesen aus.",
+  "feed1033187aadc9": "Die Hintergrunddienste von AgentD verwenden ein AgentD, das fehlt oder zum alten AgentD Desktop gehört. Das AgentD dieser App ist weg, sobald die App geschlossen wird, daher wurden sie unverändert gelassen: Installiere agentd für das Terminal und führe dann agentd install aus.",
+  "e5409921bb75522c": "Die Hintergrunddienste von AgentD verwenden noch nicht das AgentD dieser App: AgentD startet sie nicht, solange ältere AgentD-Dienste aktiv sind. Führe dies und danach agentd install in einem Terminal aus.",
+  "ef7c30f129576625": "Wird repariert…",
+  "afb4c74d1cc655a7": "Reparieren…",
+  "dc26fcb837031237": "Hintergrunddienste von AgentD reparieren?",
+  "61ef16efc02ec666": [
+    "Dies führt agentd install mit dem AgentD dieser App aus (",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "). Dashboard und Watchdog werden mit dem AgentD dieser App und seinem Standard-Root neu registriert; ein jetzt gesetztes AGENTD_ROOT oder AGENTD_DB bleibt nicht erhalten."
+  ],
+  "35559a884c5b7c0e": [
+    "Dies führt agentd dash install mit dem AgentD dieser App aus (",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "). Das Dashboard wird mit dem AgentD dieser App und seinem Standard-Root neu registriert; ein jetzt gesetztes AGENTD_ROOT oder AGENTD_DB bleibt nicht erhalten."
+  ],
+  "a1427ddb00f318dd": [
+    "Dies führt agentd install mit dem AgentD dieser App aus (",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "). Der Watchdog wird mit dem AgentD dieser App und seinem Standard-Root neu registriert; ein jetzt gesetztes AGENTD_ROOT oder AGENTD_DB bleibt nicht erhalten."
+  ],
+  "97848e9a3bfa3bf6": "Reparieren",
   "001d17590be2a445": "AgentD",
   "893bb44a7b9c9094": "Aktualisieren",
   "57af791aca31d90a": "Background task",

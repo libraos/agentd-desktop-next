@@ -232,24 +232,29 @@ export const AgentdInstallRecord = Schema.Struct({
 });
 export type AgentdInstallRecord = typeof AgentdInstallRecord.Type;
 
-/** agentd services that ran a missing agentd or the old AgentD Desktop's, re-registered on start. */
-export const AgentdServicesRepair = Schema.Struct({
-  services: Schema.Array(Schema.Literals(["watchdog", "dash"])),
-  ok: Schema.Boolean,
-  /** Services on another working agentd that moving the stale ones would also have moved. */
-  kept: Schema.optionalKey(Schema.Array(Schema.Literals(["watchdog", "dash"]))),
+export const AgentdServiceName = Schema.Literals(["watchdog", "dash"]);
+export type AgentdServiceName = typeof AgentdServiceName.Type;
+
+/** agentd services that run a missing agentd or the old AgentD Desktop's: reported, never moved. */
+export const AgentdServicesProblem = Schema.Struct({
+  services: Schema.Array(Schema.Struct({ name: AgentdServiceName, program: Schema.String })),
+  /** The agentd Repair registers; null when this app's is gone once it quits (an AppImage). */
+  agentd: Schema.NullOr(Schema.String),
+  /** The services Repair re-registers; empty when it isn't offered. */
+  moves: Schema.Array(AgentdServiceName),
+  /** Services on another working agentd that install would also move, so Repair isn't offered. */
+  kept: Schema.optionalKey(Schema.Array(AgentdServiceName)),
   /** What agentd install asked the user to run first, before it would enable the services. */
   command: Schema.optionalKey(Schema.String),
-  /**
-   * Why nothing was moved: the services name two ledgers, a Linux service names a ledger its new
-   * unit would drop or one the app can't tell, a Windows task's env file can't be read, a systemd
-   * drop-in sets the program, or the app's agentd is in an AppImage mount.
-   */
-  reason: Schema.optionalKey(
-    Schema.Literals(["ledgers", "ledger", "unread", "override", "transient"]),
-  ),
 });
-export type AgentdServicesRepair = typeof AgentdServicesRepair.Type;
+export type AgentdServicesProblem = typeof AgentdServicesProblem.Type;
+
+export const AgentdServicesRepairResult = Schema.Struct({
+  ok: Schema.Boolean,
+  /** What agentd install asked the user to run first, before it would enable the services. */
+  command: Schema.optionalKey(Schema.String),
+});
+export type AgentdServicesRepairResult = typeof AgentdServicesRepairResult.Type;
 
 export const AgentdStatus = Schema.Struct({
   /** `agentd version` as it printed it, such as "agentd v0.1.13 0d0b360a58c0". */
@@ -262,8 +267,8 @@ export const AgentdStatus = Schema.Struct({
   /** The agentd binary the app runs. */
   binary: Schema.optionalKey(Schema.String),
   install: Schema.optionalKey(Schema.NullOr(AgentdInstallRecord)),
-  /** agentd's services this app moved to its bundled agentd since it started; null when none. */
-  servicesRepair: Schema.optionalKey(Schema.NullOr(AgentdServicesRepair)),
+  /** agentd's services on a missing or old agentd, as last checked; null when none. */
+  servicesProblem: Schema.optionalKey(Schema.NullOr(AgentdServicesProblem)),
 });
 export type AgentdStatus = typeof AgentdStatus.Type;
 

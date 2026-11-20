@@ -3049,16 +3049,8 @@
   "e9530c0bbdc98bd2": "LibraOS 账户",
   "2c73362a57a1dff5": "AgentD 页面",
   "19ccb9ca234d58ce": "Worker 设置",
+  "f456f04a3de8783d": "AgentD 的后台服务运行的是已缺失或属于旧版 AgentD Desktop 的 AgentD，且未能改用此应用的 AgentD。请在终端中运行 agentd install。",
   "8b9fa521cecb4f8d": "使用",
-  "74d5bd28e284fa57": "AgentD 的一个后台服务运行的 AgentD 已缺失或属于旧版 AgentD Desktop，另一个运行的是你自己的 AgentD。此应用未改动两者：请用你使用的 AgentD 运行 agentd install。它会用运行处设置的 AGENTD_ROOT 和 AGENTD_DB 重写两个服务；如果仪表板使用自己的设置，之后请用这些设置运行 agentd dash install。",
-  "a6679080269d6abc": "AgentD 的后台服务运行的 AgentD 已丢失或属于旧版 AgentD Desktop，并且它们使用两个不同的 AgentD 账本。此应用未做更改：请在终端中先按 watchdog 的 AGENTD_ROOT 和 AGENTD_DB 运行 agentd install，再按仪表盘的设置运行 agentd dash install。",
-  "3699758ab3139312": "AgentD 的某个后台服务运行的 AgentD 已丢失或属于旧版 AgentD Desktop，并且它以 agentd install 不会保留的方式设置了自己的 AGENTD_ROOT 或 AGENTD_DB。此应用未做更改：请在终端中运行 agentd install 和 agentd dash install，然后为该服务重新设置这些值。",
-  "519f26ed4d1e0664": "AgentD 的一个后台服务运行的 AgentD 已缺失或属于旧版 AgentD Desktop，且此应用无法读取指明其 AgentD 账本的设置文件。它未改动这些服务，并会在下次启动时再次检查；或者在终端中设置该服务的 AGENTD_ROOT 和 AGENTD_DB 后运行 agentd install。",
-  "27a56601919e53d0": "AgentD 的一个后台服务运行的 AgentD 已缺失或属于旧版 AgentD Desktop，且它的 systemd drop-in 指定了要运行的程序，agentd install 不会更改这一点。此应用未改动它：请从 drop-in 中删除该 ExecStart，然后在终端中运行 agentd install（仪表板则运行 agentd dash install）。",
-  "feed1033187aadc9": "AgentD 的后台服务运行的 AgentD 已不存在或属于旧版 AgentD Desktop。此应用的 AgentD 会在应用关闭后消失，因此未做更改：请为终端安装 agentd，然后运行 agentd install。",
-  "e5409921bb75522c": "AgentD 的后台服务尚未运行此应用的 AgentD：在旧的 AgentD 服务开启期间，AgentD 不会启动它们。请在终端中运行此命令，然后运行 agentd install。",
-  "d1934c355b387dbd": "AgentD 的后台服务之前运行的是已缺失或属于旧版 AgentD Desktop 的 AgentD。现在它们改用此应用的 AgentD，云端结果会重新同步。",
-  "e94ad00e323f4971": "AgentD 的后台服务运行的是已缺失或属于旧版 AgentD Desktop 的 AgentD，且未能改用此应用的 AgentD。请在终端中运行 agentd install。",
   "803dbf99343f4441": "已为终端安装",
   "b21f66984690c19a": [
     {
@@ -3078,6 +3070,58 @@
   ],
   "c86e02018b5fd3b3": "要在终端里运行 agentd，请把这一行加到你的 shell 配置文件：",
   "a28dff6e4d10f8e1": "知道了",
+  "39ec3f59be4e055c": [
+    "AgentD 的 watchdog 服务运行的是 ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "，它已缺失或属于旧版 AgentD Desktop。"
+  ],
+  "e32b73bb21bcacb0": [
+    "AgentD 的仪表板服务运行的是 ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "，它已缺失或属于旧版 AgentD Desktop。"
+  ],
+  "74d5bd28e284fa57": "AgentD 的一个后台服务运行的 AgentD 已缺失或属于旧版 AgentD Desktop，另一个运行的是你自己的 AgentD。此应用未改动两者：请用你使用的 AgentD 运行 agentd install。它会用运行处设置的 AGENTD_ROOT 和 AGENTD_DB 重写两个服务；如果仪表板使用自己的设置，之后请用这些设置运行 agentd dash install。",
+  "feed1033187aadc9": "AgentD 的后台服务运行的 AgentD 已不存在或属于旧版 AgentD Desktop。此应用的 AgentD 会在应用关闭后消失，因此未做更改：请为终端安装 agentd，然后运行 agentd install。",
+  "e5409921bb75522c": "AgentD 的后台服务尚未运行此应用的 AgentD：在旧的 AgentD 服务开启期间，AgentD 不会启动它们。请在终端中运行此命令，然后运行 agentd install。",
+  "ef7c30f129576625": "正在修复…",
+  "afb4c74d1cc655a7": "修复…",
+  "dc26fcb837031237": "修复 AgentD 的后台服务？",
+  "61ef16efc02ec666": [
+    "这会用此应用的 AgentD（",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "）运行 agentd install。它会用此应用的 AgentD 及其默认根目录重新注册仪表板和 watchdog；它们现在设置的 AGENTD_ROOT 或 AGENTD_DB 不会保留。"
+  ],
+  "35559a884c5b7c0e": [
+    "这会用此应用的 AgentD（",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "）运行 agentd dash install。它会用此应用的 AgentD 及其默认根目录重新注册仪表板；它现在设置的 AGENTD_ROOT 或 AGENTD_DB 不会保留。"
+  ],
+  "a1427ddb00f318dd": [
+    "这会用此应用的 AgentD（",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "）运行 agentd install。它会用此应用的 AgentD 及其默认根目录重新注册 watchdog；它现在设置的 AGENTD_ROOT 或 AGENTD_DB 不会保留。"
+  ],
+  "97848e9a3bfa3bf6": "修复",
   "001d17590be2a445": "AgentD",
   "893bb44a7b9c9094": "刷新",
   "57af791aca31d90a": "后台任务",

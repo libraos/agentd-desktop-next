@@ -123,6 +123,7 @@ export function useAgentdCommands() {
     setTeamNode: useAtomCommand(agentdEnvironment.setTeamNode),
     cloudConfigure: useAtomCommand(agentdEnvironment.cloudConfigure),
     cloudKeyFileFix: useAtomCommand(agentdEnvironment.cloudKeyFileFix),
+    repairServices: useAtomCommand(agentdEnvironment.repairServices),
   };
 }
 

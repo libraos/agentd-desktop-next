@@ -3043,16 +3043,8 @@
   "e9530c0bbdc98bd2": "LibraOS account",
   "2c73362a57a1dff5": "AgentD page",
   "19ccb9ca234d58ce": "Worker settings",
+  "f456f04a3de8783d": "AgentD のバックグラウンドサービスは、見つからない AgentD か旧 AgentD Desktop の AgentD で動いており、このアプリの AgentD への切り替えに失敗しました。ターミナルで agentd install を実行してください。",
   "8b9fa521cecb4f8d": "Uses",
-  "74d5bd28e284fa57": "AgentD のバックグラウンドサービスの 1 つが、見つからないか旧 AgentD Desktop の AgentD を実行しており、もう 1 つはご自身の AgentD を実行しています。このアプリはどちらも変更していません。お使いの AgentD で agentd install を実行してください。実行した環境で設定されている AGENTD_ROOT と AGENTD_DB で両方のサービスが書き換えられます。ダッシュボードが独自の値を使う場合は、その後その値で agentd dash install を実行してください。",
-  "a6679080269d6abc": "AgentD のバックグラウンドサービスが、見つからない AgentD または旧 AgentD Desktop の AgentD を実行しており、2 つの異なる AgentD レジャーを使用しています。このアプリは変更していません。ターミナルで、watchdog の AGENTD_ROOT と AGENTD_DB を設定して agentd install を実行し、次にダッシュボードの値を設定して agentd dash install を実行してください。",
-  "3699758ab3139312": "AgentD のバックグラウンドサービスの 1 つが、見つからない AgentD または旧 AgentD Desktop の AgentD を実行しており、agentd install では保持されない方法で独自の AGENTD_ROOT または AGENTD_DB を設定しています。このアプリは変更していません。ターミナルで agentd install と agentd dash install を実行してから、そのサービスにそれらを再設定してください。",
-  "519f26ed4d1e0664": "AgentD のバックグラウンドサービスの 1 つが、見つからないか旧 AgentD Desktop の AgentD を実行しており、このアプリはその AgentD 台帳を示す設定ファイルを読み取れませんでした。サービスは変更せず、次回起動時に再確認します。または、そのサービスの AGENTD_ROOT と AGENTD_DB を設定してターミナルで agentd install を実行してください。",
-  "27a56601919e53d0": "AgentD のバックグラウンドサービスの 1 つが、見つからないか旧 AgentD Desktop の AgentD を実行しており、その systemd ドロップインが実行するプログラムを指定しています。これは agentd install では変更されません。このアプリは変更していません。ドロップインからその ExecStart を削除してから、ターミナルで agentd install（ダッシュボードの場合は agentd dash install）を実行してください。",
-  "feed1033187aadc9": "AgentD のバックグラウンドサービスが、存在しない AgentD または旧 AgentD Desktop の AgentD を実行しています。このアプリの AgentD はアプリを閉じると消えるため、変更していません。ターミナル用に agentd をインストールしてから agentd install を実行してください。",
-  "e5409921bb75522c": "AgentD のバックグラウンドサービスはまだこのアプリの AgentD を実行していません。古い AgentD サービスが有効な間、AgentD はそれらを起動しません。ターミナルでこれを実行し、続けて agentd install を実行してください。",
-  "d1934c355b387dbd": "AgentD のバックグラウンドサービスは、見つからない AgentD か旧 AgentD Desktop の AgentD で動いていました。現在はこのアプリの AgentD で動いており、クラウドの結果が再び同期されます。",
-  "e94ad00e323f4971": "AgentD のバックグラウンドサービスは、見つからない AgentD か旧 AgentD Desktop の AgentD で動いており、このアプリの AgentD への切り替えに失敗しました。ターミナルで agentd install を実行してください。",
   "803dbf99343f4441": "Installed for the terminal",
   "b21f66984690c19a": [
     {
@@ -3072,6 +3064,58 @@
   ],
   "c86e02018b5fd3b3": "To run agentd in a terminal, add this line to your shell profile:",
   "a28dff6e4d10f8e1": "Got it",
+  "39ec3f59be4e055c": [
+    "AgentD の watchdog サービスは ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " を実行していますが、これは見つからないか旧 AgentD Desktop のものです。"
+  ],
+  "e32b73bb21bcacb0": [
+    "AgentD のダッシュボードサービスは ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " を実行していますが、これは見つからないか旧 AgentD Desktop のものです。"
+  ],
+  "74d5bd28e284fa57": "AgentD のバックグラウンドサービスの 1 つが、見つからないか旧 AgentD Desktop の AgentD を実行しており、もう 1 つはご自身の AgentD を実行しています。このアプリはどちらも変更していません。お使いの AgentD で agentd install を実行してください。実行した環境で設定されている AGENTD_ROOT と AGENTD_DB で両方のサービスが書き換えられます。ダッシュボードが独自の値を使う場合は、その後その値で agentd dash install を実行してください。",
+  "feed1033187aadc9": "AgentD のバックグラウンドサービスが、存在しない AgentD または旧 AgentD Desktop の AgentD を実行しています。このアプリの AgentD はアプリを閉じると消えるため、変更していません。ターミナル用に agentd をインストールしてから agentd install を実行してください。",
+  "e5409921bb75522c": "AgentD のバックグラウンドサービスはまだこのアプリの AgentD を実行していません。古い AgentD サービスが有効な間、AgentD はそれらを起動しません。ターミナルでこれを実行し、続けて agentd install を実行してください。",
+  "ef7c30f129576625": "修復中…",
+  "afb4c74d1cc655a7": "修復…",
+  "dc26fcb837031237": "AgentD のバックグラウンドサービスを修復しますか？",
+  "61ef16efc02ec666": [
+    "このアプリの AgentD（",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "）で agentd install を実行します。ダッシュボードと watchdog の両方を、このアプリの AgentD とその既定のルートで登録し直します。現在設定されている AGENTD_ROOT や AGENTD_DB は保持されません。"
+  ],
+  "35559a884c5b7c0e": [
+    "このアプリの AgentD（",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "）で agentd dash install を実行します。ダッシュボードを、このアプリの AgentD とその既定のルートで登録し直します。現在設定されている AGENTD_ROOT や AGENTD_DB は保持されません。"
+  ],
+  "a1427ddb00f318dd": [
+    "このアプリの AgentD（",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "）で agentd install を実行します。watchdog を、このアプリの AgentD とその既定のルートで登録し直します。現在設定されている AGENTD_ROOT や AGENTD_DB は保持されません。"
+  ],
+  "97848e9a3bfa3bf6": "修復",
   "001d17590be2a445": "AgentD",
   "893bb44a7b9c9094": "更新",
   "57af791aca31d90a": "Background task",

@@ -3620,6 +3620,7 @@ export const layerWsRpc = (
         [WS_METHODS.agentdCloudConfigure]: (input) => agentd.cloudConfigure(input),
         [WS_METHODS.agentdCloudKeyFile]: (input) => agentd.cloudKeyFile(input, false),
         [WS_METHODS.agentdCloudKeyFileFix]: (input) => agentd.cloudKeyFile(input, true),
+        [WS_METHODS.agentdRepairServices]: (_input) => agentd.repairServices,
         [WS_METHODS.agentdTaskDefaults]: (input) => agentd.taskDefaults(input),
         [WS_METHODS.agentdTaskOthers]: (input) => agentd.taskOthers(input),
         [WS_METHODS.agentdSubscribeTeamNode]: (_input) => teamNode.subscribe,

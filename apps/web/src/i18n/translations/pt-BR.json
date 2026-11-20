@@ -3045,16 +3045,8 @@
   "e9530c0bbdc98bd2": "LibraOS account",
   "2c73362a57a1dff5": "AgentD page",
   "19ccb9ca234d58ce": "Worker settings",
+  "f456f04a3de8783d": "Os serviços em segundo plano do AgentD usam um AgentD ausente ou do antigo AgentD Desktop, e não foi possível passá-los para o AgentD deste app. Execute agentd install em um terminal.",
   "8b9fa521cecb4f8d": "Uses",
-  "74d5bd28e284fa57": "Um dos serviços em segundo plano do AgentD executa um AgentD que está ausente ou pertence ao antigo AgentD Desktop, e outro executa o seu próprio AgentD. Este app não mexeu em nenhum dos dois: execute agentd install com o AgentD que você usa. Ele reescreve os dois serviços com o AGENTD_ROOT e o AGENTD_DB definidos onde você o executar; se o painel usa os próprios, execute depois agentd dash install com eles.",
-  "a6679080269d6abc": "Os serviços em segundo plano do AgentD executam um AgentD ausente ou do antigo AgentD Desktop e usam dois registros do AgentD diferentes. Este app não os alterou: em um terminal, execute agentd install com AGENTD_ROOT e AGENTD_DB do watchdog e depois agentd dash install com os do painel.",
-  "3699758ab3139312": "Um dos serviços em segundo plano do AgentD executa um AgentD ausente ou do antigo AgentD Desktop e define o próprio AGENTD_ROOT ou AGENTD_DB de um jeito que o agentd install não manteria. Este app não o alterou: execute agentd install e agentd dash install em um terminal e depois defina-os de novo para esse serviço.",
-  "519f26ed4d1e0664": "Um dos serviços em segundo plano do AgentD executa um AgentD que está ausente ou pertence ao antigo AgentD Desktop, e este app não conseguiu ler o arquivo de configurações que indica o ledger do AgentD dele. Ele não mexeu nos serviços e verificará de novo na próxima vez que iniciar; ou execute agentd install em um terminal com o AGENTD_ROOT e o AGENTD_DB desse serviço.",
-  "27a56601919e53d0": "Um dos serviços em segundo plano do AgentD executa um AgentD que está ausente ou pertence ao antigo AgentD Desktop, e um drop-in do systemd define o programa que ele executa, o que o agentd install não altera. Este app não mexeu nele: remova esse ExecStart do drop-in e depois execute agentd install em um terminal, ou agentd dash install para o painel.",
-  "feed1033187aadc9": "Os serviços em segundo plano do AgentD executam um AgentD ausente ou do antigo AgentD Desktop. O AgentD deste app some quando o app é fechado, então eles foram deixados como estavam: instale o agentd para o terminal e depois execute agentd install.",
-  "e5409921bb75522c": "Os serviços em segundo plano do AgentD ainda não executam o AgentD deste app: o AgentD não os inicia enquanto serviços antigos do AgentD estiverem ativos. Execute isto e depois agentd install em um terminal.",
-  "d1934c355b387dbd": "Os serviços em segundo plano do AgentD usavam um AgentD ausente ou do antigo AgentD Desktop. Agora usam o AgentD deste app, e os resultados da nuvem voltam a sincronizar.",
-  "e94ad00e323f4971": "Os serviços em segundo plano do AgentD usam um AgentD ausente ou do antigo AgentD Desktop, e não foi possível passá-los para o AgentD deste app. Execute agentd install em um terminal.",
   "803dbf99343f4441": "Installed for the terminal",
   "b21f66984690c19a": [
     {
@@ -3074,6 +3066,58 @@
   ],
   "c86e02018b5fd3b3": "To run agentd in a terminal, add this line to your shell profile:",
   "a28dff6e4d10f8e1": "Got it",
+  "39ec3f59be4e055c": [
+    "O serviço watchdog do AgentD executa ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ", que está ausente ou pertence ao antigo AgentD Desktop."
+  ],
+  "e32b73bb21bcacb0": [
+    "O serviço do painel do AgentD executa ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ", que está ausente ou pertence ao antigo AgentD Desktop."
+  ],
+  "74d5bd28e284fa57": "Um dos serviços em segundo plano do AgentD executa um AgentD que está ausente ou pertence ao antigo AgentD Desktop, e outro executa o seu próprio AgentD. Este app não mexeu em nenhum dos dois: execute agentd install com o AgentD que você usa. Ele reescreve os dois serviços com o AGENTD_ROOT e o AGENTD_DB definidos onde você o executar; se o painel usa os próprios, execute depois agentd dash install com eles.",
+  "feed1033187aadc9": "Os serviços em segundo plano do AgentD executam um AgentD ausente ou do antigo AgentD Desktop. O AgentD deste app some quando o app é fechado, então eles foram deixados como estavam: instale o agentd para o terminal e depois execute agentd install.",
+  "e5409921bb75522c": "Os serviços em segundo plano do AgentD ainda não executam o AgentD deste app: o AgentD não os inicia enquanto serviços antigos do AgentD estiverem ativos. Execute isto e depois agentd install em um terminal.",
+  "ef7c30f129576625": "Reparando…",
+  "afb4c74d1cc655a7": "Reparar…",
+  "dc26fcb837031237": "Reparar os serviços em segundo plano do AgentD?",
+  "61ef16efc02ec666": [
+    "Isso executa agentd install com o AgentD deste app (",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "). O painel e o watchdog são registrados novamente com o AgentD deste app e sua raiz padrão; um AGENTD_ROOT ou AGENTD_DB definido agora não é mantido."
+  ],
+  "35559a884c5b7c0e": [
+    "Isso executa agentd dash install com o AgentD deste app (",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "). O painel é registrado novamente com o AgentD deste app e sua raiz padrão; um AGENTD_ROOT ou AGENTD_DB definido agora não é mantido."
+  ],
+  "a1427ddb00f318dd": [
+    "Isso executa agentd install com o AgentD deste app (",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "). O watchdog é registrado novamente com o AgentD deste app e sua raiz padrão; um AGENTD_ROOT ou AGENTD_DB definido agora não é mantido."
+  ],
+  "97848e9a3bfa3bf6": "Reparar",
   "001d17590be2a445": "AgentD",
   "893bb44a7b9c9094": "Atualizar",
   "57af791aca31d90a": "Background task",

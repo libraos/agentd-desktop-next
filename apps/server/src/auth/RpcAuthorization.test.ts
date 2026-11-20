@@ -83,6 +83,10 @@ describe("RPC authorization scopes", () => {
     expect(requiredScopeForRpcMethod(WS_METHODS.agentdCloudKeyFileFix)).toBe(
       AuthEnvironmentMaintainScope,
     );
+    // Repair rewrites agentd's services on the host.
+    expect(requiredScopeForRpcMethod(WS_METHODS.agentdRepairServices)).toBe(
+      AuthEnvironmentMaintainScope,
+    );
   });
 
   it("still lets readers load settings the way installed Swift clients ask", () => {

@@ -3045,16 +3045,8 @@
   "e9530c0bbdc98bd2": "LibraOS account",
   "2c73362a57a1dff5": "AgentD page",
   "19ccb9ca234d58ce": "Worker settings",
+  "f456f04a3de8783d": "Les services d’arrière-plan d’AgentD utilisent un AgentD manquant ou appartenant à l’ancien AgentD Desktop, et leur passage à l’AgentD de cette app a échoué. Exécutez agentd install dans un terminal.",
   "8b9fa521cecb4f8d": "Uses",
-  "74d5bd28e284fa57": "L’un des services d’arrière-plan d’AgentD exécute un AgentD manquant ou appartenant à l’ancien AgentD Desktop, et un autre exécute votre propre AgentD. Cette app n’a touché à aucun des deux : exécutez agentd install avec l’AgentD que vous utilisez. Il réécrit les deux services avec les AGENTD_ROOT et AGENTD_DB définis là où vous l’exécutez ; si le tableau de bord utilise les siens, exécutez ensuite agentd dash install avec ceux-ci.",
-  "a6679080269d6abc": "Les services d’arrière-plan d’AgentD exécutent un AgentD manquant ou appartenant à l’ancien AgentD Desktop, et ils utilisent deux registres AgentD différents. Cette app n’y a pas touché : dans un terminal, lancez agentd install avec AGENTD_ROOT et AGENTD_DB du watchdog, puis agentd dash install avec ceux du tableau de bord.",
-  "3699758ab3139312": "L’un des services d’arrière-plan d’AgentD exécute un AgentD manquant ou appartenant à l’ancien AgentD Desktop, et il définit son propre AGENTD_ROOT ou AGENTD_DB d’une façon qu’agentd install ne conserverait pas. Cette app n’y a pas touché : lancez agentd install et agentd dash install dans un terminal, puis redéfinissez-les pour ce service.",
-  "519f26ed4d1e0664": "L’un des services d’arrière-plan d’AgentD exécute un AgentD manquant ou appartenant à l’ancien AgentD Desktop, et cette app n’a pas pu lire le fichier de réglages qui indique son registre AgentD. Elle n’a pas touché aux services et vérifiera de nouveau à son prochain démarrage ; ou exécutez agentd install dans un terminal avec les AGENTD_ROOT et AGENTD_DB de ce service.",
-  "27a56601919e53d0": "L’un des services d’arrière-plan d’AgentD exécute un AgentD manquant ou appartenant à l’ancien AgentD Desktop, et un drop-in systemd définit le programme qu’il exécute, ce que agentd install ne modifie pas. Cette app n’y a pas touché : retirez cet ExecStart du drop-in, puis exécutez agentd install dans un terminal, ou agentd dash install pour le tableau de bord.",
-  "feed1033187aadc9": "Les services d’arrière-plan d’AgentD exécutent un AgentD absent ou appartenant à l’ancien AgentD Desktop. L’AgentD de cette app disparaît à sa fermeture, ils n’ont donc pas été modifiés : installez agentd pour le terminal, puis exécutez agentd install.",
-  "e5409921bb75522c": "Les services d’arrière-plan d’AgentD n’exécutent pas encore l’AgentD de cette app : AgentD ne les démarrera pas tant que d’anciens services AgentD sont actifs. Lancez ceci, puis agentd install, dans un terminal.",
-  "d1934c355b387dbd": "Les services d’arrière-plan d’AgentD utilisaient un AgentD manquant ou appartenant à l’ancien AgentD Desktop. Ils utilisent désormais l’AgentD de cette app : les résultats cloud se synchronisent de nouveau.",
-  "e94ad00e323f4971": "Les services d’arrière-plan d’AgentD utilisent un AgentD manquant ou appartenant à l’ancien AgentD Desktop, et leur passage à l’AgentD de cette app a échoué. Exécutez agentd install dans un terminal.",
   "803dbf99343f4441": "Installed for the terminal",
   "b21f66984690c19a": [
     {
@@ -3074,6 +3066,58 @@
   ],
   "c86e02018b5fd3b3": "To run agentd in a terminal, add this line to your shell profile:",
   "a28dff6e4d10f8e1": "Got it",
+  "39ec3f59be4e055c": [
+    "Le service watchdog d’AgentD exécute ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ", qui est manquant ou appartient à l’ancien AgentD Desktop."
+  ],
+  "e32b73bb21bcacb0": [
+    "Le service du tableau de bord d’AgentD exécute ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ", qui est manquant ou appartient à l’ancien AgentD Desktop."
+  ],
+  "74d5bd28e284fa57": "L’un des services d’arrière-plan d’AgentD exécute un AgentD manquant ou appartenant à l’ancien AgentD Desktop, et un autre exécute votre propre AgentD. Cette app n’a touché à aucun des deux : exécutez agentd install avec l’AgentD que vous utilisez. Il réécrit les deux services avec les AGENTD_ROOT et AGENTD_DB définis là où vous l’exécutez ; si le tableau de bord utilise les siens, exécutez ensuite agentd dash install avec ceux-ci.",
+  "feed1033187aadc9": "Les services d’arrière-plan d’AgentD exécutent un AgentD absent ou appartenant à l’ancien AgentD Desktop. L’AgentD de cette app disparaît à sa fermeture, ils n’ont donc pas été modifiés : installez agentd pour le terminal, puis exécutez agentd install.",
+  "e5409921bb75522c": "Les services d’arrière-plan d’AgentD n’exécutent pas encore l’AgentD de cette app : AgentD ne les démarrera pas tant que d’anciens services AgentD sont actifs. Lancez ceci, puis agentd install, dans un terminal.",
+  "ef7c30f129576625": "Réparation…",
+  "afb4c74d1cc655a7": "Réparer…",
+  "dc26fcb837031237": "Réparer les services d’arrière-plan d’AgentD ?",
+  "61ef16efc02ec666": [
+    "Cela exécute agentd install avec l’AgentD de cette app (",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "). Le tableau de bord et le watchdog sont réenregistrés avec l’AgentD de cette app et sa racine par défaut ; un AGENTD_ROOT ou AGENTD_DB défini actuellement n’est pas conservé."
+  ],
+  "35559a884c5b7c0e": [
+    "Cela exécute agentd dash install avec l’AgentD de cette app (",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "). Le tableau de bord est réenregistré avec l’AgentD de cette app et sa racine par défaut ; un AGENTD_ROOT ou AGENTD_DB défini actuellement n’est pas conservé."
+  ],
+  "a1427ddb00f318dd": [
+    "Cela exécute agentd install avec l’AgentD de cette app (",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    "). Le watchdog est réenregistré avec l’AgentD de cette app et sa racine par défaut ; un AGENTD_ROOT ou AGENTD_DB défini actuellement n’est pas conservé."
+  ],
+  "97848e9a3bfa3bf6": "Réparer",
   "001d17590be2a445": "AgentD",
   "893bb44a7b9c9094": "Actualiser",
   "57af791aca31d90a": "Background task",

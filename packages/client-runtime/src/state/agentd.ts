@@ -119,6 +119,11 @@ export function createAgentdEnvironmentAtoms<R, E>(
       tag: WS_METHODS.agentdCloudKeyFileFix,
       scheduler,
     }),
+    repairServices: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:agentd:repair-services",
+      tag: WS_METHODS.agentdRepairServices,
+      scheduler,
+    }),
     cloudReview: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:agentd:cloud-review",
       tag: WS_METHODS.agentdCloudReview,

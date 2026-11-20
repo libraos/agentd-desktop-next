@@ -21,7 +21,8 @@ import {
   type AgentdCloudConfigured,
   type AgentdCloudKeyFileCheck,
   type AgentdCloudKeyFileInput,
-  type AgentdServicesRepair,
+  type AgentdServicesProblem,
+  type AgentdServicesRepairResult,
   type AgentdTaskDefaults,
   type AgentdTaskDefaultsInput,
   type AgentdCloudTaskInput,
@@ -63,7 +64,7 @@ import { makeAgentdCloud } from "./agentdCloud.ts";
 import { makeCloudReview } from "./agentdCloudReview.ts";
 import { AgentdArgumentError, agentdArgs, agentdTicket } from "./agentdCommands.ts";
 import * as AgentdJson from "./agentdJson.ts";
-import { repairServices, serviceAgentd } from "./agentdServices.ts";
+import { detectServices, repairServices, serviceAgentd } from "./agentdServices.ts";
 import { makeCloudKeyFile } from "./cloudKeyFile.ts";
 import { estimateType, PROJECT_FILES, readEstimate, suggestCheck } from "./taskDefaults.ts";
 import { joinedPerson, mergeTaskHolders, repositoryTargets } from "./taskOthers.ts";
@@ -105,6 +106,8 @@ export class AgentdBridge extends Context.Service<
       input: AgentdCloudKeyFileInput,
       makePrivate: boolean,
     ) => Effect.Effect<AgentdCloudKeyFileCheck, AgentdError>;
+    /** Re-registers services on a missing or old agentd with this app's; only on the user's say. */
+    readonly repairServices: Effect.Effect<AgentdServicesRepairResult, AgentdError>;
     readonly taskDefaults: (
       input: AgentdTaskDefaultsInput,
     ) => Effect.Effect<AgentdTaskDefaults, AgentdError>;
@@ -310,43 +313,50 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
       )
     : Effect.succeed(null);
 
-  // Set once on start when agentd's services were moved to the bundled agentd.
-  let servicesRepair: AgentdServicesRepair | null = null;
+  // agentd's services on a missing or old agentd: checked on start and after a Repair, never moved
+  // unless the user confirms Repair.
+  let servicesProblem: AgentdServicesProblem | null = null;
   const bundledBinary = env.AGENTD_DESKTOP_BUNDLED === "1" ? env.AGENTD_BIN?.trim() : undefined;
-  if (bundledBinary) {
-    const home = yield* HostProcess.HomeDirectory;
-    yield* readInstallRecord.pipe(
-      Effect.flatMap((installed) =>
-        repairServices({
+  const home = bundledBinary ? yield* HostProcess.HomeDirectory : "";
+  const serviceDeps = bundledBinary
+    ? readInstallRecord.pipe(
+        Effect.map((installed) => ({
           bundled: bundledBinary,
           target: serviceAgentd(bundledBinary, env.APPDIR, installed),
           platform,
           home,
           root: env.AGENTD_ROOT,
           run: runner.run,
-        }),
-      ),
-      Effect.tap((repair) =>
-        Effect.sync(() => {
-          servicesRepair = repair;
-        }),
-      ),
-      Effect.tap((repair) =>
-        repair === null
-          ? Effect.void
-          : repair.ok
-            ? Effect.logInfo("agentd services moved to the bundled agentd", repair)
-            : Effect.logWarning(
-                "agentd services on a missing or old agentd were not moved",
-                repair,
-              ),
-      ),
+        })),
+      )
+    : null;
+  const provideFiles = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    effect.pipe(
       Effect.provideService(FileSystem.FileSystem, fs),
       Effect.provideService(Path.Path, pathService),
-      Effect.ignore,
-      Effect.forkScoped,
     );
-  }
+  const checkServices = Effect.fn("AgentdBridge.checkServices")(function* () {
+    if (serviceDeps === null) return null;
+    const problem = yield* provideFiles(detectServices(yield* serviceDeps));
+    servicesProblem = problem;
+    if (problem !== null)
+      yield* Effect.logWarning("agentd services run a missing or old agentd", problem);
+    return problem;
+  });
+  if (serviceDeps !== null) yield* checkServices().pipe(Effect.ignore, Effect.forkScoped);
+
+  const repairAgentdServices = Effect.fn("AgentdBridge.repairServices")(function* () {
+    const problem = serviceDeps === null ? null : yield* checkServices();
+    if (serviceDeps === null || problem === null) return { ok: true };
+    if (problem.moves.length === 0)
+      return yield* commandError(
+        "Repair isn’t available for these services. Run agentd install in a terminal.",
+      );
+    const result = yield* provideFiles(repairServices(yield* serviceDeps, problem));
+    yield* Effect.logInfo("agentd services repaired on request", result);
+    yield* checkServices();
+    return result;
+  });
 
   // Until the watchdog runs a working agentd, the listed cloud jobs are synced here, never often.
   // One sync at a time, beside the list: a slow Job API never holds up the local tasks.
@@ -415,7 +425,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
       defaultWorker,
       binary: yield* binary,
       install,
-      ...(servicesRepair === null ? {} : { servicesRepair }),
+      ...(servicesProblem === null ? {} : { servicesProblem }),
     };
   }).pipe(Effect.withSpan("AgentdBridge.status"));
 
@@ -697,6 +707,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     cloudReview,
     cloudConfigure: cloud.cloudConfigure,
     cloudKeyFile,
+    repairServices: repairAgentdServices(),
     taskDefaults,
     taskOthers,
     binary,

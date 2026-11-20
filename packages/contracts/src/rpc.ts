@@ -401,6 +401,7 @@ import {
   AgentdCloudConfigureInput,
   AgentdCloudConfigured,
   AgentdCloudKeyFileCheck,
+  AgentdServicesRepairResult,
   AgentdCloudKeyFileInput,
   AgentdCloudReview,
   AgentdCloudReviewInput,
@@ -725,6 +726,7 @@ export const WS_METHODS = {
   agentdCloudConfigure: "agentd.cloudConfigure",
   agentdCloudKeyFile: "agentd.cloudKeyFile",
   agentdCloudKeyFileFix: "agentd.cloudKeyFileFix",
+  agentdRepairServices: "agentd.repairServices",
   agentdTaskDefaults: "agentd.taskDefaults",
   agentdTaskOthers: "agentd.taskOthers",
   agentdSubscribeTeamNode: "agentd.subscribeTeamNode",
@@ -2403,6 +2405,12 @@ const WsAgentdCloudKeyFileFixRpc = Rpc.make(WS_METHODS.agentdCloudKeyFileFix, {
   error: AgentdRpcError,
 });
 
+const WsAgentdRepairServicesRpc = Rpc.make(WS_METHODS.agentdRepairServices, {
+  payload: Schema.Struct({}),
+  success: AgentdServicesRepairResult,
+  error: AgentdRpcError,
+});
+
 const WsAgentdCloudReviewRpc = Rpc.make(WS_METHODS.agentdCloudReview, {
   payload: AgentdCloudReviewInput,
   success: AgentdCloudReview,
@@ -2712,6 +2720,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsAgentdCloudConfigureRpc,
   WsAgentdCloudKeyFileRpc,
   WsAgentdCloudKeyFileFixRpc,
+  WsAgentdRepairServicesRpc,
   WsAgentdTaskDefaultsRpc,
   WsAgentdTaskOthersRpc,
   WsAgentdSubscribeTeamNodeRpc,
