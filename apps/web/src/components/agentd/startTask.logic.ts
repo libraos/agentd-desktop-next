@@ -7,6 +7,7 @@ import {
   type AgentdCloudPlan,
   type AgentdCloudSubscription,
   type AgentdTaskEstimate,
+  type ClientSettings,
   type MessageId,
   type OrchestrationV2ThreadProjection,
 } from "@t3tools/contracts";
@@ -280,22 +281,23 @@ export function keyFileProblem(
   return check.openToOthers ? "open-to-others" : null;
 }
 
-type RememberedKeyFiles = Readonly<
-  Record<string, { readonly anthropic?: string; readonly openai?: string }>
->;
+type RememberedKeyFiles = ClientSettings["agentdCloudKeyFiles"];
 
-/** The BYOK paths agentd accepted, merged into the latest per-environment record. */
+/** The BYOK paths agentd accepted at `now`, merged into the latest per-environment record. */
 export function rememberKeyFiles(
   latest: RememberedKeyFiles,
   environmentId: string,
   submitted: { readonly anthropicKeyFile?: string; readonly openaiKeyFile?: string },
+  now: number,
 ): RememberedKeyFiles {
   return {
     ...latest,
     [environmentId]: {
       ...latest[environmentId],
-      ...(submitted.anthropicKeyFile ? { anthropic: submitted.anthropicKeyFile } : {}),
-      ...(submitted.openaiKeyFile ? { openai: submitted.openaiKeyFile } : {}),
+      ...(submitted.anthropicKeyFile
+        ? { anthropic: submitted.anthropicKeyFile, anthropicSavedAt: now }
+        : {}),
+      ...(submitted.openaiKeyFile ? { openai: submitted.openaiKeyFile, openaiSavedAt: now } : {}),
     },
   };
 }

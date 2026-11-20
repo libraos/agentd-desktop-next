@@ -5,15 +5,15 @@ Ten findings from testing 0.1.10-agentd.7 on macOS. Our own files carry most of 
 - `packages/contracts/src/agentd.ts` — Append the key file check, the quoted `chmod 600` command it suggests, the services problem on status, the scope a Repair was confirmed for and its result, `unreachable` and `checkoutUnknown` on cloud setup and `privateFile` and `wrongKeyFile` on refusals.
 - `packages/contracts/src/rpc.ts` — Append the key file check and fix RPCs and the services Repair RPC.
 - `packages/contracts/src/clientRpcPermissions.ts` — Give making a key file private the environment maintain scope: it reaches host files outside the workspaces that filesystem write covers. Repairing agentd's services gets the same scope: it rewrites host services.
-- `packages/contracts/src/settings.ts` — Append the remembered BYOK key file paths per environment.
+- `packages/contracts/src/settings.ts` — Append the remembered BYOK key file paths per environment, each with when it was saved.
 - `packages/client-runtime/src/state/agentd.ts` — Append the key file check query, fix command and services Repair command.
 - `apps/server/src/auth/RpcAuthorization.ts` — Give the key file check the filesystem read scope, as browsing files has.
 - `apps/server/src/auth/RpcAuthorization.test.ts` — Check both key file scopes and the Repair scope.
 - `apps/server/src/observability/RpcInstrumentation.ts` — Append the two key file RPCs and Repair to the AgentD group.
 - `apps/server/src/ws.ts` — Append the thin key file check, fix and Repair handlers; Start's wrong-provider error is made generic for a connection without filesystem read.
-- `apps/web/src/clientPersistenceStorage.ts` — Keep stored BYOK key paths under the incoming ones on write, so two tabs can't erase each other's.
-- `apps/desktop/src/settings/DesktopClientSettings.ts` — Serialize writes and keep stored BYOK key paths under the incoming ones, so two windows can't erase each other's.
-- `apps/desktop/src/settings/DesktopClientSettings.test.ts` — Check two windows' concurrent saves keep both paths.
+- `apps/web/src/clientPersistenceStorage.ts` — Keep the newer of stored and incoming BYOK key path per provider on write, so a tab saving an old snapshot can't erase or restore one.
+- `apps/desktop/src/settings/DesktopClientSettings.ts` — Serialize writes and keep the newer of stored and incoming BYOK key path per provider, so a window saving an old snapshot can't erase or restore one.
+- `apps/desktop/src/settings/DesktopClientSettings.test.ts` — Check two windows' concurrent saves keep both paths, and an old snapshot's save keeps a replaced path.
 - `apps/web/src/lib/agentdState.ts` — Append the key file check hook, fix command and Repair command.
 - `apps/web/src/components/chat/useComposerMenuItems.ts` — Show Hand to a worker as `/hand-to-worker`, like every other built-in command, from our `handToWorkerSlashItem`.
 - `apps/web/src/composer-logic.test.ts` — Check that `/hand` finds the item the menu shows.

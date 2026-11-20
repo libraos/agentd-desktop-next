@@ -34,11 +34,12 @@ it("keeps a key path another window remembered while this one was writing", asyn
     durable = settings;
   });
 
+  using _now = vi.spyOn(Date, "now").mockReturnValue(5);
   await persistRememberedKeyFiles("here", { anthropicKeyFile: "/a/anthropic.key" }, persist);
 
   const both = {
     other: { openai: "/b/openai.key" },
-    here: { anthropic: "/a/anthropic.key" },
+    here: { anthropic: "/a/anthropic.key", anthropicSavedAt: 5 },
   };
   expect(durable.agentdCloudKeyFiles).toEqual(both);
   expect(getClientSettings().agentdCloudKeyFiles).toEqual(both);
@@ -63,14 +64,15 @@ it("keeps a key path another window saved before its change reached this one", a
     storage.settings = settings;
   });
 
+  using _now = vi.spyOn(Date, "now").mockReturnValue(5);
   await persistRememberedKeyFiles("third", { anthropicKeyFile: "/c/anthropic.key" }, persist);
   // The same environment: only the submitted provider's path changes.
   await persistRememberedKeyFiles("here", { anthropicKeyFile: "/a/anthropic.key" }, persist);
 
   expect(durable.agentdCloudKeyFiles).toEqual({
-    here: { openai: "/new/openai.key", anthropic: "/a/anthropic.key" },
+    here: { openai: "/new/openai.key", anthropic: "/a/anthropic.key", anthropicSavedAt: 5 },
     other: { openai: "/b/openai.key" },
-    third: { anthropic: "/c/anthropic.key" },
+    third: { anthropic: "/c/anthropic.key", anthropicSavedAt: 5 },
   });
 });
 
@@ -80,11 +82,17 @@ it("keeps both provider paths when two saves queue in one window", async () => {
   const persist = async (settings: ClientSettings) => {
     storage.settings = settings;
   };
+  using _now = vi.spyOn(Date, "now").mockReturnValue(5);
   await Promise.all([
     persistRememberedKeyFiles("here", { openaiKeyFile: "/a/openai.key" }, persist),
     persistRememberedKeyFiles("here", { anthropicKeyFile: "/a/anthropic.key" }, persist),
   ]);
   expect(storage.settings.agentdCloudKeyFiles).toEqual({
-    here: { openai: "/a/openai.key", anthropic: "/a/anthropic.key" },
+    here: {
+      openai: "/a/openai.key",
+      openaiSavedAt: 5,
+      anthropic: "/a/anthropic.key",
+      anthropicSavedAt: 5,
+    },
   });
 });

@@ -255,9 +255,9 @@ it("blocks a key file under the other provider's field, then one others can read
 
 it("remembers accepted BYOK paths without dropping another environment's", () => {
   const latest = { other: { openai: "/b/openai.key" }, here: { anthropic: "/a/old.key" } };
-  expect(rememberKeyFiles(latest, "here", { openaiKeyFile: "/a/openai.key" })).toEqual({
+  expect(rememberKeyFiles(latest, "here", { openaiKeyFile: "/a/openai.key" }, 7)).toEqual({
     other: { openai: "/b/openai.key" },
-    here: { anthropic: "/a/old.key", openai: "/a/openai.key" },
+    here: { anthropic: "/a/old.key", openai: "/a/openai.key", openaiSavedAt: 7 },
   });
 });
 

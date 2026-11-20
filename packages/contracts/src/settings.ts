@@ -414,6 +414,9 @@ export const DEFAULT_AGENTD_BUDGET = "60m,$5";
 const AgentdCloudKeyFiles = Schema.Struct({
   anthropic: Schema.optionalKey(Schema.String),
   openai: Schema.optionalKey(Schema.String),
+  // When each path was remembered (epoch ms): a write keeps the newer path per provider.
+  anthropicSavedAt: Schema.optionalKey(Schema.Number),
+  openaiSavedAt: Schema.optionalKey(Schema.Number),
 });
 
 export const ClientSettingsSchema = Schema.Struct({

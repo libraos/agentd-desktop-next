@@ -165,6 +165,22 @@ describe("DesktopClientSettings", () => {
           here: { openai: "/o.key", anthropic: "/a.key" },
           other: { openai: "/b.key" },
         });
+        // A path replaced in one window survives another's save from its old snapshot.
+        yield* settings.set({
+          ...stored,
+          agentdCloudKeyFiles: {
+            ...stored.agentdCloudKeyFiles,
+            here: { ...stored.agentdCloudKeyFiles.here, openai: "/new.key", openaiSavedAt: 2 },
+          },
+        });
+        yield* settings.set({ ...stored, agentdDefaultBudget: "40m,$3" });
+        const after = Option.getOrThrow(yield* settings.get);
+        assert.equal(after.agentdDefaultBudget, "40m,$3");
+        assert.deepEqual(after.agentdCloudKeyFiles.here, {
+          openai: "/new.key",
+          openaiSavedAt: 2,
+          anthropic: "/a.key",
+        });
       }),
     ),
   );

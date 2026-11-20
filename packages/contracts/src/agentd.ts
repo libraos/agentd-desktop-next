@@ -569,24 +569,40 @@ export const AgentdCloudKeyFileCheck = Schema.Struct({
 });
 export type AgentdCloudKeyFileCheck = typeof AgentdCloudKeyFileCheck.Type;
 
-type CloudKeyFiles = Readonly<
-  Record<string, { readonly anthropic?: string; readonly openai?: string }>
->;
+interface CloudKeyFileEntry {
+  readonly anthropic?: string;
+  readonly openai?: string;
+  readonly anthropicSavedAt?: number;
+  readonly openaiSavedAt?: number;
+}
+type CloudKeyFiles = Readonly<Record<string, CloudKeyFileEntry>>;
 
 /**
- * Settings to store with the BYOK paths already stored kept under the incoming ones, so two windows
- * that each read the same old settings and save a path can't erase each other's. Nothing forgets one.
+ * Settings to store with each provider's BYOK path the newer of stored and incoming, by when it
+ * was remembered, so a window saving from an old snapshot (a budget edit, say) can't restore a
+ * path another window replaced, nor erase one it added. A tie keeps the stored path.
  */
 export function withStoredCloudKeyFiles<S extends { readonly agentdCloudKeyFiles: CloudKeyFiles }>(
   stored: { readonly agentdCloudKeyFiles: CloudKeyFiles } | null,
   incoming: S,
 ): S {
   if (stored === null) return incoming;
-  const merged: Record<string, { readonly anthropic?: string; readonly openai?: string }> = {
-    ...stored.agentdCloudKeyFiles,
-  };
-  for (const [environment, files] of Object.entries(incoming.agentdCloudKeyFiles))
-    merged[environment] = { ...merged[environment], ...files };
+  const merged: Record<string, CloudKeyFileEntry> = { ...stored.agentdCloudKeyFiles };
+  for (const [environment, files] of Object.entries(incoming.agentdCloudKeyFiles)) {
+    const entry: { -readonly [K in keyof CloudKeyFileEntry]: CloudKeyFileEntry[K] } = {
+      ...merged[environment],
+    };
+    for (const provider of ["anthropic", "openai"] as const) {
+      const at = `${provider}SavedAt` as const;
+      const path = files[provider];
+      if (path === undefined) continue;
+      if (entry[provider] !== undefined && (files[at] ?? 0) <= (entry[at] ?? 0)) continue;
+      entry[provider] = path;
+      if (files[at] === undefined) delete entry[at];
+      else entry[at] = files[at];
+    }
+    merged[environment] = entry;
+  }
   return { ...incoming, agentdCloudKeyFiles: merged };
 }
 

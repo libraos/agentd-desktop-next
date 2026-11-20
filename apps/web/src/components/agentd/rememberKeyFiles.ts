@@ -27,6 +27,7 @@ export function persistRememberedKeyFiles(
           stored ?? current.agentdCloudKeyFiles,
           environmentId,
           submitted,
+          Date.now(),
         ),
       }),
       persist,
