@@ -22,7 +22,9 @@ import { AgentdInstallStatus } from "./AgentdInstallStatus";
 const environmentId = "env-1" as EnvironmentId;
 const OLD = "/Applications/AgentD Desktop.app/Contents/Resources/bin/agentd";
 const NEXT = "/Applications/AgentD Next.app/Contents/Resources/bin/agentd";
-const status = (servicesProblem: AgentdStatus["servicesProblem"]): AgentdStatus => ({
+const status = (
+  servicesProblem: NonNullable<AgentdStatus["servicesProblem"]> | null,
+): AgentdStatus => ({
   version: "agentd v0.1.14",
   ok: true,
   setUp: true,
