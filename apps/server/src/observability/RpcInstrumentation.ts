@@ -279,6 +279,11 @@ const RPC_AGGREGATES = {
   [WS_METHODS.libraosGatewayStatus]: "libraosGateway",
   [WS_METHODS.libraosGatewayConnect]: "libraosGateway",
   [WS_METHODS.libraosGatewayDisconnect]: "libraosGateway",
+  [WS_METHODS.customGatewayList]: "customGateway",
+  [WS_METHODS.customGatewayAdd]: "customGateway",
+  [WS_METHODS.customGatewayRename]: "customGateway",
+  [WS_METHODS.customGatewayRemove]: "customGateway",
+  [WS_METHODS.customGatewayRefreshModels]: "customGateway",
 } as const satisfies Readonly<Record<WsRpcMethod, string>>;
 
 const RPC_SPAN_PREFIX = "ws.rpc";

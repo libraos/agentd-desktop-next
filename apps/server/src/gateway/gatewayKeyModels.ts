@@ -26,29 +26,40 @@ export type GatewayModelsAnswer =
   | { readonly kind: "refused"; readonly message: string }
   | { readonly kind: "unavailable"; readonly message: string };
 
-const UNREACHABLE: GatewayModelsAnswer = {
-  kind: "unavailable",
-  message: "Couldn't reach LibraOS Gateway at api.libraos.com. Check your connection.",
-};
-
-/** Asks the Gateway which models `key` allows. Never fails: an unreachable Gateway is an answer. */
-export const askGatewayModels = Effect.fn("LibraosGateway.askModels")(function* (key: string) {
+/**
+ * Asks `<base>/models` which models `key` allows; `base` ends in `/v1`. Never fails: an unreachable
+ * gateway is an answer. `name` is how its messages call it.
+ */
+export const askModels = Effect.fn("Gateway.askModels")(function* (gateway: {
+  readonly base: string;
+  readonly name: string;
+  readonly key: string | null;
+}) {
   const http = yield* HttpClient.HttpClient;
-  const request = HttpClientRequest.get(`${LIBRAOS_GATEWAY_ORIGIN}/v1/models`).pipe(
+  const unreachable: GatewayModelsAnswer = {
+    kind: "unavailable",
+    message: `Couldn't reach ${gateway.name} at ${new URL(gateway.base).host}. Check your connection.`,
+  };
+  const request = HttpClientRequest.get(`${gateway.base}/models`).pipe(
     HttpClientRequest.acceptJson,
   );
   const ask = Effect.gen(function* () {
-    const response = yield* http.execute(HttpClientRequest.bearerToken(request, key)).pipe(
-      // A redirect could carry the key to another origin.
-      Effect.provideService(FetchHttpClient.RequestInit, { redirect: "error" }),
-      Effect.provideService(HttpClient.TracerPropagationEnabled, false),
-      Effect.option,
-    );
-    if (response._tag === "None") return UNREACHABLE;
+    const response = yield* http
+      .execute(gateway.key === null ? request : HttpClientRequest.bearerToken(request, gateway.key))
+      .pipe(
+        // A redirect could carry the key to another origin.
+        Effect.provideService(FetchHttpClient.RequestInit, { redirect: "error" }),
+        Effect.provideService(HttpClient.TracerPropagationEnabled, false),
+        Effect.option,
+      );
+    if (response._tag === "None") return unreachable;
     const body = yield* response.value.json.pipe(Effect.orElseSucceed((): unknown => undefined));
     const status = response.value.status;
     if (status < 200 || status >= 300) {
-      const message = gatewayRefusal(status, body);
+      const message = gatewayRefusal(status, body, {
+        name: gateway.name,
+        ...(gateway.key === null ? {} : { key: gateway.key }),
+      });
       return (
         isKeyRefusal(status) ? { kind: "refused", message } : { kind: "unavailable", message }
       ) satisfies GatewayModelsAnswer;
@@ -58,17 +69,21 @@ export const askGatewayModels = Effect.fn("LibraosGateway.askModels")(function* 
       models === null
         ? {
             kind: "unavailable",
-            message: "LibraOS Gateway answered with an unreadable model list.",
+            message: `${gateway.name} answered with an unreadable model list.`,
           }
         : { kind: "models", models }
     ) satisfies GatewayModelsAnswer;
   });
-  // The deadline covers the body too: a Gateway that stalls mid-answer must not hold a refresh.
+  // The deadline covers the body too: a gateway that stalls mid-answer must not hold a refresh.
   return yield* ask.pipe(
     Effect.timeoutOption(CHECK_TIMEOUT),
-    Effect.map(Option.getOrElse(() => UNREACHABLE)),
+    Effect.map(Option.getOrElse(() => unreachable)),
   );
 });
+
+/** Asks LibraOS Gateway which models `key` allows. */
+export const askGatewayModels = (key: string) =>
+  askModels({ base: `${LIBRAOS_GATEWAY_ORIGIN}/v1`, name: "LibraOS Gateway", key });
 
 /**
  * The models of `family` (prefix dropped, else full ids) the key an agent sends to the Gateway

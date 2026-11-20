@@ -66,7 +66,10 @@ const libraosGatewayEnvironment = {
   }),
 };
 
-function useGatewayEnvironment(target: EnvironmentId | null | undefined): EnvironmentId | null {
+/** The environment gateways are set up on: `target`, else the primary one; null if unreadable. */
+export function useGatewayEnvironment(
+  target: EnvironmentId | null | undefined,
+): EnvironmentId | null {
   const primary = usePrimaryEnvironment();
   const environmentId = target === undefined ? (primary?.environmentId ?? null) : target;
   const canRead = useEnvironmentScope(environmentId, AuthOrchestrationReadScope);
