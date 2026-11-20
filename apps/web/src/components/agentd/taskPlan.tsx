@@ -12,6 +12,7 @@ import * as Schema from "effect/Schema";
 import { useGT, useLocale } from "gt-react";
 import { useRef, useState } from "react";
 
+import { useComposerDraftStore } from "~/composerDraftStore";
 import { agentdEnvironment, useAgentdStatus, useAgentdTaskDefaults } from "~/lib/agentdState";
 import { useLibraosGatewayConnected } from "~/lib/libraosGatewayState";
 import { useProject, useQuietThreadShell } from "~/state/entities";
@@ -35,13 +36,17 @@ import { useWorkerDefaults } from "./workerSettings";
 
 const isCommandError = Schema.is(AgentdCommandError);
 
-/** The session's project directory, where a task from it runs. */
+/** The session's project directory, where a task from it runs; a draft thread uses its project's. */
 export function useTaskDirectory(threadRef: ScopedThreadRef) {
   const thread = useQuietThreadShell(threadRef);
-  const project = useProject(
-    thread ? scopeProjectRef(threadRef.environmentId, thread.projectId) : null,
+  const draft = useComposerDraftStore((store) =>
+    thread ? null : store.getDraftThreadByRef(threadRef),
   );
-  return { thread, cwd: thread?.worktreePath ?? project?.workspaceRoot ?? null };
+  const source = thread ?? draft;
+  const project = useProject(
+    source ? scopeProjectRef(source.environmentId, source.projectId) : null,
+  );
+  return { thread, cwd: source?.worktreePath ?? project?.workspaceRoot ?? null };
 }
 
 export function useTaskDefaults(
@@ -122,16 +127,13 @@ export function useTaskPlan({
 
   const money = (amount: number) =>
     new Intl.NumberFormat(locale, { style: "currency", currency: "USD" }).format(amount);
-  const branchReason = (problem: ReturnType<typeof taskBranchProblem>, name: string | null) => {
+  const branchReason = (problem: ReturnType<typeof taskBranchProblem>) => {
     switch (problem) {
       case "not-repo":
         return gt("The working directory is not a Git repository.");
       case "detached":
         return gt("Check out a named branch in this working directory first.");
       case "protected":
-        return gt("The working directory is on {branch}. Switch to a different branch first.", {
-          branch: name ?? "",
-        });
       case null:
         return null;
     }
@@ -176,8 +178,7 @@ export function useTaskPlan({
         return gt("Choose a worker. The default is set in agentd.");
       case "not-repo":
       case "detached":
-      case "protected":
-        return branchReason(problemKind, git.data?.refName ?? null);
+        return branchReason(problemKind);
       case null:
         break;
     }
@@ -250,6 +251,12 @@ export function useTaskPlan({
           }) +
           (cloud.enabled ? ` ${gt("The estimate comes from local runs of similar tasks.")}` : "");
 
+  const defaultBranch = branch === "protected" ? (git.data?.refName ?? null) : null;
+  const whereLine =
+    cloud.enabled || cloud.waiting || defaultBranch === null
+      ? null
+      : gt("Runs on a new branch in its own worktree, from {branch}.", { branch: defaultBranch });
+
   const ready =
     canStart &&
     problem === null &&
@@ -275,7 +282,7 @@ export function useTaskPlan({
           replaceSubmission: null,
         };
       }
-      const reason = branchReason(taskBranchProblem(current.value), current.value.refName);
+      const reason = branchReason(taskBranchProblem(current.value));
       if (reason !== null) return { kind: "refused", reason };
     }
     const { goal, accept, check } = validation.input;
@@ -356,6 +363,7 @@ export function useTaskPlan({
     checking,
     summary,
     estimateLine,
+    whereLine,
     ready,
     starting,
     startingRef,
@@ -367,12 +375,18 @@ export function useTaskPlan({
 export function TaskPlanSummary({
   plan,
 }: {
-  readonly plan: Pick<ReturnType<typeof useTaskPlan>, "summary" | "estimateLine" | "problem">;
+  readonly plan: Pick<
+    ReturnType<typeof useTaskPlan>,
+    "summary" | "estimateLine" | "whereLine" | "problem"
+  >;
 }) {
   return (
     <div className="min-w-0 space-y-1">
       <p className="wrap-anywhere text-sm">{plan.summary}</p>
       <p className="text-muted-foreground text-xs">{plan.estimateLine}</p>
+      {plan.whereLine !== null ? (
+        <p className="wrap-anywhere text-muted-foreground text-xs">{plan.whereLine}</p>
+      ) : null}
       {plan.problem !== null ? (
         <p role="alert" className="text-destructive-foreground text-xs">
           {plan.problem}

@@ -1,6 +1,6 @@
 import "~/index.css";
 
-import { scopeThreadRef } from "@t3tools/client-runtime/environment";
+import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import {
   AgentdCommandError,
   type AgentdCloudKeyFileCheck,
@@ -21,6 +21,7 @@ import { AsyncResult } from "effect/reactivity";
 import { expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
+import { DraftId, useComposerDraftStore } from "~/composerDraftStore";
 import { __setClientSettingsForTests } from "~/hooks/useSettings";
 import { hostRightPanel, selectActiveRightPanel, useRightPanelStore } from "~/rightPanelStore";
 import { AppAtomRegistryProvider } from "~/rpc/atomRegistry";
@@ -56,6 +57,8 @@ const state = vi.hoisted(() => ({
   // The synced task list, as its subscription last answered.
   rows: [] as Array<{ id: string; cloudState: string | null }>,
   rowListeners: new Set<() => void>(),
+  // The thread is a draft not yet on the server.
+  draft: false,
 }));
 
 vi.mock("~/lib/agentdState", async () => {
@@ -124,8 +127,8 @@ vi.mock("~/state/environments", async (importOriginal) => ({
   }),
 }));
 vi.mock("~/state/entities", () => ({
-  useQuietThreadShell: () => thread,
-  useProject: () => ({ workspaceRoot: "/repo" }),
+  useQuietThreadShell: () => (state.draft ? null : thread),
+  useProject: (ref: unknown) => (ref ? { workspaceRoot: "/repo" } : null),
   useThreadProjection: () => null,
 }));
 vi.mock("~/state/threads", () => ({ threadEnvironment: { startTurn: {} } }));
@@ -172,6 +175,8 @@ function setup(
   state.rows = [];
   state.rowListeners.clear();
   state.dollarBudgets = null;
+  state.draft = false;
+  useComposerDraftStore.setState({ draftThreadsByThreadKey: {} });
   state.start.mockReset();
   state.configure.mockReset();
   state.cloudRefresh.mockReset();
@@ -462,16 +467,52 @@ it("turns off cloud start if the checkout’s origin is not a GitHub repository"
     .toBeVisible();
 });
 
-it("does not contact the worker bridge when the branch changes to main before Start", async () => {
+it("does not contact the worker bridge when the checkout is detached before Start", async () => {
   setup("feature/export");
-  state.refresh.mockResolvedValue(AsyncResult.success({ isRepo: true, refName: "main" }));
+  state.refresh.mockResolvedValue(AsyncResult.success({ isRepo: true, refName: null }));
   await using _screen = await renderDialog();
   await fillTask();
   await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect
     .element(page.getByRole("alert"))
-    .toHaveTextContent("The working directory is on main. Switch to a different branch first.");
+    .toHaveTextContent("Check out a named branch in this working directory first.");
   expect(state.start).not.toHaveBeenCalled();
+});
+
+it("starts from the default branch and says the worker gets its own worktree", async () => {
+  setup("main", drafted);
+  state.start.mockResolvedValue(
+    AsyncResult.success({ id: "hof-123abc", started: true, note: null }),
+  );
+  await using _screen = await renderDialog();
+  await expect
+    .element(page.getByText("Runs on a new branch in its own worktree, from main."))
+    .toBeVisible();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await expect.element(page.getByText("Started task hof-123abc.")).toBeVisible();
+  expect(state.start).toHaveBeenCalledWith(
+    expect.objectContaining({ input: expect.objectContaining({ cwd: "/repo/worktrees/export" }) }),
+  );
+});
+
+it("runs a draft thread’s task in its project’s checkout", async () => {
+  setup("feature/export", drafted);
+  state.draft = true;
+  useComposerDraftStore
+    .getState()
+    .setLogicalProjectDraftThreadId(
+      "draft-project",
+      scopeProjectRef(thread.environmentId, thread.projectId),
+      DraftId.make("draft-1"),
+      { threadId: thread.id },
+    );
+  await using _screen = await renderDialog();
+  await expect
+    .element(page.getByText("This session has no project working directory."))
+    .not.toBeInTheDocument();
+  await expect.element(page.getByRole("button", { name: "Start", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Edit" }).click();
+  await expect.element(page.getByLabelText("Working directory")).toHaveValue("/repo");
 });
 
 it("shows a drafted task as one summary with Start and its inputs folded under Edit", async () => {
@@ -616,11 +657,6 @@ it("caps a cloud budget by the balance and says the estimate comes from local ru
 });
 
 it.each([
-  [
-    "a protected branch",
-    { branch: "main" },
-    "The working directory is on main. Switch to a different branch first.",
-  ],
   ["no worker", { worker: null }, "Choose a worker. The default is set in agentd."],
   ["no credit", { balanceUsd: 0 }, "There is not enough LibraOS credit for Cloud Workers."],
   [
