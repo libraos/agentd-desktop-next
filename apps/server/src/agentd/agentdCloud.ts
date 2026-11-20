@@ -26,7 +26,7 @@ import {
   nextSubmissionId,
   type Reservation,
   submissionFingerprint,
-  submissionMarker,
+  stateDraft,
   submissionSession,
 } from "./agentdCloudSubmissions.ts";
 import { agentdArgs } from "./agentdCommands.ts";
@@ -556,7 +556,8 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
         ),
       ),
     );
-    // The task agentd recorded for a submission; null when it has none.
+    // The task agentd recorded for a submission and the draft that made it (null for an older
+    // version's, which names none); null when it has none.
     const recorded = (id: string) =>
       agentd(() => agentdArgs.findSubmission(id)).pipe(
         Effect.map(foundHandoffs),
@@ -570,8 +571,9 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
         Effect.flatMap((shows) => {
           const show = shows[0];
           if (show === undefined) return Effect.succeed(null);
-          return show._tag === "Some" && show.value.body?.state === submissionMarker(id)
-            ? Effect.succeed(show.value.id)
+          const draft = show._tag === "Some" ? stateDraft(show.value.body?.state, id) : undefined;
+          return show._tag === "Some" && draft !== undefined
+            ? Effect.succeed({ handoff: show.value.id, draft })
             : Effect.fail(unknownOutcome());
         }),
         Effect.mapError(() => unknownOutcome()),
@@ -600,13 +602,15 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
 
     const current = yield* reservation;
     let submission: string;
+    // An offer under an earlier reservation's key, whose task may be an earlier draft's.
+    let reused = false;
     // This offer, which a refusal releases: never an earlier or later one under the same key.
     const attempt = newAttempt();
     if (current !== null && current.handoff === null) {
-      const handoff = yield* recorded(current.id);
-      if (handoff !== null) {
-        yield* remember(current.id, handoff);
-        return alreadyRecorded(handoff, current.fingerprint !== fingerprint);
+      const found = yield* recorded(current.id);
+      if (found !== null) {
+        yield* remember(current.id, found.handoff);
+        return alreadyRecorded(found.handoff, (found.draft ?? current.fingerprint) !== fingerprint);
       }
       if (
         !current.released &&
@@ -622,6 +626,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
       // The same key again: agentd's --idem makes this the earlier offer, never a second one; a
       // different draft under it is refused once the earlier one made a task, and found above.
       submission = current.id;
+      reused = true;
       // Recorded first, so a lost answer for this offer, even a retry of the same draft, asks the
       // next different one to replace it.
       yield* agentd(() =>
@@ -676,9 +681,9 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
     // A failure before the offer runs offered nothing under this attempt, so it is closed; the
     // reservation and its other attempts stay: another server sharing this ledger may already be
     // offering under it.
-    const argv = yield* args(() => agentdArgs.cloudOffer(input, project, submission)).pipe(
-      Effect.tapError(() => release(submission, attempt)),
-    );
+    const argv = yield* args(() =>
+      agentdArgs.cloudOffer(input, project, submission, fingerprint),
+    ).pipe(Effect.tapError(() => release(submission, attempt)));
     yield* agentd(() => agentdArgs.cloudSession(input.cwd)).pipe(
       Effect.catchTags({
         AgentdCommandError: (error) =>
@@ -693,8 +698,13 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
     // A ledger that can't be read leaves the outcome unknown, and the reservation kept.
     const reconcile = (said: string | null) =>
       recorded(submission).pipe(
-        Effect.flatMap((handoff) => {
-          if (handoff !== null)
+        Effect.flatMap((found) => {
+          if (found !== null && found.draft !== fingerprint)
+            return remember(submission, found.handoff).pipe(
+              Effect.as(alreadyRecorded(found.handoff, true)),
+            );
+          if (found !== null) {
+            const handoff = found.handoff;
             return remember(submission, handoff).pipe(
               Effect.as({
                 id: handoff,
@@ -704,6 +714,7 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
                   `AgentD recorded task ${handoff} but didn’t confirm that Cloud Workers accepted it. Check Background tasks for updates.`,
               } satisfies AgentdStartTaskResult),
             );
+          }
           const reason = said ? cloudReason(said) : null;
           // Released only when agentd said it refused the offer before making a task; a runner or
           // network failure may still have reached the Job API under this --idem key.
@@ -736,6 +747,16 @@ export const makeAgentdCloud = Effect.fn("AgentdCloud.make")(function* (deps: {
     const receipt = offerReceipt(offered.success);
     if (receipt._tag === "None") return yield* reconcile(null);
     const { handoff: id, cloud } = receipt.value;
+    // agentd answers a reused key only for the same request, whose --state names this draft; a
+    // task the ledger shows as another draft's is that one's all the same. An unread ledger leaves
+    // the receipt to stand.
+    if (reused) {
+      const owner = yield* recorded(submission).pipe(Effect.orElseSucceed(() => null));
+      if (owner !== null && owner.handoff === id && owner.draft !== fingerprint) {
+        yield* remember(submission, id);
+        return alreadyRecorded(id, true);
+      }
+    }
     yield* remember(submission, id);
     const note = cloud?.error
       ? offerError(cloud.error).message

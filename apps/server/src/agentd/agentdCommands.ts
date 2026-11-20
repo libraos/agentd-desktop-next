@@ -3,6 +3,7 @@ import * as Schema from "effect/Schema";
 import {
   handoffRecord,
   attemptRecord,
+  offerState,
   releaseRecord,
   reserveRecord,
   submissionMarker,
@@ -237,14 +238,19 @@ export const agentdArgs = {
     "handoff",
     "--json",
   ],
-  cloudOffer: (input: AgentdCloudTaskInput, project: string, submission: string) => [
+  cloudOffer: (
+    input: AgentdCloudTaskInput,
+    project: string,
+    submission: string,
+    fingerprint: string,
+  ) => [
     "handoff",
     "offer",
     "--cloud",
     "--idem",
     submission,
     "--state",
-    submissionMarker(submission),
+    offerState(submission, fingerprint),
     "--to",
     "any",
     "--session",

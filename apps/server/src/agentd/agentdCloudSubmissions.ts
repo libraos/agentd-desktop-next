@@ -49,6 +49,29 @@ export function submissionMarker(id: string): string {
   return `desktop-cloud-${id}`;
 }
 
+/**
+ * The offer's --state: its submission's marker and the draft it carries. agentd's --idem answers a
+ * reused key only for the same request, and a task found by the marker names whose draft made it.
+ */
+export function offerState(id: string, fingerprint: string): string {
+  if (!FINGERPRINT.test(fingerprint)) throw new Error("not a submission fingerprint");
+  return `${submissionMarker(id)} ${fingerprint}`;
+}
+
+/**
+ * The draft a task's --state names for this submission: null for the bare marker of an older
+ * version, which names none; undefined when it is not this submission's.
+ */
+export function stateDraft(
+  state: string | null | undefined,
+  id: string,
+): string | null | undefined {
+  const marker = submissionMarker(id);
+  if (state === marker) return null;
+  const draft = state?.startsWith(`${marker} `) ? state.slice(marker.length + 1) : undefined;
+  return draft !== undefined && FINGERPRINT.test(draft) ? draft : undefined;
+}
+
 /** Every window that reads the same reservation picks the same next id, so agentd's --idem keeps one. */
 export function nextSubmissionId(session: string, after: string | null): string {
   const hash = submissionDigest([session, after]);

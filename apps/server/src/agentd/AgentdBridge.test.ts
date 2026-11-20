@@ -103,7 +103,8 @@ const DOCTOR_JSON = `{
 }`;
 
 const SUBMISSION = /^[a-f0-9]{8}-[a-f0-9]{4}-8[a-f0-9]{3}-8[a-f0-9]{3}-[a-f0-9]{12}$/;
-const MARKER = /^desktop-cloud-[a-f0-9]{8}-[a-f0-9]{4}-8[a-f0-9]{3}-8[a-f0-9]{3}-[a-f0-9]{12}$/;
+const MARKER =
+  /^desktop-cloud-[a-f0-9]{8}-[a-f0-9]{4}-8[a-f0-9]{3}-8[a-f0-9]{3}-[a-f0-9]{12} [a-f0-9]{64}$/;
 
 const output = (stdout: string, code = 0): ProcessRunner.ProcessRunOutput => ({
   stdout,
@@ -151,8 +152,8 @@ function cloudLedger() {
         return output("{}");
       case "find": {
         const marker = args[1]!.slice(1, -1);
-        const hits = [...handoffs.values()].filter(
-          (show) => (show.body as { state: string }).state === marker,
+        const hits = [...handoffs.values()].filter((show) =>
+          (show.body as { state: string }).state.includes(marker),
         );
         return output(JSON.stringify(hits.map((show) => ({ kind: "handoff", ref: show.id }))));
       }
@@ -970,6 +971,28 @@ describe("AgentdBridge", () => {
       );
       expect(offers()).toHaveLength(2);
 
+      // The first offer's task shows up only after the last lookup, and wins the shared key: the
+      // replacement is not this draft's start, whether agentd answers with that task or refuses.
+      const replace = { ...other, cloud: { ...other.cloud, replaceSubmission: keys()[0]! } };
+      failPinAdd = true;
+      for (const answer of [
+        output('{"handoff":"hof-aabbcc","cloud":{"state":"queued"}}'),
+        output("idempotency key reused with different request", 1),
+      ]) {
+        offer = () => {
+          ledger.record(offers()[0]!, "hof-aabbcc", "queued");
+          return answer;
+        };
+        expect(yield* bridge.startTask(replace)).toMatchObject({
+          id: "hof-aabbcc",
+          started: false,
+          earlier: true,
+        });
+        ledger.handoffs.delete("hof-aabbcc");
+      }
+      expect(offers()).toHaveLength(4);
+      failPinAdd = false;
+
       // agentd recorded the offer but the answer was lost, and so was the record of its task.
       offer = (args) => {
         ledger.record(args, "hof-aabbcc", "queued");
@@ -996,7 +1019,7 @@ describe("AgentdBridge", () => {
         earlier: true,
         note: expect.stringContaining("hof-aabbcc"),
       });
-      expect(offers()).toHaveLength(3);
+      expect(offers()).toHaveLength(5);
 
       // A task agentd is still submitting holds the project: no offer from any checkout.
       ledger.handoffs.set("hof-aabbcc", {
@@ -1007,7 +1030,7 @@ describe("AgentdBridge", () => {
       expect(held.message).toBe(
         "Task hof-aabbcc for acme/app is still being submitted to Cloud Workers. Wait for it, or stop it in Background tasks, before starting another.",
       );
-      expect(offers()).toHaveLength(3);
+      expect(offers()).toHaveLength(5);
 
       // Once it is queued, a new Start is a new submission with a new key.
       ledger.handoffs.set("hof-aabbcc", {
@@ -1028,7 +1051,7 @@ describe("AgentdBridge", () => {
       // A reservation agentd cannot list is an unknown outcome, never a blind offer.
       brokenPins = true;
       expect(yield* Effect.flip(bridge.startTask(other))).toMatchObject({ outcomeUnknown: true });
-      expect(offers()).toHaveLength(4);
+      expect(offers()).toHaveLength(6);
     }),
   );
 
