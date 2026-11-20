@@ -3421,6 +3421,7 @@
     "을(를) 실행한 다음 다시 시도하세요."
   ],
   "5e8c89ed36b770b3": "권한 수정",
+  "9ec433045537acfc": "다시 확인",
   "26870059a55a8693": [
     "이 환경의 컴퓨터에서 ",
     {
@@ -3431,6 +3432,7 @@
     "을(를) 읽을 수 없습니다. 경로와 계정이 파일을 읽을 수 있는지 확인하세요."
   ],
   "cbc2d86edf351bfc": "이 키 파일을 확인할 수 없습니다.",
+  "3f9a96df2f740140": "이 연결은 이 환경의 컴퓨터에 있는 파일을 읽을 수 없으므로 시작할 때 AgentD가 키 파일을 확인합니다.",
   "8590981f396d633b": "이 키 파일을 확인하는 중…",
   "0faf657712a9d10a": "Plan",
   "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
@@ -3544,8 +3546,8 @@
   "c0cdda8786778243": "The working directory is not a Git repository.",
   "423f5560c920e52f": "Check out a named branch in this working directory first.",
   "a542a9e7e7d46218": "The working directory is on {branch}. Switch to a different branch first.",
-  "06c852fe5d55c5ec": "Cloud Workers용 이 체크아웃의 origin을 읽을 수 없습니다. 다시 시도하거나 “Run in the cloud”를 끄고 이 작업을 여기에서 실행하세요.",
-  "1abb623568c6e268": "Cloud Workers를 확인하기 위해 AgentD에 연결할 수 없습니다. 다시 시도하거나 “Run in the cloud”를 끄고 이 작업을 여기에서 실행하세요.",
+  "ae8470f8ec58cfa1": "Cloud Workers용 이 체크아웃의 origin을 읽을 수 없습니다. 다시 시도하거나 “편집”을 선택해 “Run in the cloud”를 끄고 이 작업을 여기에서 실행하세요.",
+  "76f77c14c6d662e7": "Cloud Workers를 확인하기 위해 AgentD에 연결할 수 없습니다. 다시 시도하거나 “편집”을 선택해 “Run in the cloud”를 끄고 이 작업을 여기에서 실행하세요.",
   "a4aff358558707df": "This session has no project working directory.",
   "cee006e381c89877": "There is not enough LibraOS credit for Cloud Workers.",
   "7e4a9f1615efb801": "Sign in to LibraOS or connect the LibraOS Gateway to use LibraOS models.",
@@ -6417,7 +6419,6 @@
   "718a33a11c0e63a6": "{time}에 만료 · 1회용",
   "800f3d6ba89ed228": "{label} 복사",
   "402ad504ab1fe6a4": "연결됨: {environments}",
-  "9ec433045537acfc": "다시 확인",
   "2fa65dc5d5e30e21": "Checking the hosted relay…",
   "e9aeca4977a84a3d": "Your hosted relay account is out of tunnels.",
   "aa5e468e4f0772e1": [

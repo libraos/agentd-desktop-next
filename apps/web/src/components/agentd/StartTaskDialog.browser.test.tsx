@@ -10,6 +10,7 @@ import {
   type AgentdTaskDefaults,
   type AgentdTaskOther,
   DEFAULT_CLIENT_SETTINGS,
+  EnvironmentAuthorizationError,
   EnvironmentId,
   PRIMARY_LOCAL_ENVIRONMENT_ID,
   ThreadId,
@@ -47,11 +48,14 @@ const state = vi.hoisted(() => ({
   os: "unknown" as ExecutionEnvironmentPlatformOs,
   cloudError: null as Error | null,
   keyFiles: {} as Record<string, AgentdCloudKeyFileCheck>,
+  // Paths this connection may not check: it lacks filesystem read.
+  keyFilesDenied: new Set<string>(),
   fixKeyFile: vi.fn(),
 }));
 
 vi.mock("~/lib/agentdState", async () => {
   const { Atom } = await import("effect/reactivity");
+  const { useReducer } = await import("react");
   const allowed = Atom.make(true);
   return {
     agentdEnvironment: {
@@ -66,11 +70,22 @@ vi.mock("~/lib/agentdState", async () => {
       error: state.cloudError,
       refresh: state.cloudRefresh,
     }),
-    useAgentdCloudKeyFile: (path: string | null) => ({
-      data: path === null ? null : (state.keyFiles[path] ?? null),
-      error: null,
-      refresh: () => {},
-    }),
+    useAgentdCloudKeyFile: (path: string | null) => {
+      // A refresh reads the file's state again, as the real query does.
+      const [, refresh] = useReducer((n: number) => n + 1, 0);
+      const denied = path !== null && state.keyFilesDenied.has(path);
+      return {
+        data: path === null || denied ? null : (state.keyFiles[path] ?? null),
+        error: denied ? "This connection requires filesystem:read." : null,
+        failure: denied
+          ? new EnvironmentAuthorizationError({
+              message: "This connection requires filesystem:read.",
+              requiredScope: "filesystem:read",
+            })
+          : null,
+        refresh,
+      };
+    },
     useAgentdCommands: () => ({ cloudKeyFileFix: state.fixKeyFile }),
     useAgentdCloudAccount: () => ({
       data: state.cloud,
@@ -120,6 +135,8 @@ function setup(
   open: boolean | typeof drafted = true,
   settings: Partial<typeof DEFAULT_CLIENT_SETTINGS> = {},
 ) {
+  // Remembered key paths are read back from storage: an earlier test's must not leak in.
+  localStorage.clear();
   __setClientSettingsForTests({ ...DEFAULT_CLIENT_SETTINGS, ...settings });
   state.branch = branch;
   state.cloud = null;
@@ -131,6 +148,7 @@ function setup(
   state.worker = "opencode";
   state.cloudError = null;
   state.keyFiles = {};
+  state.keyFilesDenied = new Set();
   state.fixKeyFile.mockReset();
   state.start.mockReset();
   state.configure.mockReset();
@@ -983,12 +1001,12 @@ it.each([
   {
     unanswered: "agentd",
     reason:
-      "Couldn’t reach AgentD to check Cloud Workers. Retry, or turn off Run in the cloud to run this task here.",
+      "Couldn’t reach AgentD to check Cloud Workers. Retry, or choose Edit and turn off Run in the cloud to run this task here.",
   },
   {
     unanswered: "git",
     reason:
-      "Couldn’t read this checkout’s origin for Cloud Workers. Retry, or turn off Run in the cloud to run this task here.",
+      "Couldn’t read this checkout’s origin for Cloud Workers. Retry, or choose Edit and turn off Run in the cloud to run this task here.",
   },
 ])(
   "keeps a cloud Start in the cloud while $unanswered doesn't answer the probe, until turned off",
@@ -1042,7 +1060,7 @@ it("offers Retry on the AgentD page when agentd didn't answer the cloud probe", 
   expect(state.cloudRefresh).toHaveBeenCalled();
 });
 
-it("keeps Start disabled until each BYOK path is checked, and says when one can't be read", async () => {
+it("keeps Start disabled until each BYOK path is checked, and says when one can't be read or checked", async () => {
   setup("feature/export");
   state.cloud = cloudReady();
   await using _screen = await renderDialog();
@@ -1063,6 +1081,14 @@ it("keeps Start disabled until each BYOK path is checked, and says when one can'
     .toBeVisible();
   await expect.element(start).toBeDisabled();
   expect(state.start).not.toHaveBeenCalled();
+
+  // A connection without filesystem read can't check the file: agentd checks it on Start.
+  state.keyFilesDenied.add("/home/me/team.key");
+  await userEvent.fill(anthropic, "/home/me/team.key");
+  await expect
+    .element(page.getByText(/This connection can’t read files on this environment’s machine/))
+    .toBeVisible();
+  await expect.element(start).toBeEnabled();
 });
 
 it("checks each BYOK key file's provider and privacy, and remembers the paths that were sent", async () => {
@@ -1107,6 +1133,15 @@ it("checks each BYOK key file's provider and privacy, and remembers the paths th
       environmentId: thread.environmentId,
       input: { path: "/home/me/shared.key" },
     });
+    // Fixed in a terminal instead: Check again reads the same path anew.
+    state.keyFiles["/home/me/shared.key"] = {
+      provider: "openai",
+      readable: true,
+      openToOthers: false,
+    };
+    await page.getByRole("button", { name: "Check again" }).click();
+    await expect.element(page.getByText(/can be read by other users/)).not.toBeInTheDocument();
+    await expect.element(start).toBeEnabled();
 
     await userEvent.fill(openai, "/home/me/openai.key");
     await expect.element(start).toBeEnabled();

@@ -248,6 +248,8 @@ it("blocks a key file under the other provider's field, then one others can read
   expect(keyFileProblem("openai", check(null))).toBe("unreadable");
   expect(keyFileProblem("openai", null)).toBe("checking");
   expect(keyFileProblem("openai", "failed")).toBe("check-failed");
+  // A connection without filesystem read leaves the check to agentd on Start.
+  expect(keyFileProblem("openai", "not-permitted")).toBe("unchecked");
 });
 
 it("remembers accepted BYOK paths without dropping another environment's", () => {

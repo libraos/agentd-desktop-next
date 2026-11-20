@@ -3422,6 +3422,7 @@
     " e tente novamente."
   ],
   "5e8c89ed36b770b3": "Corrigir permissões",
+  "9ec433045537acfc": "Verificar novamente",
   "26870059a55a8693": [
     "Não foi possível ler ",
     {
@@ -3432,6 +3433,7 @@
     " na máquina deste ambiente. Verifique o caminho e se sua conta pode ler o arquivo."
   ],
   "cbc2d86edf351bfc": "Não foi possível verificar este arquivo de chave.",
+  "3f9a96df2f740140": "Esta conexão não pode ler arquivos na máquina deste ambiente, então o AgentD verifica o arquivo de chave quando você inicia.",
   "8590981f396d633b": "Verificando este arquivo de chave…",
   "0faf657712a9d10a": "Plan",
   "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
@@ -3545,8 +3547,8 @@
   "c0cdda8786778243": "The working directory is not a Git repository.",
   "423f5560c920e52f": "Check out a named branch in this working directory first.",
   "a542a9e7e7d46218": "The working directory is on {branch}. Switch to a different branch first.",
-  "06c852fe5d55c5ec": "Não foi possível ler o origin deste checkout para o Cloud Workers. Tente novamente ou desative “Run in the cloud” para executar esta tarefa aqui.",
-  "1abb623568c6e268": "Não foi possível acessar o AgentD para verificar o Cloud Workers. Tente novamente ou desative “Run in the cloud” para executar esta tarefa aqui.",
+  "ae8470f8ec58cfa1": "Não foi possível ler o origin deste checkout para o Cloud Workers. Tente novamente ou escolha “Editar” e desative “Run in the cloud” para executar esta tarefa aqui.",
+  "76f77c14c6d662e7": "Não foi possível acessar o AgentD para verificar o Cloud Workers. Tente novamente ou escolha “Editar” e desative “Run in the cloud” para executar esta tarefa aqui.",
   "a4aff358558707df": "This session has no project working directory.",
   "cee006e381c89877": "There is not enough LibraOS credit for Cloud Workers.",
   "7e4a9f1615efb801": "Sign in to LibraOS or connect the LibraOS Gateway to use LibraOS models.",
@@ -6432,7 +6434,6 @@
   "718a33a11c0e63a6": "Expira {time} · uso único",
   "800f3d6ba89ed228": "Copiar {label}",
   "402ad504ab1fe6a4": "Vinculado: {environments}",
-  "9ec433045537acfc": "Verificar novamente",
   "2fa65dc5d5e30e21": "Checking the hosted relay…",
   "e9aeca4977a84a3d": "Your hosted relay account is out of tunnels.",
   "aa5e468e4f0772e1": [

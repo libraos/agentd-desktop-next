@@ -3420,6 +3420,7 @@
     " を実行してから、もう一度お試しください。"
   ],
   "5e8c89ed36b770b3": "権限を修正",
+  "9ec433045537acfc": "再確認",
   "26870059a55a8693": [
     "この環境のマシンで ",
     {
@@ -3430,6 +3431,7 @@
     " を読み取れませんでした。パスと、アカウントがファイルを読み取れるかを確認してください。"
   ],
   "cbc2d86edf351bfc": "このキーファイルを確認できませんでした。",
+  "3f9a96df2f740140": "この接続ではこの環境のマシン上のファイルを読み取れないため、AgentD が開始時にキーファイルを確認します。",
   "8590981f396d633b": "このキーファイルを確認しています…",
   "0faf657712a9d10a": "Plan",
   "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
@@ -3543,8 +3545,8 @@
   "c0cdda8786778243": "The working directory is not a Git repository.",
   "423f5560c920e52f": "Check out a named branch in this working directory first.",
   "a542a9e7e7d46218": "The working directory is on {branch}. Switch to a different branch first.",
-  "06c852fe5d55c5ec": "Cloud Workers 用にこのチェックアウトの origin を読み取れませんでした。再試行するか、「Run in the cloud」をオフにしてこのタスクをここで実行してください。",
-  "1abb623568c6e268": "Cloud Workers を確認するために AgentD に接続できませんでした。再試行するか、「Run in the cloud」をオフにしてこのタスクをここで実行してください。",
+  "ae8470f8ec58cfa1": "Cloud Workers 用にこのチェックアウトの origin を読み取れませんでした。再試行するか、「編集」を選んで「Run in the cloud」をオフにし、このタスクをここで実行してください。",
+  "76f77c14c6d662e7": "Cloud Workers を確認するために AgentD に接続できませんでした。再試行するか、「編集」を選んで「Run in the cloud」をオフにし、このタスクをここで実行してください。",
   "a4aff358558707df": "This session has no project working directory.",
   "cee006e381c89877": "There is not enough LibraOS credit for Cloud Workers.",
   "7e4a9f1615efb801": "Sign in to LibraOS or connect the LibraOS Gateway to use LibraOS models.",
@@ -6419,7 +6421,6 @@
   "718a33a11c0e63a6": "有効期限 {time} · 1 回限り",
   "800f3d6ba89ed228": "{label} をコピー",
   "402ad504ab1fe6a4": "リンク済み: {environments}",
-  "9ec433045537acfc": "再確認",
   "2fa65dc5d5e30e21": "Checking the hosted relay…",
   "e9aeca4977a84a3d": "Your hosted relay account is out of tunnels.",
   "aa5e468e4f0772e1": [

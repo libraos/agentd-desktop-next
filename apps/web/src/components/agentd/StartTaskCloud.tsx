@@ -2,6 +2,7 @@ import {
   AgentdCloudBudget,
   AgentdCloudKeyFile,
   chmodPrivateCommand,
+  EnvironmentAuthorizationError,
   PRIMARY_LOCAL_ENVIRONMENT_ID,
   type AgentdCloudPlan,
   type AgentdCloudTaskInput,
@@ -39,6 +40,7 @@ import {
   defaultCloudPlan,
   defaultModelAccess,
   keyFileProblem,
+  type KeyFileProblem,
   looksLikeKey,
   modelAccessChoices,
 } from "./startTask.logic";
@@ -46,6 +48,7 @@ import { useWorkerDefaults } from "./workerSettings";
 
 const validBudget = Schema.is(AgentdCloudBudget);
 const validPath = Schema.is(AgentdCloudKeyFile);
+const isAuthorizationError = Schema.is(EnvironmentAuthorizationError);
 type CloudInput = AgentdCloudTaskInput["cloud"];
 type KeyPath = string | null;
 type KeyField = "anthropic" | "openai" | "claude" | "codex";
@@ -126,7 +129,13 @@ export function useStartTaskCloud(
   );
   const openaiCheck = useAgentdCloudKeyFile(byok && openaiKey ? openaiKey : null, environmentId);
   const verdict = (check: typeof anthropicCheck) =>
-    check.data ?? (check.error === null ? null : ("failed" as const));
+    check.data ??
+    (check.error === null
+      ? null
+      : isAuthorizationError(check.failure)
+        ? ("not-permitted" as const)
+        : ("failed" as const));
+  const passes = (problem: KeyFileProblem | null) => problem === null || problem === "unchecked";
   const keyProblems = {
     anthropic: anthropicKey ? keyFileProblem("anthropic", verdict(anthropicCheck)) : null,
     openai: openaiKey ? keyFileProblem("openai", verdict(openaiCheck)) : null,
@@ -138,8 +147,8 @@ export function useStartTaskCloud(
         (anthropicKey !== null &&
           openaiKey !== null &&
           Boolean(anthropicKey || openaiKey) &&
-          keyProblems.anthropic === null &&
-          keyProblems.openai === null);
+          passes(keyProblems.anthropic) &&
+          passes(keyProblems.openai));
   // git didn't answer for the origin: as unknown as agentd not answering, never "no GitHub".
   const checkoutUnknown = availability.error === null && setup?.checkoutUnknown === true;
   const unreachable = availability.error !== null || setup?.unreachable === true || checkoutUnknown;
@@ -567,7 +576,10 @@ function ByokKeyFile({
             spellCheck={false}
             maxLength={4096}
             aria-describedby={isKey || problem !== null ? helpId + " " + errorId : helpId}
-            aria-invalid={keyPath(text) === null || (problem !== null && problem !== "checking")}
+            aria-invalid={
+              keyPath(text) === null ||
+              (problem !== null && problem !== "checking" && problem !== "unchecked")
+            }
             onChange={(event) => cloud.setKeyText(field, event.target.value)}
           />
         </div>
@@ -609,16 +621,26 @@ function ByokKeyFile({
               <Var>{chmodPrivateCommand(path)}</Var>, then try again.
             </T>
           </p>
-          {cloud.canFixKeyFile ? (
+          <div className="flex items-center gap-2">
+            {cloud.canFixKeyFile ? (
+              <Button
+                variant="outline"
+                size="xs"
+                disabled={disabled || fixing}
+                onClick={fixPermissions}
+              >
+                <T>Fix permissions</T>
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               size="xs"
               disabled={disabled || fixing}
-              onClick={fixPermissions}
+              onClick={cloud.refreshKeyFiles}
             >
-              <T>Fix permissions</T>
+              <T>Check again</T>
             </Button>
-          ) : null}
+          </div>
           {fixError ? <p>{fixError}</p> : null}
         </div>
       ) : problem === "unreadable" ? (
@@ -637,6 +659,13 @@ function ByokKeyFile({
             <T>Retry</T>
           </Button>
         </div>
+      ) : problem === "unchecked" ? (
+        <p id={errorId} role="status" className="text-xs text-muted-foreground">
+          <T>
+            This connection can’t read files on this environment’s machine, so AgentD checks the key
+            file when you start.
+          </T>
+        </p>
       ) : problem === "checking" ? (
         <p id={errorId} role="status" className="text-xs text-muted-foreground">
           <T>Checking this key file…</T>

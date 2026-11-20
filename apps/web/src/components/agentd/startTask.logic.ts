@@ -260,7 +260,8 @@ export type KeyFileProblem =
   | "open-to-others"
   | "unreadable"
   | "checking"
-  | "check-failed";
+  | "check-failed"
+  | "unchecked";
 
 /**
  * Why a BYOK key file under `field` can't be submitted yet, from the host's check of it: null
@@ -268,10 +269,12 @@ export type KeyFileProblem =
  */
 export function keyFileProblem(
   field: "anthropic" | "openai",
-  check: AgentdCloudKeyFileCheck | null | "failed",
+  check: AgentdCloudKeyFileCheck | null | "failed" | "not-permitted",
 ): KeyFileProblem | null {
   if (check === null) return "checking";
   if (check === "failed") return "check-failed";
+  // This connection may not read host files: agentd checks the file on Start instead.
+  if (check === "not-permitted") return "unchecked";
   if (!check.readable) return "unreadable";
   if (check.provider !== null && check.provider !== field) return `${check.provider}-key`;
   return check.openToOthers ? "open-to-others" : null;

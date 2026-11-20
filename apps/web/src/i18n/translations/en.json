@@ -3422,6 +3422,7 @@
     ", then try again."
   ],
   "5e8c89ed36b770b3": "Fix permissions",
+  "9ec433045537acfc": "Check again",
   "26870059a55a8693": [
     "Couldn’t read ",
     {
@@ -3432,6 +3433,7 @@
     " on this environment’s machine. Check the path and that your account can read the file."
   ],
   "cbc2d86edf351bfc": "Couldn’t check this key file.",
+  "3f9a96df2f740140": "This connection can’t read files on this environment’s machine, so AgentD checks the key file when you start.",
   "8590981f396d633b": "Checking this key file…",
   "0faf657712a9d10a": "Plan",
   "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
@@ -3545,8 +3547,8 @@
   "c0cdda8786778243": "The working directory is not a Git repository.",
   "423f5560c920e52f": "Check out a named branch in this working directory first.",
   "a542a9e7e7d46218": "The working directory is on {branch}. Switch to a different branch first.",
-  "06c852fe5d55c5ec": "Couldn’t read this checkout’s origin for Cloud Workers. Retry, or turn off Run in the cloud to run this task here.",
-  "1abb623568c6e268": "Couldn’t reach AgentD to check Cloud Workers. Retry, or turn off Run in the cloud to run this task here.",
+  "ae8470f8ec58cfa1": "Couldn’t read this checkout’s origin for Cloud Workers. Retry, or choose Edit and turn off Run in the cloud to run this task here.",
+  "76f77c14c6d662e7": "Couldn’t reach AgentD to check Cloud Workers. Retry, or choose Edit and turn off Run in the cloud to run this task here.",
   "a4aff358558707df": "This session has no project working directory.",
   "cee006e381c89877": "There is not enough LibraOS credit for Cloud Workers.",
   "7e4a9f1615efb801": "Sign in to LibraOS or connect the LibraOS Gateway to use LibraOS models.",
@@ -6434,7 +6436,6 @@
   "718a33a11c0e63a6": "Expires {time} · one use",
   "800f3d6ba89ed228": "Copy {label}",
   "402ad504ab1fe6a4": "Linked: {environments}",
-  "9ec433045537acfc": "Check again",
   "2fa65dc5d5e30e21": "Checking the hosted relay…",
   "e9aeca4977a84a3d": "Your hosted relay account is out of tunnels.",
   "aa5e468e4f0772e1": [

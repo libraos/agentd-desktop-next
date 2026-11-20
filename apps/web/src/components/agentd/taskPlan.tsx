@@ -149,10 +149,10 @@ export function useTaskPlan({
     if (cloud.waiting && cloud.unreachable)
       return cloud.checkoutUnknown
         ? gt(
-            "Couldn’t read this checkout’s origin for Cloud Workers. Retry, or turn off Run in the cloud to run this task here.",
+            "Couldn’t read this checkout’s origin for Cloud Workers. Retry, or choose Edit and turn off Run in the cloud to run this task here.",
           )
         : gt(
-            "Couldn’t reach AgentD to check Cloud Workers. Retry, or turn off Run in the cloud to run this task here.",
+            "Couldn’t reach AgentD to check Cloud Workers. Retry, or choose Edit and turn off Run in the cloud to run this task here.",
           );
     switch (problemKind) {
       case "no-directory":

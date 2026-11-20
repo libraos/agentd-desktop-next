@@ -3423,6 +3423,7 @@
     " aus und versuche es dann erneut."
   ],
   "5e8c89ed36b770b3": "Berechtigungen korrigieren",
+  "9ec433045537acfc": "Erneut prüfen",
   "26870059a55a8693": [
     {
       "i": 1,
@@ -3432,6 +3433,7 @@
     " konnte auf dem Computer dieser Umgebung nicht gelesen werden. Prüfe den Pfad und ob dein Konto die Datei lesen kann."
   ],
   "cbc2d86edf351bfc": "Diese Schlüsseldatei konnte nicht geprüft werden.",
+  "3f9a96df2f740140": "Diese Verbindung kann keine Dateien auf dem Computer dieser Umgebung lesen, daher prüft AgentD die Schlüsseldatei beim Start.",
   "8590981f396d633b": "Schlüsseldatei wird geprüft…",
   "0faf657712a9d10a": "Plan",
   "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
@@ -3545,8 +3547,8 @@
   "c0cdda8786778243": "The working directory is not a Git repository.",
   "423f5560c920e52f": "Check out a named branch in this working directory first.",
   "a542a9e7e7d46218": "The working directory is on {branch}. Switch to a different branch first.",
-  "06c852fe5d55c5ec": "Der Origin dieses Checkouts konnte für Cloud Workers nicht gelesen werden. Versuche es erneut oder schalte „Run in the cloud“ aus, um diese Aufgabe hier auszuführen.",
-  "1abb623568c6e268": "AgentD war für die Prüfung der Cloud Workers nicht erreichbar. Versuche es erneut oder schalte „Run in the cloud“ aus, um diese Aufgabe hier auszuführen.",
+  "ae8470f8ec58cfa1": "Der Origin dieses Checkouts konnte für Cloud Workers nicht gelesen werden. Versuche es erneut oder wähle „Bearbeiten“ und schalte „Run in the cloud“ aus, um diese Aufgabe hier auszuführen.",
+  "76f77c14c6d662e7": "AgentD war für die Prüfung der Cloud Workers nicht erreichbar. Versuche es erneut oder wähle „Bearbeiten“ und schalte „Run in the cloud“ aus, um diese Aufgabe hier auszuführen.",
   "a4aff358558707df": "This session has no project working directory.",
   "cee006e381c89877": "There is not enough LibraOS credit for Cloud Workers.",
   "7e4a9f1615efb801": "Sign in to LibraOS or connect the LibraOS Gateway to use LibraOS models.",
@@ -6432,7 +6434,6 @@
   "718a33a11c0e63a6": "Läuft {time} ab · einmalig",
   "800f3d6ba89ed228": "{label} kopieren",
   "402ad504ab1fe6a4": "Verknüpft: {environments}",
-  "9ec433045537acfc": "Erneut prüfen",
   "2fa65dc5d5e30e21": "Checking the hosted relay…",
   "e9aeca4977a84a3d": "Your hosted relay account is out of tunnels.",
   "aa5e468e4f0772e1": [

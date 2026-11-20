@@ -3422,6 +3422,7 @@
     ", puis réessayez."
   ],
   "5e8c89ed36b770b3": "Corriger les autorisations",
+  "9ec433045537acfc": "Vérifier à nouveau",
   "26870059a55a8693": [
     "Impossible de lire ",
     {
@@ -3432,6 +3433,7 @@
     " sur la machine de cet environnement. Vérifiez le chemin et que votre compte peut lire le fichier."
   ],
   "cbc2d86edf351bfc": "Impossible de vérifier ce fichier de clé.",
+  "3f9a96df2f740140": "Cette connexion ne peut pas lire les fichiers sur la machine de cet environnement ; AgentD vérifie donc le fichier de clé au démarrage.",
   "8590981f396d633b": "Vérification de ce fichier de clé…",
   "0faf657712a9d10a": "Plan",
   "35f3400f1d3dee9f": "Needs a newer AgentD. Run agentd upgrade to use your ChatGPT plan.",
@@ -3545,8 +3547,8 @@
   "c0cdda8786778243": "The working directory is not a Git repository.",
   "423f5560c920e52f": "Check out a named branch in this working directory first.",
   "a542a9e7e7d46218": "The working directory is on {branch}. Switch to a different branch first.",
-  "06c852fe5d55c5ec": "Impossible de lire l’origin de ce checkout pour Cloud Workers. Réessayez, ou désactivez « Run in the cloud » pour exécuter cette tâche ici.",
-  "1abb623568c6e268": "Impossible de joindre AgentD pour vérifier Cloud Workers. Réessayez, ou désactivez « Run in the cloud » pour exécuter cette tâche ici.",
+  "ae8470f8ec58cfa1": "Impossible de lire l’origin de ce checkout pour Cloud Workers. Réessayez, ou choisissez « Modifier » et désactivez « Run in the cloud » pour exécuter cette tâche ici.",
+  "76f77c14c6d662e7": "Impossible de joindre AgentD pour vérifier Cloud Workers. Réessayez, ou choisissez « Modifier » et désactivez « Run in the cloud » pour exécuter cette tâche ici.",
   "a4aff358558707df": "This session has no project working directory.",
   "cee006e381c89877": "There is not enough LibraOS credit for Cloud Workers.",
   "7e4a9f1615efb801": "Sign in to LibraOS or connect the LibraOS Gateway to use LibraOS models.",
@@ -6433,7 +6435,6 @@
   "718a33a11c0e63a6": "Expire {time} · usage unique",
   "800f3d6ba89ed228": "Copier {label}",
   "402ad504ab1fe6a4": "Associé : {environments}",
-  "9ec433045537acfc": "Vérifier à nouveau",
   "2fa65dc5d5e30e21": "Checking the hosted relay…",
   "e9aeca4977a84a3d": "Your hosted relay account is out of tunnels.",
   "aa5e468e4f0772e1": [
