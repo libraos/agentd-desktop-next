@@ -44,14 +44,6 @@ export function TaskDraftCard({
   const [untrustedFolder, setUntrustedFolder] = useState<string | null>(null);
   const [blocking, setBlocking] = useState<AgentdBlockingTask | null>(null);
 
-  async function start(replacing: string | null = null, trustClaudeFolder = false) {
-    setResult(null);
-    setReplaceSubmission(null);
-    setUntrustedFolder(null);
-    const outcome = await plan.start(replacing, trustClaudeFolder);
-    if (outcome !== null) settle(outcome);
-  }
-
   function settle(outcome: TaskStartOutcome) {
     setBlocking(outcome.kind === "offered" ? (outcome.task.blocking ?? null) : null);
     switch (outcome.kind) {
@@ -89,6 +81,14 @@ export function TaskDraftCard({
               : gt("AgentD could not start the task."),
         );
     }
+  }
+
+  async function start(replacing: string | null = null, trustClaudeFolder = false) {
+    setResult(null);
+    setReplaceSubmission(null);
+    setUntrustedFolder(null);
+    const outcome = await plan.start(replacing, trustClaudeFolder);
+    if (outcome !== null) settle(outcome);
   }
 
   return (
