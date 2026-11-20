@@ -170,6 +170,10 @@ const CUSTOM_MODEL_CLAUDE_SETTINGS = Schema.decodeSync(ClaudeSettings)({
     },
   ],
 });
+const GATEWAY_ALIAS_CLAUDE_SETTINGS = Schema.decodeSync(ClaudeSettings)({
+  customModels: [{ slug: "opus", capabilities: { optionDescriptors: [] } }],
+  onlyCustomModels: true,
+});
 const ALIAS_CUSTOM_MODEL_CLAUDE_SETTINGS = Schema.decodeSync(ClaudeSettings)({
   customModels: ["haiku", "sonnet"],
 });
@@ -504,27 +508,27 @@ describe("ClaudeAdapterV2 runtime query policy", () => {
   });
 
   it("sends a custom model named like a Claude Code alias to the API unchanged", () => {
-    const options = ClaudeAdapterV2.makeClaudeQueryOptions({
-      modelSelection: { instanceId: CLAUDE_TEST_MODEL_SELECTION.instanceId, model: "opus" },
-      modelCatalog: scopeClaudeModelCatalog(
-        BUNDLED_CLAUDE_MODEL_CATALOG,
-        CUSTOM_MODEL_CLAUDE_SETTINGS.customModels,
-      ),
-      nativeThreadId: "native-custom-alias",
-      resume: false,
-      cwd: "/workspace",
-      settings: CUSTOM_MODEL_CLAUDE_SETTINGS,
-    });
-    // Claude Code expands a bare alias to its own model unless ANTHROPIC_DEFAULT_<ALIAS>_MODEL overrides it.
-    const settingsEnv =
-      typeof options.settings === "object" && options.settings !== null
-        ? (options.settings as { env?: Record<string, string> }).env
-        : undefined;
-    const aliasOverride =
-      settingsEnv?.ANTHROPIC_DEFAULT_OPUS_MODEL ?? options.env?.ANTHROPIC_DEFAULT_OPUS_MODEL;
-    const requestedModel =
-      options.model === "opus" ? (aliasOverride ?? "claude-opus-5-5") : options.model;
-    assert.equal(requestedModel, "opus");
+    // A user-added `opus`, and a Gateway key's bare `opus` id (written with no options).
+    for (const settings of [CUSTOM_MODEL_CLAUDE_SETTINGS, GATEWAY_ALIAS_CLAUDE_SETTINGS]) {
+      const options = ClaudeAdapterV2.makeClaudeQueryOptions({
+        modelSelection: { instanceId: CLAUDE_TEST_MODEL_SELECTION.instanceId, model: "opus" },
+        modelCatalog: scopeClaudeModelCatalog(BUNDLED_CLAUDE_MODEL_CATALOG, settings.customModels),
+        nativeThreadId: "native-custom-alias",
+        resume: false,
+        cwd: "/workspace",
+        settings,
+      });
+      // Claude Code expands a bare alias to its own model unless ANTHROPIC_DEFAULT_<ALIAS>_MODEL overrides it.
+      const settingsEnv =
+        typeof options.settings === "object" && options.settings !== null
+          ? (options.settings as { env?: Record<string, string> }).env
+          : undefined;
+      const aliasOverride =
+        settingsEnv?.ANTHROPIC_DEFAULT_OPUS_MODEL ?? options.env?.ANTHROPIC_DEFAULT_OPUS_MODEL;
+      const requestedModel =
+        options.model === "opus" ? (aliasOverride ?? "claude-opus-5-5") : options.model;
+      assert.equal(requestedModel, "opus");
+    }
   });
 
   it("projects AskUserQuestion input with question text as the answer key", () => {

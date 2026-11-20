@@ -76,21 +76,28 @@ export function gatewayRefusal(status: number, body: unknown): string {
 /** A key the Gateway will not serve at all, as opposed to a Gateway that is down or busy. */
 export const isKeyRefusal = (status: number): boolean => status === 401 || status === 403;
 
-// The Gateway routes by the id's family. The agent's own family drops its prefix (as agentd's
-// workers ask) to keep its catalog entry and options, unless the bare name is a Gateway id too.
-// Any other model keeps its full id, its family and none of the agent's options (Codex would
-// lend it a GPT model's).
+const ownName = (id: string, family: string) => {
+  const [owner = "", name = "", ...rest] = id.split("/");
+  return owner === family && name !== "" && rest.length === 0 ? name : undefined;
+};
+
+// The agent's own family drops its prefix (as agentd's workers ask) to keep its catalog entry and
+// options. A slug depends on its id alone, so saved choices survive key changes; a bare id equal to
+// an own-family name is the request that row already sends. Other models keep their full id, their
+// family and none of the agent's options (Codex would lend them a GPT model's).
 export function gatewayAgentModels(models: ReadonlyArray<LibraosGatewayModel>, family: string) {
-  const ids = new Set(models.map((model) => model.id));
+  const ownNames = new Set(models.flatMap((model) => ownName(model.id, family) ?? []));
   const own: Array<CustomModelEntry> = [];
   const other: Array<CustomModelEntry> = [];
   for (const model of models) {
     const named = model.name ? { name: model.name } : {};
-    const [owner = "", name = "", ...rest] = model.id.split("/");
-    if (owner === family && name !== "" && rest.length === 0 && !ids.has(name)) {
+    const name = ownName(model.id, family);
+    if (name !== undefined) {
       own.push({ slug: name, ...named });
       continue;
     }
+    if (ownNames.has(model.id)) continue;
+    const owner = model.id.split("/")[0] ?? "";
     other.push({
       slug: model.id,
       ...named,

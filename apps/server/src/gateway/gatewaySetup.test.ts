@@ -84,28 +84,34 @@ describe("gatewaySetup", () => {
     }
   });
 
-  it("keeps the full id of an own-family model whose bare name the Gateway also serves", () => {
-    const [claude, codex] = gatewayProviderInstances("lk_test_key_123456", [
+  it("keeps a model's slug when the key adds a bare id equal to its own-family name", () => {
+    const key = "lk_test_key_123456";
+    const before = Object.fromEntries(
+      gatewayProviderInstances(key, [
+        { id: "openai/gpt-5.5", name: "GPT 5.5" },
+        { id: "anthropic/claude-opus-5-5" },
+      ]).map(({ instanceId, instance }) => [instanceId, instance]),
+    );
+    const after = withGatewayModels(before, [
       { id: "openai/gpt-5.5", name: "GPT 5.5" },
       { id: "gpt-5.5", name: "Standalone GPT route" },
       { id: "anthropic/claude-opus-5-5" },
       { id: "claude-opus-5-5" },
     ]);
-    const slugs = (config: unknown) =>
-      readCustomModelEntries((config as { customModels: unknown }).customModels).map(
-        ({ slug }) => slug,
-      );
-    expect(slugs(codex?.instance.config)).toEqual([
-      "openai/gpt-5.5",
-      "gpt-5.5",
-      "anthropic/claude-opus-5-5",
-      "claude-opus-5-5",
+    const entries = (instanceId: keyof typeof after) =>
+      readCustomModelEntries(
+        (after[instanceId]?.config as { customModels?: unknown } | undefined)?.customModels,
+      ).map(({ slug, subProvider }) => [slug, subProvider]);
+    // A thread, favorite or hidden model saved as `gpt-5.5` still names the GPT 5.5 row.
+    expect(entries(GATEWAY_INSTANCE_IDS.codex)).toEqual([
+      ["gpt-5.5", undefined],
+      ["anthropic/claude-opus-5-5", "anthropic"],
+      ["claude-opus-5-5", undefined],
     ]);
-    expect(slugs(claude?.instance.config)).toEqual([
-      "openai/gpt-5.5",
-      "gpt-5.5",
-      "anthropic/claude-opus-5-5",
-      "claude-opus-5-5",
+    expect(entries(GATEWAY_INSTANCE_IDS.claude)).toEqual([
+      ["claude-opus-5-5", undefined],
+      ["openai/gpt-5.5", "openai"],
+      ["gpt-5.5", undefined],
     ]);
   });
 
