@@ -665,7 +665,7 @@ it.each([
     "Sign in to LibraOS or connect the LibraOS Gateway to use LibraOS models.",
   ],
 ] as const)("shows %s in one line and disables Start", async (_name, problem, line) => {
-  setup("branch" in problem ? problem.branch : "feature/export", drafted);
+  setup("feature/export", drafted);
   if ("worker" in problem) state.worker = problem.worker;
   await using _screen = await renderDialog();
   if ("balanceUsd" in problem) {
