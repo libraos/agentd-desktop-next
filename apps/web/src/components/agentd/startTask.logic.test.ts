@@ -6,6 +6,7 @@ import { makeStreamingTimelineFixture } from "~/test-fixtures";
 import {
   autoBudget,
   budgetMinutes,
+  cloudOfferStarted,
   cloudPlanProblem,
   conversationTaskDraft,
   defaultCloudPlan,
@@ -258,4 +259,12 @@ it("remembers accepted BYOK paths without dropping another environment's", () =>
     other: { openai: "/b/openai.key" },
     here: { anthropic: "/a/old.key", openai: "/a/openai.key" },
   });
+});
+
+it("reads an offered cloud task as started once its job is past submitting", () => {
+  expect(cloudOfferStarted(null, "hof-aa")).toBe(false);
+  expect(cloudOfferStarted([{ id: "hof-aa", cloudState: "submitting" }], "hof-aa")).toBe(false);
+  expect(cloudOfferStarted([{ id: "hof-aa", cloudState: null }], "hof-aa")).toBe(false);
+  expect(cloudOfferStarted([{ id: "hof-bb", cloudState: "running" }], "hof-aa")).toBe(false);
+  expect(cloudOfferStarted([{ id: "hof-aa", cloudState: "queued" }], "hof-aa")).toBe(true);
 });

@@ -63,7 +63,8 @@ export function AgentdInstallStatus({ status }: { status: AgentdStatus }) {
               One of AgentD’s background services runs an AgentD that is missing or belongs to the
               old AgentD Desktop, and a systemd drop-in for it sets the program it runs, which
               agentd install doesn’t change. This app left it alone: remove that ExecStart from the
-              drop-in, then run agentd install in a terminal.
+              drop-in, then run agentd install in a terminal, or agentd dash install for the
+              dashboard.
             </T>
           ) : repair.reason === "transient" ? (
             <T>

@@ -337,3 +337,12 @@ export function taskStartProblem(input: {
   if (input.worker === null) return "worker";
   return null;
 }
+
+/** The cloud job of a task agentd saved without confirming it is under way, by the synced list. */
+export function cloudOfferStarted(
+  rows: ReadonlyArray<{ readonly id: string; readonly cloudState?: string | null }> | null,
+  id: string,
+): boolean {
+  const state = rows?.find((row) => row.id === id)?.cloudState;
+  return state !== null && state !== undefined && state !== "submitting";
+}

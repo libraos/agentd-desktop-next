@@ -52,11 +52,14 @@ const state = vi.hoisted(() => ({
   keyFilesDenied: new Set<string>(),
   fixKeyFile: vi.fn(),
   tasks: vi.fn(),
+  // The synced task list, as its subscription last answered.
+  rows: [] as Array<{ id: string; cloudState: string | null }>,
+  rowListeners: new Set<() => void>(),
 }));
 
 vi.mock("~/lib/agentdState", async () => {
   const { Atom } = await import("effect/reactivity");
-  const { useReducer } = await import("react");
+  const { useReducer, useSyncExternalStore } = await import("react");
   const allowed = Atom.make(true);
   return {
     agentdEnvironment: {
@@ -96,7 +99,14 @@ vi.mock("~/lib/agentdState", async () => {
     useAgentdTaskOthers: () => ({ data: state.others, isPending: false, isSuccess: true }),
     useAgentdTasks: (environmentId: EnvironmentId) => {
       state.tasks(environmentId);
-      return { data: [] };
+      const data = useSyncExternalStore(
+        (listener) => {
+          state.rowListeners.add(listener);
+          return () => state.rowListeners.delete(listener);
+        },
+        () => state.rows,
+      );
+      return { data };
     },
   };
 });
@@ -156,6 +166,8 @@ function setup(
   state.keyFilesDenied = new Set();
   state.fixKeyFile.mockReset();
   state.tasks.mockReset();
+  state.rows = [];
+  state.rowListeners.clear();
   state.start.mockReset();
   state.configure.mockReset();
   state.cloudRefresh.mockReset();
@@ -412,6 +424,17 @@ it("checks an unknown cloud outcome before retrying and can replace an earlier s
   await expect.element(page.getByText(/AgentD saved task hof-aabbcc/)).toBeVisible();
   // While the dialog shows it, its task list subscription drives the cloud sync fallback.
   expect(state.tasks).toHaveBeenCalledWith(thread.environmentId);
+  // The sync finds the job under way: the dialog no longer says it didn't start.
+  state.rows = [{ id: "hof-aabbcc", cloudState: "running" }];
+  for (const listener of state.rowListeners) listener();
+  await expect
+    .element(
+      page.getByText(
+        "Task hof-aabbcc started in Cloud Workers. Check Background tasks for its progress.",
+      ),
+    )
+    .toBeVisible();
+  await expect.element(page.getByText(/AgentD saved task hof-aabbcc/)).not.toBeInTheDocument();
   await expect
     .element(page.getByRole("button", { name: /Start|Check and retry/ }))
     .not.toBeInTheDocument();

@@ -5,7 +5,7 @@ import { threadRuntimeIsActive } from "@t3tools/client-runtime/state/shell";
 import { type EnvironmentId, type MessageId, type ScopedThreadRef } from "@t3tools/contracts";
 import { Atom } from "effect/reactivity";
 import { T, useGT } from "gt-react";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 
 import { agentdEnvironment, useAgentdCommands, useAgentdTasks } from "~/lib/agentdState";
 import { useLibraosGatewayConnected } from "~/lib/libraosGatewayState";
@@ -34,6 +34,7 @@ import { CloudWorkersSetup } from "./CloudWorkersSetup";
 import { StartTaskCloud, useStartTaskCloud } from "./StartTaskCloud";
 import { StartTaskOthers } from "./StartTaskOthers";
 import {
+  cloudOfferStarted,
   conversationTaskDraft,
   EMPTY_TASK_FIELDS,
   TASK_ACCEPT_LIMIT,
@@ -69,10 +70,41 @@ export function openStartTaskDialog(threadRef: ScopedThreadRef, fields: TaskFiel
   appAtomRegistry.set(dialogState, { threadRef, fields });
 }
 
-/** The task list's subscription runs the server's cloud sync fallback, closed tasks pane or not. */
-function SyncsCloudTasks({ environmentId }: { environmentId: EnvironmentId }) {
-  useAgentdTasks(environmentId);
-  return null;
+/**
+ * The refusal shown for a cloud task agentd saved but didn't confirm, until the synced task list
+ * shows it started. Its subscription runs the server's cloud sync fallback, tasks pane closed or not.
+ */
+function OfferedCloudTask(props: {
+  environmentId: EnvironmentId;
+  taskId: string | null;
+  children: ReactNode;
+}) {
+  return props.taskId === null ? (
+    props.children
+  ) : (
+    <SyncedCloudTask {...props} taskId={props.taskId} />
+  );
+}
+
+function SyncedCloudTask({
+  environmentId,
+  taskId,
+  children,
+}: {
+  environmentId: EnvironmentId;
+  taskId: string;
+  children: ReactNode;
+}) {
+  const gt = useGT();
+  const { data } = useAgentdTasks(environmentId);
+  if (!cloudOfferStarted(data, taskId)) return children;
+  return (
+    <p role="status" className="text-muted-foreground text-sm">
+      {gt("Task {taskId} started in Cloud Workers. Check Background tasks for its progress.", {
+        taskId,
+      })}
+    </p>
+  );
 }
 
 export function useCanStartTask(environmentId: EnvironmentId | null) {
@@ -447,90 +479,92 @@ function StartTaskDialog({
             </p>
           )}
           {startError !== null && (
-            <div
-              role="alert"
-              className="space-y-1 rounded-lg border border-destructive/30 p-3 text-sm"
+            <OfferedCloudTask
+              environmentId={environmentId}
+              taskId={offeredId !== null && cloud.enabled ? offeredId : null}
             >
-              {offeredId !== null && cloud.enabled && (
-                <SyncsCloudTasks environmentId={environmentId} />
-              )}
-              {offeredId !== null && (
-                <p>
-                  {cloud.enabled
-                    ? gt(
-                        "AgentD saved task {taskId}, but it didn’t start in Cloud Workers. Check Background tasks for updates before trying again.",
-                        { taskId: offeredId },
-                      )
-                    : gt("Task {taskId} was offered but did not start.", { taskId: offeredId })}
-                </p>
-              )}
-              <p className="wrap-anywhere whitespace-pre-wrap">{startError}</p>
-              {cloud.enabled && replaceSubmission !== null ? (
-                <div className="flex gap-2">
+              <div
+                role="alert"
+                className="space-y-1 rounded-lg border border-destructive/30 p-3 text-sm"
+              >
+                {offeredId !== null && (
+                  <p>
+                    {cloud.enabled
+                      ? gt(
+                          "AgentD saved task {taskId}, but it didn’t start in Cloud Workers. Check Background tasks for updates before trying again.",
+                          { taskId: offeredId },
+                        )
+                      : gt("Task {taskId} was offered but did not start.", { taskId: offeredId })}
+                  </p>
+                )}
+                <p className="wrap-anywhere whitespace-pre-wrap">{startError}</p>
+                {cloud.enabled && replaceSubmission !== null ? (
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={disabled}
+                      onClick={() => submit(replaceSubmission)}
+                    >
+                      <T>Replace</T>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={disabled}
+                      onClick={() => {
+                        setStartError(null);
+                        setReplaceSubmission(null);
+                      }}
+                    >
+                      <T>Don’t replace</T>
+                    </Button>
+                  </div>
+                ) : null}
+                {cloud.enabled && cloud.canFixKeyFile && privateFile !== null ? (
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={disabled}
-                    onClick={() => submit(replaceSubmission)}
-                  >
-                    <T>Replace</T>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={disabled}
-                    onClick={() => {
+                    disabled={disabled || fixingFile}
+                    onClick={async () => {
+                      setFixingFile(true);
+                      const result = await cloudKeyFileFix({
+                        environmentId,
+                        input: { path: privateFile },
+                      });
+                      setFixingFile(false);
+                      if (result._tag === "Failure") {
+                        setStartError(
+                          showFailure(
+                            squashAtomCommandFailure(result),
+                            gt("Couldn’t change the file’s permissions."),
+                          ),
+                        );
+                        return;
+                      }
+                      setPrivateFile(null);
                       setStartError(null);
-                      setReplaceSubmission(null);
+                      cloud.refreshKeyFiles();
                     }}
                   >
-                    <T>Don’t replace</T>
+                    <T>Fix permissions</T>
                   </Button>
-                </div>
-              ) : null}
-              {cloud.enabled && cloud.canFixKeyFile && privateFile !== null ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={disabled || fixingFile}
-                  onClick={async () => {
-                    setFixingFile(true);
-                    const result = await cloudKeyFileFix({
-                      environmentId,
-                      input: { path: privateFile },
-                    });
-                    setFixingFile(false);
-                    if (result._tag === "Failure") {
-                      setStartError(
-                        showFailure(
-                          squashAtomCommandFailure(result),
-                          gt("Couldn’t change the file’s permissions."),
-                        ),
-                      );
-                      return;
-                    }
-                    setPrivateFile(null);
-                    setStartError(null);
-                    cloud.refreshKeyFiles();
-                  }}
-                >
-                  <T>Fix permissions</T>
-                </Button>
-              ) : null}
-              {cloud.enabled &&
-              cloud.setup?.problem !== "setup" &&
-              /cloud configuration and account key file/.test(startError) ? (
-                <CloudWorkersSetup
-                  environmentId={environmentId}
-                  canConfigure={cloud.setup?.canConfigure === true}
-                  setupUrl={cloud.setup?.setupUrl}
-                  onConfigured={cloud.refresh}
-                />
-              ) : null}
-            </div>
+                ) : null}
+                {cloud.enabled &&
+                cloud.setup?.problem !== "setup" &&
+                /cloud configuration and account key file/.test(startError) ? (
+                  <CloudWorkersSetup
+                    environmentId={environmentId}
+                    canConfigure={cloud.setup?.canConfigure === true}
+                    setupUrl={cloud.setup?.setupUrl}
+                    onConfigured={cloud.refresh}
+                  />
+                ) : null}
+              </div>
+            </OfferedCloudTask>
           )}
         </DialogPanel>
         <StartTaskOthers
