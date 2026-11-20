@@ -10,7 +10,7 @@ Ten findings from testing 0.1.10-agentd.7 on macOS. Our own files carry most of 
 - `apps/server/src/auth/RpcAuthorization.ts` — Give the key file check the filesystem read scope, as browsing files has.
 - `apps/server/src/auth/RpcAuthorization.test.ts` — Check both key file scopes and the Repair scope.
 - `apps/server/src/observability/RpcInstrumentation.ts` — Append the two key file RPCs and Repair to the AgentD group.
-- `apps/server/src/ws.ts` — Append the thin key file check, fix and Repair handlers; Start's wrong-provider error is made generic for a connection without filesystem read.
+- `apps/server/src/ws.ts` — Append the thin key file check, fix and Repair handlers; Start's wrong-provider error, and a shared credential file it didn't enter, are made generic for a connection without filesystem read.
 - `apps/web/src/clientPersistenceStorage.ts` — Keep the newer of stored and incoming BYOK key path per provider on write, so a tab saving an old snapshot can't erase or restore one.
 - `apps/desktop/src/settings/DesktopClientSettings.ts` — Serialize writes and keep the newer of stored and incoming BYOK key path per provider, so a window saving an old snapshot can't erase or restore one.
 - `apps/desktop/src/settings/DesktopClientSettings.test.ts` — Check two windows' concurrent saves keep both paths, and an old snapshot's save keeps a replaced path.

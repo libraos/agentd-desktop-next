@@ -99,11 +99,34 @@ describe("startErrorFor", () => {
       notSetUp: false,
       wrongKeyFile: "openai",
     });
-    expect(startErrorFor(wrong, true)).toBe(wrong);
-    const hidden = startErrorFor(wrong, false);
+    expect(startErrorFor(wrong, true, [])).toBe(wrong);
+    const hidden = startErrorFor(wrong, false, []);
     expect(hidden).toMatchObject({ message: CLOUD_REASONS.keyFile });
     expect(hidden).not.toHaveProperty("wrongKeyFile");
     const other = new AgentdCommandError({ message: "x", notSetUp: false });
-    expect(startErrorFor(other, false)).toBe(other);
+    expect(startErrorFor(other, false, [])).toBe(other);
+  });
+
+  it("names a shared credential file to a connection without host reads only if it entered it", () => {
+    const opened =
+      "--claude-token-file /srv/personal/claude-token can be read or written by others";
+    const shared = new AgentdCommandError({
+      message: cloudReason(opened)!,
+      notSetUp: false,
+      privateFile: openKeyFile(opened)!,
+    });
+    expect(startErrorFor(shared, true, [])).toBe(shared);
+    // The host's configured token file, which this connection never named.
+    const hidden = startErrorFor(shared, false, []);
+    expect(hidden.message).toBe(CLOUD_REASONS.privateFile);
+    expect(hidden).not.toHaveProperty("privateFile");
+    expect(startErrorFor(shared, false, ["/srv/personal/claude-token"])).toBe(shared);
+    const owned = new AgentdCommandError({
+      message: cloudReason("cloud.claude_token_file /srv/t belongs to another user (uid 501)")!,
+      notSetUp: false,
+    });
+    expect(owned.message).toContain("/srv/t");
+    expect(startErrorFor(owned, false, []).message).toBe(CLOUD_REASONS.privateFile);
+    expect(startErrorFor(owned, false, ["/srv/t"])).toBe(owned);
   });
 });

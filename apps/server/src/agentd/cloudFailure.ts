@@ -207,8 +207,48 @@ export function cloudFailureReason(
   return STATE_REASONS[state] ?? null;
 }
 
-/** A Start error for a connection that may not read host files: whose key a file holds isn't said. */
-export function startErrorFor<E>(error: E, readsHostFiles: boolean): E | AgentdCommandError {
-  if (readsHostFiles || !isCommandError(error) || !error.wrongKeyFile) return error;
-  return new AgentdCommandError({ message: CLOUD_REASONS.keyFile, notSetUp: false });
+/** The file a shared-file reason names (sharedFileReason's own wording); null for any other. */
+function sharedFileNamed(reason: string): string | null {
+  return (
+    /^(.+) can be read by other users\. Run /s.exec(reason)?.[1] ??
+    /^(.+) belongs to another user\. Copy it /s.exec(reason)?.[1] ??
+    null
+  );
+}
+
+/**
+ * A Start error for a connection that may not read host files: whose key a file holds isn't said,
+ * nor a file the host chose (a configured token file); a file it entered itself still is.
+ */
+export function startErrorFor<E>(
+  error: E,
+  readsHostFiles: boolean,
+  entered: ReadonlyArray<string>,
+): E | AgentdCommandError {
+  if (readsHostFiles || !isCommandError(error)) return error;
+  if (error.wrongKeyFile)
+    return new AgentdCommandError({ message: CLOUD_REASONS.keyFile, notSetUp: false });
+  const named = error.privateFile ?? sharedFileNamed(error.message);
+  if (named !== null && !entered.includes(named))
+    return new AgentdCommandError({ message: CLOUD_REASONS.privateFile, notSetUp: false });
+  return error;
+}
+
+/** The credential files a Start's input names, as the user entered them. */
+export function enteredKeyFiles(input: {
+  readonly cloud?: {
+    readonly anthropicKeyFile?: string;
+    readonly openaiKeyFile?: string;
+    readonly claudeTokenFile?: string;
+    readonly codexAuthFile?: string;
+  };
+}): ReadonlyArray<string> {
+  const cloud = input.cloud;
+  if (cloud === undefined) return [];
+  return [
+    cloud.anthropicKeyFile,
+    cloud.openaiKeyFile,
+    cloud.claudeTokenFile,
+    cloud.codexAuthFile,
+  ].filter((file) => file !== undefined);
 }

@@ -20,7 +20,6 @@ import type { ProcessRunner } from "../processRunner.ts";
 // install` for a Linux dash). An AppImage's agentd is never registered: its mount goes with the app.
 
 type ServiceName = AgentdServiceName;
-const UNREAD = Symbol("unread");
 const SERVICES: ReadonlyArray<ServiceName> = ["watchdog", "dash"];
 
 /** The old AgentD Desktop's install folder on macOS, Windows or Linux; not AgentD Next's. */
@@ -346,19 +345,19 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
   const exec = runner(deps.run);
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  // A service file that is there but can't be read is UNREAD, never taken as absent.
+  // A service file that is there but can't be read is undefined: unread, never taken as absent.
   const readService = (file: string) =>
     fs.readFileString(file).pipe(
-      Effect.map((text): string | null | typeof UNREAD => text),
+      Effect.map((text): string | null | undefined => text),
       Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(null)),
-      Effect.orElseSucceed(() => UNREAD),
+      Effect.orElseSucceed(() => undefined),
     );
   const unitDir = path.join(home, ".config", "systemd", "user");
   const names = (dir: string) => fs.readDirectory(dir).pipe(Effect.orElseSucceed(() => []));
   // A unit with its drop-ins, which systemd reads after it: the program it runs in effect.
   const unitText = Effect.fn("AgentdServices.unit")(function* (file: string) {
     const unit = yield* readService(path.join(unitDir, file));
-    if (unit === null || unit === UNREAD) return unit;
+    if (unit === null || unit === undefined) return unit;
     // A drop-in file name taken from the most specific folder that has it, read in name order.
     const dropIns = new Map<string, string>();
     for (const dir of dropInDirs(file).toReversed())
@@ -367,7 +366,7 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
     let text = unit;
     for (const name of [...dropIns.keys()].toSorted()) {
       const conf = yield* readService(dropIns.get(name)!);
-      if (conf === UNREAD) return UNREAD;
+      if (conf === undefined) return undefined;
       if (conf !== null) text += `\n${conf}`;
     }
     return { unit, text };
@@ -380,7 +379,7 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
       const all = yield* exec("schtasks", ["/Query", "/FO", "CSV", "/NH"]);
       listing = all.ok ? all.text : null;
     }
-    return listing === null ? UNREAD : listsTask(listing, task);
+    return listing === null ? undefined : listsTask(listing, task);
   });
   // Services whose program a drop-in sets: agentd install rewrites only the unit file itself.
   const overridden: ServiceName[] = [];
@@ -389,7 +388,7 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
       const plist = yield* readService(
         path.join(home, "Library", "LaunchAgents", `com.libraos.agentd.${name}.plist`),
       );
-      return plist === null || plist === UNREAD ? plist : plistProgram(plist);
+      return plist === null || plist === undefined ? plist : plistProgram(plist);
     }
     if (platform === "win32") {
       const names = taskNames(name, root);
@@ -399,7 +398,7 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
         if (!query.ok) {
           const there = yield* listed(task);
           if (there === false) continue;
-          return UNREAD;
+          return undefined;
         }
         const envFile = taskEnvFile(query.text);
         // The plain legacy name may be another root's task: only one whose env file is this root's.
@@ -417,7 +416,7 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
       return null;
     }
     const unit = yield* unitText(`agentd-${name}.service`);
-    if (unit === null || unit === UNREAD) return unit;
+    if (unit === null || unit === undefined) return unit;
     const runs = unitProgram(unit.text, home);
     if (runs !== null && runs !== unitProgram(unit.unit, home)) overridden.push(name);
     return runs;
@@ -431,8 +430,8 @@ export const detectServices = Effect.fn("AgentdServices.detect")(function* (deps
   let watchdogOnTarget = false;
   for (const name of SERVICES) {
     const runs = yield* program(name);
-    if (runs === UNREAD) unread.push(name);
-    if (runs === null || runs === UNREAD) continue;
+    if (runs === undefined) unread.push(name);
+    if (runs === null || runs === undefined) continue;
     const exists = yield* fs.exists(runs).pipe(Effect.orElseSucceed(() => false));
     if (isStaleProgram(runs, exists, agentd)) services.push({ name, program: runs });
     else if (runs !== agentd) kept.push(name);
