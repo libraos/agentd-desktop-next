@@ -133,6 +133,7 @@ export const AgentdHandoffShowJson = Schema.Struct({
   cloud_state: NullableString,
   worker_log: NullableString,
   worker_note: NullableString,
+  report_note: NullableString,
   close_reason: NullableString,
   project: NullableString,
   /** Pull requests linked to the task, as OWNER/REPO#N. */
@@ -341,6 +342,8 @@ export const AgentdTask = Schema.Struct({
   budgetState: Schema.NullOr(Schema.String),
   branch: Schema.NullOr(Schema.String),
   note: Schema.NullOr(Schema.String),
+  /** The worker's latest progress report, while it runs. */
+  report: Schema.optionalKey(Schema.String),
   project: Schema.NullOr(Schema.String),
   hasLog: Schema.Boolean,
   started: Schema.NullOr(Schema.String),

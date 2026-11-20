@@ -235,6 +235,12 @@ export function budgetMinutes(budget: string | null | undefined): number | null 
   return match ? Number(match[1]) : null;
 }
 
+/** The dollars of an agentd budget such as `30m,$5`; null when it names none. */
+export function budgetDollarLimit(budget: string | null | undefined): number | null {
+  const match = /(?:^|,)\$(\d+(?:\.\d+)?)$/.exec(budget ?? "");
+  return match ? Number(match[1]) : null;
+}
+
 /** LibraOS when the person is signed in to it or the Gateway is connected; else their own key. */
 export function defaultModelAccess(signedIn: boolean, gatewayConnected: boolean) {
   return signedIn || gatewayConnected ? ("libraos" as const) : ("byok" as const);

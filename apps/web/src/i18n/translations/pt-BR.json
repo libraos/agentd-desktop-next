@@ -3004,6 +3004,7 @@
   "1e358a7392662403": "Entrada de inicialização do terminal inválida",
   "78afe8f657a424b5": "Este ambiente não conseguiu informar o uso.",
   "7e007018635dcd2b": "Esta conexão não pode alterar threads nem projetos.",
+  "c28102a5b9d35f9c": "Budget used",
   "1e1df8f48c421413": "Stop this background task?\n{title}",
   "b7d61910316f86a9": "Untitled task",
   "465643a63f98226b": "Local worker",
@@ -3029,6 +3030,61 @@
       "v": "v"
     }
   ],
+  "b5210e40aa57d3d0": "Budget used",
+  "2a3aad5091e435a0": [
+    "Time: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " of ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    },
+    " min"
+  ],
+  "28200bcefb088b3a": [
+    "Budget: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "d277b0ec38959170": [
+    "Estimated cost: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " of",
+    " ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    }
+  ],
+  "6de5aa237e1aee92": [
+    "Cost: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " of",
+    " ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    }
+  ],
+  "8157da18a493cabf": "Latest report",
   "dc6fbc8cd1b7528b": "Check result",
   "de4069eb8cca9f58": "No check result was recorded.",
   "39bbd757e4977de7": "Next step",
