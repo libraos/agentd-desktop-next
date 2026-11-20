@@ -506,7 +506,8 @@ function StartTaskDialog({
                 role="alert"
                 className="space-y-1 rounded-lg border border-destructive/30 p-3 text-sm"
               >
-                {offeredId !== null && (
+                {/* An earlier submission's task: its note says this draft wasn't sent. */}
+                {offeredId !== null && !(cloud.enabled && offeredEarlier) && (
                   <p>
                     {cloud.enabled
                       ? gt(

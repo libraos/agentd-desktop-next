@@ -734,6 +734,36 @@ describe("AgentdBridge", () => {
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );
 
+  it.effect("reads a shown services problem again on each status read", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const home = yield* fs.makeTempDirectoryScoped();
+      const units = path.join(home, ".config", "systemd", "user");
+      yield* fs.makeDirectory(units, { recursive: true });
+      const unit = path.join(units, "agentd-dash.service");
+      yield* fs.writeFileString(unit, "[Service]\nExecStart=/gone/agentd dash\n");
+      const bridge = yield* makeBridge(
+        { PATH: "", AGENTD_BIN: process.execPath, AGENTD_DESKTOP_BUNDLED: "1" },
+        (input) => {
+          const key = input.args.join(" ");
+          if (key === "version") return Effect.succeed(output("agentd v0.1.15\n"));
+          if (key === "doctor --json") return Effect.succeed(output(DOCTOR_JSON, 1));
+          return Effect.succeed(output(""));
+        },
+      ).pipe(
+        Effect.provideService(HostProcess.Platform, "linux"),
+        Effect.provideService(HostProcess.HomeDirectory, home),
+      );
+      // A Repair of another scope only reads the services: the stale dash is now known.
+      yield* Effect.flip(bridge.repairServices({ moves: ["watchdog"] }));
+      expect((yield* bridge.status).servicesProblem).toMatchObject({ moves: ["dash"] });
+      // Fixed by hand, as the notice says: the next read no longer shows it.
+      yield* fs.writeFileString(unit, `[Service]\nExecStart=${process.execPath} dash\n`);
+      expect(yield* bridge.status).not.toHaveProperty("servicesProblem");
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
   it.effect("answers every method with AgentdNotFoundError when there is no agentd", () =>
     Effect.gen(function* () {
       const bridge = yield* makeBridge({ PATH: "" }, () => Effect.die("agentd must not run"));

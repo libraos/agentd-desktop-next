@@ -1357,6 +1357,7 @@ it("checks each BYOK key file's provider and privacy, and remembers the paths th
     await userEvent.fill(page.getByLabelText("OpenAI key file path"), "/home/me/draft.key");
     await page.getByRole("button", { name: "Start", exact: true }).click();
     await expect.element(page.getByText("Earlier.")).toBeVisible();
+    await expect.element(page.getByText(/AgentD saved task hof-777eee/)).not.toBeInTheDocument();
     state.rows = [{ id: "hof-777eee", cloudState: "running" }];
     for (const listener of state.rowListeners) listener();
     await expect

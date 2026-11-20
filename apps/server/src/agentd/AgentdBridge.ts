@@ -435,6 +435,8 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
   });
 
   const status: AgentdBridge["Service"]["status"] = Effect.gen(function* () {
+    // A problem shown is read again, so services the user fixed by hand stop showing on Refresh.
+    if (servicesProblem !== null) yield* checkServices().pipe(Effect.ignore);
     const [version, doctor] = yield* Effect.all([run(agentdArgs.version()), readDoctor], {
       concurrency: 2,
     }).pipe(
