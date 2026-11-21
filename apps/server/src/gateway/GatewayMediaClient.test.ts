@@ -131,7 +131,9 @@ it.effect("openrouter expired becomes a failure", () =>
     const http = fakeGateway({
       "GET /v1/videos/job-1": () => Response.json({ id: "job-1", status: "expired" }),
     });
-    const job = yield* pollVideo(c, "job-1").pipe(Effect.provideService(HttpClient.HttpClient, http));
+    const job = yield* pollVideo(c, "job-1").pipe(
+      Effect.provideService(HttpClient.HttpClient, http),
+    );
     assert.strictEqual(job.status, "failed");
     assert.strictEqual(job.error, "expired");
     const error: GatewayMediaFailure = yield* waitForJob(
@@ -149,7 +151,9 @@ it.effect("a job still running at the wait cap comes back in progress", () =>
     const http = fakeGateway({
       "GET /v1/videos/job-2": () => Response.json({ id: "job-2", status: "in_progress" }),
     });
-    const job = yield* pollVideo(c, "job-2").pipe(Effect.provideService(HttpClient.HttpClient, http));
+    const job = yield* pollVideo(c, "job-2").pipe(
+      Effect.provideService(HttpClient.HttpClient, http),
+    );
     const result = yield* waitForJob(
       job,
       (id) => pollVideo(c, id).pipe(Effect.provideService(HttpClient.HttpClient, http)),
