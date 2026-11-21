@@ -735,7 +735,17 @@ it.layer(
         assert.deepStrictEqual(asked[2], { endpoint: "https://api.libraos.com", key: undefined });
 
         // The Gateway answers once, then is down: the key's list stands, not Codex's catalog.
-        let gatewayAnswer = () => Response.json({ data: [{ id: "openai/gpt-6-luna" }] });
+        // Another family's model runs too, by its full id and labelled with its family. A bare id
+        // equal to an own-family name is that same row, which keeps Codex's catalog entry; the
+        // prefixed id is a row of its own with that entry's options.
+        let gatewayAnswer = () =>
+          Response.json({
+            data: [
+              { id: "openai/gpt-6-luna" },
+              { id: "gpt-6-luna", name: "Standalone route" },
+              { id: "gemini/gemini-2.5-pro" },
+            ],
+          });
         const gatewayKeyModels = yield* makeGatewayKeyModels("openai").pipe(
           Effect.provideService(
             HttpClient.HttpClient,
@@ -759,14 +769,26 @@ it.layer(
             undefined,
             gatewayKeyModels,
           );
+        const served = (yield* live()).models;
         assert.deepStrictEqual(
-          (yield* live()).models.map((model) => model.slug),
-          ["gpt-6-luna"],
+          served.map((model) => [
+            model.slug,
+            model.name,
+            model.subProvider,
+            model.isCustom,
+            (model.capabilities?.optionDescriptors ?? []).length > 0,
+          ]),
+          // Only Codex's own models carry its reasoning and service-tier controls.
+          [
+            ["gpt-6-luna", "gpt-6-luna", undefined, false, true],
+            ["openai/gpt-6-luna", "openai/gpt-6-luna", "openai", true, true],
+            ["gemini/gemini-2.5-pro", "gemini/gemini-2.5-pro", "gemini", true, false],
+          ],
         );
         gatewayAnswer = () => Response.json({ error: { message: "Down" } }, { status: 503 });
         assert.deepStrictEqual(
           (yield* live()).models.map((model) => model.slug),
-          ["gpt-6-luna"],
+          ["gpt-6-luna", "openai/gpt-6-luna", "gemini/gemini-2.5-pro"],
         );
 
         // A later probe answers the account and models but not its config: the confirmed route

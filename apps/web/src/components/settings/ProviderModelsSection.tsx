@@ -579,6 +579,9 @@ const ProviderModelRow = memo(function ProviderModelRow({
             ) : null}
           </TooltipPopup>
         </Tooltip>
+        {model.subProvider ? (
+          <span className="shrink-0 text-2xs text-muted-foreground/70">{model.subProvider}</span>
+        ) : null}
         {model.isCustom ? (
           <span className="shrink-0 text-2xs text-muted-foreground/70">
             {gt("custom", { $context: "badge, user-added model" })}

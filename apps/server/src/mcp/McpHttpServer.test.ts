@@ -2028,6 +2028,122 @@ it.effect(
     ).pipe(Effect.provide(NodeHttpServer.layerTest)),
 );
 
+it.effect("lists the media tools to a chat without the task tools", () =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const scopeFor = (token: string): McpInvocationContext.McpThreadInvocationScope => ({
+        environmentId,
+        requestNamespace: token,
+        thread: {
+          threadId: ThreadId.make(`thread-${token}`),
+          providerSessionId: token,
+          providerInstanceId: ProviderInstanceId.make("copilot"),
+        },
+        client: undefined,
+        capabilities: new Set(["preview"]),
+        issuedAt: 1,
+      });
+      const scopes = new Map([
+        ["deferringToken", scopeFor("deferringToken")],
+        ["otherToken", scopeFor("otherToken")],
+      ]);
+      const tool = (name: string, description: string) =>
+        Tool.make(name, {
+          description,
+          success: Schema.Struct({}),
+          failure: OrchestratorMcpFailure,
+          failureMode: "return",
+        });
+      const OptionalToolkit = Toolkit.make(
+        tool("media_generate_video", "Makes a video."),
+        tool("preview_open", "Opens a browser preview."),
+        tool("schedule_task", "Schedules a task."),
+      );
+      const reads = McpToolAccess.reads(() => Effect.succeed({}));
+      const serverLayer = McpHttpServer.layerMcpTransport(
+        Layer.mergeAll(
+          McpHttpServer.toolkitRegistration(
+            OptionalToolkit,
+            McpToolAccess.toLayer(OptionalToolkit, {
+              media_generate_video: reads,
+              preview_open: reads,
+              schedule_task: reads,
+            }),
+          ),
+          McpHttpServer.layerToolSearch,
+        ),
+      ).pipe(
+        Layer.provide(ServerSettings.layerTest()),
+        Layer.provide(McpToolAccessTestkit.liveThreadsLayer),
+        Layer.provide(
+          Layer.mock(McpSessionRegistry.McpSessionRegistry)({
+            resolve: (token) => Effect.succeed(scopes.get(token)),
+          }),
+        ),
+      );
+      yield* HttpRouter.serve(serverLayer, { disableListenLog: true, disableLogger: true }).pipe(
+        Layer.build,
+      );
+      const httpClient = yield* HttpClient.HttpClient;
+      const session = (token: string, deferred: boolean) =>
+        Effect.gen(function* () {
+          const headers = {
+            accept: "application/json, text/event-stream",
+            authorization: `Bearer ${token}`,
+            ...(deferred ? { "t3-tool-exposure": "deferred" } : {}),
+          };
+          const initialize = yield* httpClient.post("/mcp", {
+            headers,
+            body: HttpBody.text(
+              `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"probe","version":"1.0.0"}}}`,
+              "application/json",
+            ),
+          });
+          const rpc = (method: string, params: object) =>
+            httpClient
+              .post("/mcp", {
+                headers: {
+                  ...headers,
+                  "mcp-session-id": initialize.headers["mcp-session-id"]!,
+                  "mcp-protocol-version": "2025-06-18",
+                },
+                body: HttpBody.text(
+                  JSON.stringify({ jsonrpc: "2.0", id: 2, method, params }),
+                  "application/json",
+                ),
+              })
+              .pipe(
+                Effect.flatMap((response) => response.text),
+                // tool_search answers over SSE, after its list_changed notification.
+                Effect.map((text): unknown =>
+                  text
+                    .split("\n")
+                    .filter((line) => line.startsWith("data: ") || line.startsWith("{"))
+                    .map((line) => JSON.parse(line.replace(/^data: /u, "")) as { id?: number })
+                    .find((message) => message.id === 2),
+                ),
+              );
+          return {
+            listed: rpc("tools/list", {}).pipe(
+              Effect.map((body) =>
+                (body as { result: { tools: ReadonlyArray<{ name: string }> } }).result.tools
+                  .map((listed) => listed.name)
+                  .sort(),
+              ),
+            ),
+            call: (name: string, args: object) =>
+              rpc("tools/call", { name, arguments: args }).pipe(
+                Effect.map((body) => (body as { result: { structuredContent?: unknown } }).result),
+              ),
+          };
+        });
+
+      const chat = yield* session("otherToken", false);
+      expect(yield* chat.listed).toEqual(["media_generate_video", "preview_open"]);
+    }),
+  ).pipe(Effect.provide(NodeHttpServer.layerTest)),
+);
+
 it.effect("lists optional tools to a deferring client only after tool_search loads them", () =>
   Effect.scoped(
     Effect.gen(function* () {

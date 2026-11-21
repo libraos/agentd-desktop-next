@@ -115,4 +115,45 @@ it.layer(NodeServices.layer)("ClaudeHome", (it) => {
         ).toBe("custom");
       }),
   );
+
+  it.effect("keeps the picked model on a Claude Code sent to the Gateway by hand", () =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const homePath = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-claude-home-" });
+      const keepModel = {
+        CLAUDE_CODE_DISABLE_LEGACY_MODEL_REMAP: "1",
+        CLAUDE_CODE_NO_MODEL_FALLBACK: "1",
+      };
+      const instance = [
+        { name: "ANTHROPIC_BASE_URL", value: "https://api.libraos.com/", sensitive: false },
+      ];
+      expect(yield* mergeClaudeProcessEnvironment({ homePath }, instance, {})).toMatchObject(
+        keepModel,
+      );
+      // An explicit value stays the user's.
+      const explicit = [
+        ...instance,
+        { name: "CLAUDE_CODE_NO_MODEL_FALLBACK", value: "0", sensitive: false },
+      ];
+      expect(
+        (yield* mergeClaudeProcessEnvironment({ homePath }, explicit, {}))
+          .CLAUDE_CODE_NO_MODEL_FALLBACK,
+      ).toBe("0");
+      // Another endpoint keeps Claude Code's own behaviour.
+      const other = yield* mergeClaudeProcessEnvironment({ homePath }, undefined, {
+        ANTHROPIC_BASE_URL: "https://hub.example.com",
+      });
+      expect(other.CLAUDE_CODE_DISABLE_LEGACY_MODEL_REMAP).toBeUndefined();
+
+      // The endpoint set in Claude Code's own settings counts too.
+      yield* fileSystem.writeFileString(
+        path.join(homePath, "settings.json"),
+        JSON.stringify({ env: { ANTHROPIC_BASE_URL: "https://api.libraos.com" } }),
+      );
+      expect(yield* mergeClaudeProcessEnvironment({ homePath }, undefined, {})).toMatchObject(
+        keepModel,
+      );
+    }),
+  );
 });

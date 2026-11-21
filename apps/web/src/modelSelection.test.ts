@@ -534,6 +534,33 @@ describe("instance-scoped model selection", () => {
     expect(getAppModelOptionsForInstance(settings, ownGateway!, "gpt-6.2-sol")).toContainEqual(
       expect.objectContaining({ slug: "gpt-6.2-sol", isUnavailable: true }),
     );
+
+    // A revoked literal `opus` stays itself, not the catalog row that has `opus` as an alias.
+    const claudeId = ProviderInstanceId.make("libraosClaude");
+    const claudeProviders: ServerProvider[] = [
+      {
+        ...provider({ instanceId: "claude_gateway", models: [] }),
+        instanceId: claudeId,
+        models: [
+          {
+            slug: "claude-opus-5-5",
+            name: "Claude Opus 5.5",
+            aliases: ["opus"],
+            isCustom: false,
+            capabilities: null,
+          },
+        ],
+      },
+    ];
+    const [claudeGateway] = deriveProviderInstanceEntries(claudeProviders);
+    expect(getAppModelOptionsForInstance(settings, claudeGateway!, "opus")).toContainEqual(
+      expect.objectContaining({ slug: "opus", isUnavailable: true }),
+    );
+    expect(
+      resolveAppModelSelectionForInstance(claudeId, settings, claudeProviders, "opus", {
+        preserveUnavailableSelection: true,
+      }),
+    ).toBe("opus");
   });
 
   it("lists exactly the Gateway's models for an agent configured by hand to use it", () => {

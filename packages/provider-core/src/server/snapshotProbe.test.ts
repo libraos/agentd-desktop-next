@@ -119,6 +119,9 @@ describe("providerModelsFromSettings", () => {
         { slug: "gpt-6-astra", name: "OpenAI: GPT-6 Astra" },
         "gpt-6.1-sol",
         { slug: "gpt-7-preview", name: "GPT-7 Preview" },
+        { slug: "gemini/gemini-2.5-pro", name: "Gemini 2.5 Pro", subProvider: "gemini" },
+        "team-a/deployment",
+        { slug: "openai/gpt-6.2-sol", subProvider: "openai" },
       ],
       plain,
       { onlyCustomModels: true },
@@ -128,6 +131,23 @@ describe("providerModelsFromSettings", () => {
       catalog[1],
       catalog[2],
       { slug: "gpt-7-preview", name: "GPT-7 Preview", isCustom: true, capabilities: plain },
+      // A model is labelled with the family its entry names, never guessed from its id.
+      {
+        slug: "gemini/gemini-2.5-pro",
+        name: "Gemini 2.5 Pro",
+        subProvider: "gemini",
+        isCustom: true,
+        capabilities: plain,
+      },
+      { slug: "team-a/deployment", name: "team-a/deployment", isCustom: true, capabilities: plain },
+      // A family-prefixed catalog id offers that catalog model's options.
+      {
+        slug: "openai/gpt-6.2-sol",
+        name: "openai/gpt-6.2-sol",
+        subProvider: "openai",
+        isCustom: true,
+        capabilities: fast,
+      },
     ]);
   });
 

@@ -1450,8 +1450,9 @@ const layerToolExposure = Layer.effect(
 );
 
 /** AgentD: all a thread credential without `orchestration` lists (besides `tool_search`). */
-const BROWSER_AND_DEVICE_TOOLS: ReadonlySet<string> = new Set(
+const TOOLS_WITHOUT_ORCHESTRATION: ReadonlySet<string> = new Set(
   [
+    MediaToolkit,
     PreviewStandardToolkit,
     PreviewSnapshotToolkit,
     PreviewControlsToolkit,
@@ -1479,7 +1480,7 @@ const layerDeferredListing = McpServer.visibility(
         invocation?.thread !== undefined &&
         !invocation.capabilities.has("orchestration") &&
         target !== McpToolExposure.TOOL_SEARCH &&
-        !BROWSER_AND_DEVICE_TOOLS.has(target)
+        !TOOLS_WITHOUT_ORCHESTRATION.has(target)
       ) {
         return false;
       }
