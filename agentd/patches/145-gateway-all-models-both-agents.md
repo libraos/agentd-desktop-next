@@ -22,3 +22,5 @@ Ours: `apps/server/src/gateway/gatewaySetup.ts` (`gatewayAgentModels` replaces `
 - `apps/server/src/orchestration-v2/Adapters/CodexAdapterV2.test.ts` — A `gemini/*` id reaches Codex's `turn/start` unchanged, with no reasoning effort.
 - `apps/server/src/provider/Drivers/ClaudeDriver.ts` — A turn reads the picked id against the key's discovered models too, so a hand-configured Gateway agent with no saved list sends a bare `opus` as `opus`.
 - `docs/user/welcome-page.md` — The Gateway agents list every model the key allows; Claude Code leaves out ids it would run as another model; Custom endpoint adds an OpenAI- or Anthropic-compatible gateway.
+- `apps/web/src/modelSelection.ts` — On a Gateway-listed instance a saved model resolves by exact id only, so one the key drops (a literal `opus`) shows as unavailable instead of resolving by alias to another row.
+- `apps/web/src/modelSelection.test.ts` — A revoked literal `opus` on the Gateway Claude agent stays `opus`, unavailable.
