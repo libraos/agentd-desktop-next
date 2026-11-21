@@ -53,8 +53,3 @@ export function modelPickerSubProviderSectionKey(
 ): string {
   return `${SUB_PROVIDER_SECTION_KEY_PREFIX}${instanceId.length}:${instanceId}${subProvider}`;
 }
-
-/** The heading row of one source of models (a sign-in or a gateway) in the "all" list. */
-export function modelPickerSourceKey(source: string): string {
-  return `source:${source}`;
-}

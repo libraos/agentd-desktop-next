@@ -1,7 +1,7 @@
 import { type ProviderDriverKind, type ProviderInstanceId } from "@t3tools/contracts";
 import { T, useGT } from "gt-react";
 import { memo } from "react";
-import { CheckIcon, StarIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, StarIcon } from "lucide-react";
 import { getDisplayModelName } from "./providerIconUtils";
 import { ComboboxItem } from "../ui/combobox";
 import { Button } from "../ui/button";
@@ -23,9 +23,14 @@ export const ModelListRow = memo(function ModelListRow(props: {
   providerAccentColor?: string | undefined;
   acpRegistryAgentId?: string | undefined;
   acpRegistryIconUrl?: string | undefined;
+  /** Where the model runs: a sign-in, or a gateway and the agent that runs it. */
+  sourceLabel: string;
+  /** Another source of the model in the row above, listed under it. */
+  isVariant?: boolean;
+  /** Given when the model has other sources: lists them under this row. */
+  onToggleVariants?: () => void;
+  variantsExpanded?: boolean;
   isFavorite: boolean;
-  /** In Favorites every row is starred, so the star shows only on hover. */
-  favoriteStarOnHover?: boolean;
   isSelected: boolean;
   /** Marks this instance apart from another of the same provider. */
   showInstanceBadge: boolean;
@@ -56,6 +61,7 @@ export const ModelListRow = memo(function ModelListRow(props: {
       )}
     >
       {/* One row shape in every tab: the logo names the provider, so Favorites needs no second line. */}
+      {props.isVariant ? <span className="w-3 shrink-0" aria-hidden="true" /> : null}
       <ProviderInstanceIcon
         driverKind={props.driverKind}
         displayName={props.providerDisplayName}
@@ -103,6 +109,35 @@ export const ModelListRow = memo(function ModelListRow(props: {
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
+        {props.onToggleVariants ? (
+          <Button
+            size="xs"
+            variant="ghost-muted"
+            data-model-source={props.sourceLabel}
+            aria-expanded={props.variantsExpanded === true}
+            aria-label={gt("{source}. Other sources of this model", { source: props.sourceLabel })}
+            onClick={(event) => {
+              event.stopPropagation();
+              props.onToggleVariants?.();
+            }}
+            onKeyDown={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            <span className="max-w-28 truncate">{props.sourceLabel}</span>
+            <ChevronDownIcon
+              className={cn("size-3", props.variantsExpanded && "rotate-180")}
+              aria-hidden="true"
+            />
+          </Button>
+        ) : (
+          <span
+            className="max-w-28 truncate text-xs text-muted-foreground"
+            data-model-source={props.sourceLabel}
+          >
+            {props.sourceLabel}
+          </span>
+        )}
         <Tooltip>
           <TooltipTrigger
             render={
@@ -123,7 +158,7 @@ export const ModelListRow = memo(function ModelListRow(props: {
                   className={cn(
                     "size-3.5 sm:size-3",
                     props.isFavorite && "fill-current text-warning",
-                    (!props.isFavorite || props.favoriteStarOnHover) &&
+                    !props.isFavorite &&
                       "opacity-0 group-hover:opacity-100 group-data-highlighted:opacity-100 in-focus-visible:opacity-100 pointer-coarse:opacity-100",
                   )}
                 />
