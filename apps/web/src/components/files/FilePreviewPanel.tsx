@@ -61,6 +61,7 @@ import {
 } from "react";
 
 import { isBrowserPreviewFile, openFileInPreview } from "~/browser/openFileInPreview";
+import { downloadAssetFile } from "~/assets/assetFileDownload";
 import { useAssetUrlRefresh, useAssetUrlState } from "~/assets/assetUrls";
 import { OpenInPicker } from "~/components/chat/OpenInPicker";
 import { MediaVideoPlayer } from "~/components/media/MediaVideoPlayer";
@@ -298,7 +299,7 @@ export function WorkspaceBrowserPreview(props: {
       title={props.title}
       pdf={pdf}
       pdfActions={
-        <WorkspacePdfSaveAction
+        <WorkspaceFileSaveAction
           environmentId={props.environmentId}
           resource={resource}
           name={props.title}
@@ -308,7 +309,7 @@ export function WorkspaceBrowserPreview(props: {
   );
 }
 
-function WorkspacePdfSaveAction(props: {
+function WorkspaceFileSaveAction(props: {
   readonly environmentId: EnvironmentId;
   readonly resource: AssetResource;
   readonly name: string;
@@ -325,15 +326,8 @@ function WorkspacePdfSaveAction(props: {
         void (async () => {
           const url = await refreshAssetUrl();
           if (!url) throw new Error(gt("Reconnect to the environment and try again."));
-          const response = await fetch(url);
-          if (!response.ok) throw new Error(gt("The file could not be loaded. Try again."));
-          // Blob downloads keep desktop's custom app scheme from navigating to an external browser.
-          const downloadUrl = URL.createObjectURL(await response.blob());
-          setTimeout(() => URL.revokeObjectURL(downloadUrl), 30_000);
-          const anchor = document.createElement("a");
-          anchor.href = downloadUrl;
-          anchor.download = props.name.split(/[\\/]/).at(-1) || props.name;
-          anchor.click();
+          if (!(await downloadAssetFile(url, props.name)))
+            throw new Error(gt("The file could not be loaded. Try again."));
         })()
           .catch((cause: unknown) =>
             toastManager.add({
@@ -1565,6 +1559,18 @@ export default function FilePreviewPanel({
               openInCwdIsFile={file.isFile}
               compact
               revealFileManager={revealsInFileManager}
+            />
+          ) : null}
+          {absolutePath && !isFolder && !isPdf && !draft && attachment === undefined ? (
+            <WorkspaceFileSaveAction
+              environmentId={environmentId}
+              resource={{
+                _tag: "media-file",
+                threadId: threadRef.threadId,
+                path: absolutePath,
+                disposition: "attachment",
+              }}
+              name={absolutePath}
             />
           ) : null}
           {canToggleRendered && renderedMode ? (
