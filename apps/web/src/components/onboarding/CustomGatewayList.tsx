@@ -41,6 +41,9 @@ function GatewayRow({
   const id = useId();
   const { canChange, rename, remove, setHiddenModels } = useCustomGatewayCommands(environmentId);
   const [choosingModels, setChoosingModels] = useState(false);
+  // The choice being saved, so a box answers the click before the server does.
+  const [savingHidden, setSavingHidden] = useState<ReadonlyArray<string> | null>(null);
+  const hiddenModels = savingHidden ?? gateway.hiddenModels;
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(gateway.name);
   const [busy, setBusy] = useState(false);
@@ -80,17 +83,17 @@ function GatewayRow({
   };
 
   const setModelHidden = async (model: string, hidden: boolean) => {
+    const next = hidden
+      ? [...gateway.hiddenModels, model]
+      : gateway.hiddenModels.filter((entry) => entry !== model);
     setBusy(true);
     setError(null);
+    setSavingHidden(next);
     const result = await setHiddenModels({
       environmentId,
-      input: {
-        id: gateway.id,
-        hiddenModels: hidden
-          ? [...gateway.hiddenModels, model]
-          : gateway.hiddenModels.filter((entry) => entry !== model),
-      },
+      input: { id: gateway.id, hiddenModels: next },
     });
+    setSavingHidden(null);
     setBusy(false);
     if (result._tag === "Failure") setError(failure(result));
   };
@@ -184,7 +187,7 @@ function GatewayRow({
               >
                 <input
                   type="checkbox"
-                  checked={!gateway.hiddenModels.includes(model)}
+                  checked={!hiddenModels.includes(model)}
                   disabled={disabled}
                   onChange={(event) => void setModelHidden(model, !event.currentTarget.checked)}
                   className="accent-primary"

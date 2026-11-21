@@ -280,7 +280,12 @@ export const make = Effect.fn("CustomGateway.make")(function* () {
             .pipe(Effect.catch(storageFailure("save the gateway")));
         }),
       )
-      .pipe(Effect.andThen(list), Effect.withSpan("CustomGateway.setHiddenModels"));
+      // A client that goes away mid-save must not leave a model off with no record of it.
+      .pipe(
+        Effect.uninterruptible,
+        Effect.andThen(list),
+        Effect.withSpan("CustomGateway.setHiddenModels"),
+      );
 
   const remove: CustomGateway["Service"]["remove"] = (id) =>
     lock
