@@ -1,6 +1,5 @@
 import { RegistryContext } from "@effect/atom-react";
 import {
-  DEFAULT_CLIENT_SETTINGS,
   EnvironmentId,
   ProviderDriverKind,
   ProviderInstanceId,
@@ -72,21 +71,26 @@ function pickerRegistry(showOtherAgents: boolean, allowedDrivers: readonly strin
 }
 
 it.each([
-  { profile: "fresh", showOtherAgents: false, expected: ["claudeAgent", "codex", "opencode"] },
+  { profile: "fresh", showOtherAgents: false, expected: ["Codex", "Claude"] },
   {
     profile: "opted in",
     showOtherAgents: true,
-    expected: ["claudeAgent", "codex", "opencode", "cursor"],
+    expected: ["Codex", "Claude", "Existing Work Agent"],
   },
-  { profile: "managed", showOtherAgents: true, policyAllows: ["cursor"], expected: ["cursor"] },
+  {
+    profile: "managed",
+    showOtherAgents: true,
+    policyAllows: ["cursor"],
+    expected: ["Existing Work Agent"],
+  },
   {
     profile: "locked to a hidden agent",
     showOtherAgents: false,
     locked: true,
-    expected: ["cursor", "claudeAgent", "codex", "opencode"],
+    expected: ["Existing Work Agent"],
   },
 ])(
-  "offers the right agents in a $profile profile",
+  "lists models from the right agents in a $profile profile",
   async ({ showOtherAgents, policyAllows, locked, expected }) => {
     using cleanup = new DisposableStack();
     const registry = cleanup.adopt(pickerRegistry(showOtherAgents, policyAllows), (registry) =>
@@ -128,18 +132,16 @@ it.each([
     await screen
       .getByRole("button", { name: locked ? "cursor model" : "codex model", exact: true })
       .click();
-    await expect.element(page.getByRole("toolbar", { name: "Providers" })).toBeVisible();
-    expect(
-      [
-        ...document.querySelectorAll<HTMLElement>(
-          '[data-model-picker-provider]:not([data-model-picker-provider="favorites"])',
+    // Every agent's model has the same id here, so they are one row; its other sources open under it.
+    const others = document.querySelector<HTMLElement>("button[data-model-source]");
+    if (others) await page.elementLocator(others).click();
+    await vi.waitFor(() =>
+      expect(
+        [...document.querySelectorAll<HTMLElement>("[data-model-source]")].map(
+          (source) => source.dataset.modelSource,
         ),
-      ].map((element) => element.dataset.modelPickerProvider),
-    ).toEqual(expected);
-    if (locked)
-      await expect
-        .element(page.getByRole("button", { name: "Existing Work Agent", exact: true }))
-        .toBeVisible();
+      ).toEqual(expected),
+    );
   },
 );
 
@@ -219,7 +221,6 @@ it("keeps each registry image when adding a model from another ACP agent", async
     );
   await vi.waitFor(() => expect(imageWidths()).toEqual([11]));
   await screen.getByRole("button", { name: "First model", exact: true }).click();
-  await page.getByRole("button", { name: "Second agent", exact: true }).click();
   await userEvent.keyboard("{Shift>}");
   try {
     await page.getByRole("option", { name: /Second model/ }).click();
@@ -378,102 +379,65 @@ it("lists a model reported twice by one provider once, with contiguous jump shor
   );
 });
 
-it("opens on the active provider when every favorite belongs to a disabled provider", async () => {
+it("lists a gateway's model once, with the other agent that runs it under the row", async () => {
+  const gatewayCodex = ProviderInstanceId.make("gw-abc-codex");
+  const gatewayOpencode = ProviderInstanceId.make("gw-abc-opencode");
   const entries = deriveProviderInstanceEntries(
-    ["Codex", "Claude"].map((name) => ({
-      instanceId: ProviderInstanceId.make(name === "Claude" ? "claudeAgent" : "codex"),
-      driver: ProviderDriverKind.make(name === "Claude" ? "claudeAgent" : "codex"),
-      enabled: name === "Codex",
-      installed: true,
-      version: null,
-      status: "ready" as const,
-      auth: { status: "authenticated" as const },
-      checkedAt: "2026-01-01T00:00:00.000Z",
-      models: [
-        { slug: name.toLowerCase(), name: `${name} model`, isCustom: false, capabilities: {} },
-      ],
-      slashCommands: [],
-      skills: [],
-    })),
-  );
-  const [codex, claude] = entries;
-  __setClientSettingsForTests({
-    ...DEFAULT_CLIENT_SETTINGS,
-    favorites: [{ provider: claude!.instanceId, model: "claude" }],
-  });
-  using _settings = {
-    [Symbol.dispose]: () => __setClientSettingsForTests(DEFAULT_CLIENT_SETTINGS),
-  };
-
-  await using screen = await render(
-    <ProviderModelPicker
-      environmentId={null}
-      activeInstanceId={codex!.instanceId}
-      model="codex"
-      lockedProvider={null}
-      instanceEntries={entries}
-      modelOptionsByInstance={new Map(entries.map((entry) => [entry.instanceId, entry.models]))}
-      triggerAriaLabel="Choose model"
-      onInstanceModelChange={() => {}}
-    />,
-  );
-  await screen.getByRole("button", { name: "Choose model" }).click();
-  await expect.element(page.getByRole("option", { name: /Codex model/ })).toBeVisible();
-});
-
-it("keeps the touch keyboard down while choosing a provider", async () => {
-  const entries = deriveProviderInstanceEntries(
-    ["Codex", "Claude"].map((name) => ({
-      instanceId: ProviderInstanceId.make(name === "Claude" ? "claudeAgent" : "codex"),
-      driver: ProviderDriverKind.make(name === "Claude" ? "claudeAgent" : "codex"),
+    [
+      { instanceId: ProviderInstanceId.make("codex"), driver: "codex", displayName: "Codex" },
+      { instanceId: gatewayCodex, driver: "codex", displayName: "Codex · Work GW" },
+      { instanceId: gatewayOpencode, driver: "opencode", displayName: "opencode · Work GW" },
+    ].map((provider) => ({
+      ...provider,
+      driver: ProviderDriverKind.make(provider.driver),
       enabled: true,
       installed: true,
       version: null,
       status: "ready" as const,
       auth: { status: "authenticated" as const },
       checkedAt: "2026-01-01T00:00:00.000Z",
-      models: [
-        { slug: name.toLowerCase(), name: `${name} model`, isCustom: false, capabilities: {} },
-      ],
+      models: [],
       slashCommands: [],
       skills: [],
     })),
   );
-  const [codex] = entries;
-  const matchMedia = window.matchMedia.bind(window);
-  using _touch = vi.spyOn(window, "matchMedia").mockImplementation((query) =>
-    query === "(pointer: coarse)"
-      ? ({
-          matches: true,
-          media: query,
-          onchange: null,
-          addEventListener: () => {},
-          removeEventListener: () => {},
-          addListener: () => {},
-          removeListener: () => {},
-          dispatchEvent: () => false,
-        } as MediaQueryList)
-      : matchMedia(query),
-  );
-
+  const gatewayModels = [{ slug: "chat-small", name: "chat-small" }];
+  const onInstanceModelChange = vi.fn();
   await using screen = await render(
     <ProviderModelPicker
       environmentId={null}
-      activeInstanceId={codex!.instanceId}
-      model="codex"
+      activeInstanceId={ProviderInstanceId.make("codex")}
+      model="gpt"
       lockedProvider={null}
       instanceEntries={entries}
-      modelOptionsByInstance={new Map(entries.map((entry) => [entry.instanceId, entry.models]))}
+      modelOptionsByInstance={
+        new Map([
+          [ProviderInstanceId.make("codex"), [{ slug: "gpt", name: "GPT" }]],
+          [gatewayCodex, gatewayModels],
+          [gatewayOpencode, gatewayModels],
+        ])
+      }
       triggerAriaLabel="Choose model"
-      onInstanceModelChange={() => {}}
+      onInstanceModelChange={onInstanceModelChange}
     />,
   );
   await screen.getByRole("button", { name: "Choose model" }).click();
-  const search = page.getByPlaceholder("Search models...");
-  const popup = search.element().closest('[data-slot="popover-popup"]');
-  await vi.waitFor(() => expect(document.activeElement).toBe(popup));
+  await expect.element(page.getByRole("option", { name: /chat-small/ })).toBeVisible();
+  const sources = () =>
+    [...document.querySelectorAll<HTMLElement>("[data-model-source]")].map(
+      (source) => source.dataset.modelSource,
+    );
+  expect(sources()).toEqual(["Codex", "Work GW · Codex"]);
 
-  await page.getByRole("button", { name: /^Claude/ }).click();
-  await expect.element(page.getByRole("option", { name: /Claude model/ })).toBeVisible();
-  await expect.element(search).not.toHaveFocus();
+  await page
+    .elementLocator(document.querySelector<HTMLElement>("button[data-model-source]")!)
+    .click();
+  await vi.waitFor(() =>
+    expect(sources()).toEqual(["Codex", "Work GW · Codex", "Work GW · opencode"]),
+  );
+  await page
+    .getByRole("option", { name: /chat-small/ })
+    .last()
+    .click();
+  expect(onInstanceModelChange).toHaveBeenLastCalledWith(gatewayOpencode, "chat-small");
 });
