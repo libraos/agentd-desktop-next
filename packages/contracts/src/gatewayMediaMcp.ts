@@ -52,7 +52,12 @@ export const GatewayMediaVideoInput = Schema.Struct({
 export type GatewayMediaVideoInput = typeof GatewayMediaVideoInput.Type;
 
 export const GatewayMediaVideoStatusInput = Schema.Struct({
-  jobId: TrimmedNonEmptyString.annotate({ description: "`jobId` from `media_generate_video`." }),
+  jobId: Schema.optional(
+    TrimmedNonEmptyString.annotate({
+      description:
+        "`jobId` from `media_generate_video`. Leave out if lost: the newest video is used.",
+    }),
+  ),
   outputPath,
   gateway,
 });

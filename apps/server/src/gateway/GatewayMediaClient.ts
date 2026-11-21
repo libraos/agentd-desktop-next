@@ -263,6 +263,26 @@ export const pollVideo = Effect.fn("GatewayMedia.pollVideo")(function* (
   );
 });
 
+/** This key's newest video, for a wait that ended before the job id reached the agent. */
+export const latestVideo = Effect.fn("GatewayMedia.latestVideo")(function* (
+  c: MediaGatewayConnection,
+) {
+  const body = yield* requestJson(
+    c,
+    HttpClientRequest.get(`${c.base}/videos`).pipe(
+      HttpClientRequest.setUrlParams({ limit: "1", order: "desc" }),
+    ),
+  );
+  const newest = modelEntries(body)?.[0];
+  if (newest === undefined) {
+    return yield* failure(
+      "invalid_request",
+      `${c.name} has no video for this key. Pass its job id.`,
+    );
+  }
+  return yield* jobOf(c)(newest);
+});
+
 export const videoContentPath = (id: string) => `/videos/${jobPath(id)}/content`;
 
 const AUDIO_UNSUPPORTED = "This gateway does not make music or sound effects.";

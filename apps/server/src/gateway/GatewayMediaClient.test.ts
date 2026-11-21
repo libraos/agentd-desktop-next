@@ -6,6 +6,7 @@ import { HttpClient, HttpClientResponse } from "effect/http";
 
 import {
   detectVideoDialect,
+  latestVideo,
   pollVideo,
   submitVideo,
   videoRequestBody,
@@ -161,5 +162,23 @@ it.effect("a job still running at the wait cap comes back in progress", () =>
     );
     assert.strictEqual(result.status, "in_progress");
     assert.strictEqual(result.id, "job-2");
+  }),
+);
+
+it.effect("the newest video stands in for a lost job id", () =>
+  Effect.gen(function* () {
+    const http = fakeGateway({
+      "GET /v1/videos": () =>
+        Response.json({
+          object: "list",
+          data: [{ id: "video_9", status: "completed", seconds: "3" }],
+          has_more: true,
+        }),
+    });
+    const job = yield* latestVideo(connection("compute.test")).pipe(
+      Effect.provideService(HttpClient.HttpClient, http),
+    );
+    assert.strictEqual(job.id, "video_9");
+    assert.strictEqual(job.status, "completed");
   }),
 );

@@ -37,6 +37,7 @@ import {
   listModels,
   pollAudio,
   pollInterval,
+  latestVideo,
   pollVideo,
   speech as requestSpeech,
   submitAudio,
@@ -306,7 +307,10 @@ const make = Effect.fn("GatewayMedia.make")(function* () {
     videoJob(
       scope,
       input,
-      (connection) => withServices(pollVideo(connection, input.jobId)),
+      (connection) =>
+        withServices(
+          input.jobId === undefined ? latestVideo(connection) : pollVideo(connection, input.jobId),
+        ),
       undefined,
     );
 
