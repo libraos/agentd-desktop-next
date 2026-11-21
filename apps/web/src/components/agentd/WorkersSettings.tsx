@@ -17,6 +17,7 @@ import { Switch } from "../ui/switch";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "../settings/settingsLayout";
 import { AgentdStatusLines, useAgentdState, useCloudWorkersLinked } from "./AgentdIndicator";
 import { openAgentdSetupDialog, useCanSetUpAgentd } from "./AgentdSetupDialog";
+import { WorkerGatewaySettings } from "./WorkerGatewaySettings";
 import { parseDefaultBudget } from "./agentdVisibility.logic";
 import { budgetDollars } from "./startTask.logic";
 
@@ -118,6 +119,9 @@ export function WorkersSettings() {
           dollarBudgets={status?.dollarBudgets ?? null}
         />
       </SettingsSection>
+      {status?.setUp === true && environmentId !== null ? (
+        <WorkerGatewaySettings environmentId={environmentId} />
+      ) : null}
       <SettingsSection id="workers-cloud" title={gt("Cloud Workers")}>
         <SettingsRow
           id="workers-cloud-setup"

@@ -161,6 +161,16 @@ export function createAgentdEnvironmentAtoms<R, E>(
       tag: WS_METHODS.agentdTeamNodeForeground,
       scheduler,
     }),
+    workerGateway: createEnvironmentRpcQueryAtomFamily(runtime, {
+      label: "environment-data:agentd:worker-gateway",
+      tag: WS_METHODS.agentdWorkerGateway,
+      staleTimeMs: 30_000,
+    }),
+    setWorkerGateway: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:agentd:set-worker-gateway",
+      tag: WS_METHODS.agentdSetWorkerGateway,
+      scheduler,
+    }),
     eula: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:agentd:eula",
       tag: WS_METHODS.agentdEula,

@@ -11,6 +11,7 @@ import {
   AgentdNotFoundError,
   AgentdUserListJson,
   AgentdWhoJson,
+  type AgentdWorkerGateway,
   AgentdWorkerTool,
   type AgentdApproval,
   type AgentdBackupCreated,
@@ -72,6 +73,7 @@ import { AgentdArgumentError, agentdArgs, agentdTicket } from "./agentdCommands.
 import * as AgentdJson from "./agentdJson.ts";
 import { AGENTD_BACKUP_FILE, agentdBackupFileName } from "./agentdBackup.ts";
 import { blockingRefusal } from "./blockedStart.ts";
+import type { WorkerGatewayChoice } from "./workerGatewaySetting.ts";
 import { detectServices, repairServices, serviceAgentd, setupAgentd } from "./agentdServices.ts";
 import { makeClaudeTrust, projectFolder } from "./claudeTrust.ts";
 import { makeCloudKeyFile } from "./cloudKeyFile.ts";
@@ -149,6 +151,12 @@ export class AgentdBridge extends Context.Service<
       input: AgentdBackupCreateInput,
       dir: string,
     ) => Effect.Effect<Omit<AgentdBackupCreated, "relativeUrl" | "expiresAt">, AgentdError>;
+    readonly workerGateway: Effect.Effect<Omit<AgentdWorkerGateway, "chosen">, AgentdError>;
+    /** Null goes back to the tool's own login and default model. */
+    readonly setWorkerGateway: (
+      tool: AgentdWorkerTool,
+      choice: WorkerGatewayChoice | null,
+    ) => Effect.Effect<void, AgentdError>;
   }
 >()("t3/agentd/AgentdBridge") {}
 
@@ -924,6 +932,34 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
           return { fileName, bytes: made.size, sha256: made.sha256, created: made.created };
         }),
       );
+    }),
+    workerGateway: Effect.gen(function* () {
+      const read = (argv: ReadonlyArray<string>) =>
+        run(argv).pipe(
+          Effect.map((stdout) => stdout.trim()),
+          Effect.orElseSucceed(() => ""),
+        );
+      const [help, claude, codex, opencode] = yield* Effect.all(
+        [
+          read(agentdArgs.configHelp()),
+          read(agentdArgs.workerModel("claude")),
+          read(agentdArgs.workerModel("codex")),
+          read(agentdArgs.workerModel("opencode")),
+        ],
+        { concurrency: 4 },
+      );
+      return {
+        supported: help.includes("dispatch.claude_base_url"),
+        models: { claude, codex, opencode },
+      };
+    }).pipe(Effect.withSpan("AgentdBridge.workerGateway")),
+    setWorkerGateway: Effect.fn("AgentdBridge.setWorkerGateway")(function* (tool, choice) {
+      const gateway = yield* args(() =>
+        agentdArgs.setWorkerGateway(tool, choice?.url ?? "", choice?.keyFile ?? null),
+      );
+      const model = yield* args(() => agentdArgs.setWorkerModel(tool, choice?.model ?? ""));
+      yield* run(gateway);
+      yield* run(model);
     }),
   });
 });

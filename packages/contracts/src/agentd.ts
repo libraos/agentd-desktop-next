@@ -292,6 +292,29 @@ export const AgentdStatus = Schema.Struct({
 });
 export type AgentdStatus = typeof AgentdStatus.Type;
 
+/** What Settings needs of the gateway this machine's workers use. */
+export const AgentdWorkerGateway = Schema.Struct({
+  /** False on an agentd without `config set dispatch.TOOL_base_url`. */
+  supported: Schema.Boolean,
+  /** `[dispatch] TOOL_model` per tool; "" when the tool picks its own. */
+  models: Schema.Record(AgentdWorkerTool, Schema.String),
+  /** The custom gateway this app last set for each tool; agentd does not show the URL it holds. */
+  chosen: Schema.Record(AgentdWorkerTool, Schema.NullOr(Schema.String)),
+});
+export type AgentdWorkerGateway = typeof AgentdWorkerGateway.Type;
+
+export const AgentdWorkerGatewayInput = Schema.Struct({
+  tool: AgentdWorkerTool,
+  /** One of this environment's custom gateways and a model of it; null goes back to the tool's own login. */
+  gateway: Schema.NullOr(
+    Schema.Struct({
+      id: Schema.String,
+      model: Schema.String.check(Schema.isMaxLength(256)),
+    }),
+  ),
+});
+export type AgentdWorkerGatewayInput = typeof AgentdWorkerGatewayInput.Type;
+
 /** Where a task's worker runs: this machine, a team node that leased it, or agentd's cloud. */
 export const AgentdRunsOn = Schema.Literals(["local", "team", "cloud"]);
 export type AgentdRunsOn = typeof AgentdRunsOn.Type;

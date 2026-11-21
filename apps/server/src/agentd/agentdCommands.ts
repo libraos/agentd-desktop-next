@@ -123,6 +123,22 @@ export const agentdArgs = {
   version: () => ["version"],
   doctor: () => ["doctor", "--json"],
   defaultWorker: () => ["config", "get", "dispatch.default_tool"],
+  configHelp: () => ["config", "--help"],
+  workerModel: (tool: AgentdWorkerTool) => ["config", "get", `dispatch.${tool}_model`],
+  /** `url` "" clears the gateway and its key file. */
+  setWorkerGateway: (tool: AgentdWorkerTool, url: string, keyFile: string | null) => [
+    "config",
+    "set",
+    `dispatch.${tool}_base_url`,
+    url === "" ? "" : agentdServerUrl(url),
+    ...(keyFile === null ? [] : ["--key-file", text("key file", keyFile)]),
+  ],
+  setWorkerModel: (tool: AgentdWorkerTool, model: string) => [
+    "config",
+    "set",
+    `dispatch.${tool}_model`,
+    model === "" ? "" : text("model", model),
+  ],
   budgetPrices: () => ["config", "get", "budget.prices"],
   list: () => ["handoff", "list", "--json"],
   show: (id: string) => ["handoff", "show", handoffId(id), "--json"],
