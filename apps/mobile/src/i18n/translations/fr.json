@@ -229,6 +229,8 @@
   "4b45ac8cb8df04a4": "{count, plural, one {Tentative d’aperçu de {count} page HTML} other {Tentative d’aperçu de {count} pages HTML}}",
   "a6f62fca5dd25455": "{count, plural, one {{count} page HTML rendue} other {{count} pages HTML rendues}}",
   "3280d45703154eb4": "{count, plural, one {Tentative de rendu de {count} page HTML} other {Tentative de rendu de {count} pages HTML}}",
+  "9ffe87e575a8dc2f": "{count, plural, one {Outils multimédias de la passerelle utilisés {count} fois} other {Outils multimédias de la passerelle utilisés {count} fois}}",
+  "78157e46617f2bde": "{count, plural, one {Tentative d’utiliser les outils multimédias de la passerelle {count} fois} other {Tentatives d’utiliser les outils multimédias de la passerelle {count} fois}}",
   "898770cae17df8d2": "{count, plural, one {{count} message envoyé} other {{count} messages envoyés}}",
   "e63f6b002f96e1e0": "{count, plural, one {Tentative d’envoi de {count} message} other {Tentative d’envoi de {count} messages}}",
   "fad31ec7ecac436d": "{count, plural, one {Fils listés {count} fois} other {Fils listés {count} fois}}",

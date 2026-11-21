@@ -229,6 +229,8 @@
   "4b45ac8cb8df04a4": "{count, plural, other {{count} 件の HTML ページをプレビューしようとしました}}",
   "a6f62fca5dd25455": "{count, plural, other {{count} 件の HTML ページをレンダリングしました}}",
   "3280d45703154eb4": "{count, plural, other {{count} 件の HTML ページをレンダリングしようとしました}}",
+  "9ffe87e575a8dc2f": "{count, plural, other {ゲートウェイのメディアツールを {count} 回使用しました}}",
+  "78157e46617f2bde": "{count, plural, other {ゲートウェイのメディアツールを {count} 回使用しようとしました}}",
   "898770cae17df8d2": "{count, plural, other {{count} 件のメッセージを送信しました}}",
   "e63f6b002f96e1e0": "{count, plural, other {{count} 件のメッセージを送信しようとしました}}",
   "fad31ec7ecac436d": "{count, plural, other {スレッドを {count} 回一覧表示しました}}",

@@ -88,7 +88,8 @@ export type T3McpToolSummaryAction =
   | "device"
   | "html-preview"
   | "html-render"
-  | "send-to-user";
+  | "send-to-user"
+  | "media";
 
 export interface T3McpToolDefinition {
   readonly displayName: string;
@@ -273,6 +274,12 @@ const T3_MCP_TOOLS: Readonly<Record<string, T3McpToolDefinition>> = {
     "worktree-handoff",
   ),
   worktree_status: tool(["Get", "Getting", "Got", "thread worktree status"], "worktree-status"),
+  media_generate_video: tool(["Make", "Making", "Made", "a video"], "media"),
+  media_video_status: tool(["Check", "Checking", "Checked", "a video"], "media"),
+  media_generate_speech: tool(["Make", "Making", "Made", "speech"], "media"),
+  media_transcribe: tool(["Transcribe", "Transcribing", "Transcribed", "audio"], "media"),
+  media_generate_audio: tool(["Make", "Making", "Made", "audio"], "media"),
+  media_list_models: tool(["List", "Listing", "Listed", "gateway models"], "media"),
   preview_status: tool(["Get", "Getting", "Got", "preview browser status"], "browser", "browser"),
   preview_open: tool(
     ["Open", "Opening", "Opened", "a page in the preview browser"],

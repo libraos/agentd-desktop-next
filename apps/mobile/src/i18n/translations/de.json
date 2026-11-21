@@ -229,6 +229,8 @@
   "4b45ac8cb8df04a4": "{count, plural, one {Versucht, eine Vorschau für {count} HTML-Seite anzuzeigen} other {Versucht, eine Vorschau für {count} HTML-Seiten anzuzeigen}}",
   "a6f62fca5dd25455": "{count, plural, one {{count} HTML-Seite gerendert} other {{count} HTML-Seiten gerendert}}",
   "3280d45703154eb4": "{count, plural, one {Versucht, {count} HTML-Seite zu rendern} other {Versucht, {count} HTML-Seiten zu rendern}}",
+  "9ffe87e575a8dc2f": "{count, plural, one {Gateway-Medienwerkzeuge {count}-mal verwendet} other {Gateway-Medienwerkzeuge {count}-mal verwendet}}",
+  "78157e46617f2bde": "{count, plural, one {Versucht, Gateway-Medienwerkzeuge {count}-mal zu verwenden} other {Versucht, Gateway-Medienwerkzeuge {count}-mal zu verwenden}}",
   "898770cae17df8d2": "{count, plural, one {{count} Nachricht gesendet} other {{count} Nachrichten gesendet}}",
   "e63f6b002f96e1e0": "{count, plural, one {Versucht, {count} Nachricht zu senden} other {Versucht, {count} Nachrichten zu senden}}",
   "fad31ec7ecac436d": "{count, plural, one {Threads {count}-mal aufgelistet} other {Threads {count}-mal aufgelistet}}",

@@ -229,6 +229,8 @@
   "4b45ac8cb8df04a4": "{count, plural, one {Tried to preview {count} HTML page} other {Tried to preview {count} HTML pages}}",
   "a6f62fca5dd25455": "{count, plural, one {Rendered {count} HTML page} other {Rendered {count} HTML pages}}",
   "3280d45703154eb4": "{count, plural, one {Tried to render {count} HTML page} other {Tried to render {count} HTML pages}}",
+  "9ffe87e575a8dc2f": "{count, plural, one {Used gateway media tools {count} time} other {Used gateway media tools {count} times}}",
+  "78157e46617f2bde": "{count, plural, one {Tried to use gateway media tools {count} time} other {Tried to use gateway media tools {count} times}}",
   "898770cae17df8d2": "{count, plural, one {Sent {count} message} other {Sent {count} messages}}",
   "e63f6b002f96e1e0": "{count, plural, one {Tried to send {count} message} other {Tried to send {count} messages}}",
   "fad31ec7ecac436d": "{count, plural, one {Listed threads {count} time} other {Listed threads {count} times}}",

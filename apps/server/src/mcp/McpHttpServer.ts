@@ -77,6 +77,9 @@ import {
   PreviewSnapshotToolkit,
   PreviewStandardToolkit,
 } from "./toolkits/preview/tools.ts";
+import * as GatewayMedia from "../gateway/GatewayMedia.ts";
+import * as MediaHandlers from "./toolkits/media/handlers.ts";
+import { MediaToolkit } from "./toolkits/media/tools.ts";
 import * as WorktreeHandlers from "./toolkits/worktree/handlers.ts";
 import { WorktreeToolkit } from "./toolkits/worktree/tools.ts";
 import * as WorktreeMcpService from "./WorktreeMcpService.ts";
@@ -1339,6 +1342,10 @@ const layerWorktreeToolkitRegistration = toolkitRegistration(
   WorktreeHandlers.layer,
 ).pipe(Layer.provide(WorktreeMcpService.layer));
 
+const layerMediaToolkit = toolkitRegistration(MediaToolkit, MediaHandlers.layer).pipe(
+  Layer.provide(GatewayMedia.layer),
+);
+
 const layerPreviewControlsRegistration = toolkitRegistration(
   PreviewControlsToolkit,
   PreviewControlsHandlers.layer,
@@ -1427,6 +1434,7 @@ export const layerTools = Layer.mergeAll(
   layerDeviceToolkit,
   layerHtmlToolkit,
   layerMessageToolkit,
+  layerMediaToolkit,
 );
 
 const layerToolExposure = Layer.effect(

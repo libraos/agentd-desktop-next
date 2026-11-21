@@ -73,13 +73,18 @@ export function gatewayRefusal(
   const line = Option.isSome(parsed)
     ? (parsed.value.error.message.trim().split(/\r?\n/)[0] ?? "")
     : "";
-  // A custom gateway's key has no known shape, so the key itself goes too.
-  const key = gateway.key?.trim();
-  const message = (key ? line.split(key).join("[redacted]") : line)
-    .replace(CREDENTIAL, "[redacted]")
-    .trim();
+  const message = redactGatewayText(line, gateway.key);
   if (message === "") return `${gateway.name} answered HTTP ${status}.`;
   return message.length > REFUSAL_LIMIT ? `${message.slice(0, REFUSAL_LIMIT - 1)}…` : message;
+}
+
+/** Gateway text without `key` or anything shaped like a credential. */
+export function redactGatewayText(text: string, key?: string | null): string {
+  // A custom gateway's key has no known shape, so the key itself goes too.
+  const trimmed = key?.trim();
+  return (trimmed ? text.split(trimmed).join("[redacted]") : text)
+    .replace(CREDENTIAL, "[redacted]")
+    .trim();
 }
 
 /** A key the Gateway will not serve at all, as opposed to a Gateway that is down or busy. */
