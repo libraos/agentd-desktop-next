@@ -3592,6 +3592,9 @@
       "v": "v"
     }
   ],
+  "264ff5bcdde342a4": "En molnuppgift levererar en gren i det här repot, som du öppnar med ”Granska ändringar”. Den kan inte öppna eller kommentera issues eller pull requests, och når inga andra repon.",
+  "84e6b0dc280d7798": "Det här målet kräver en issue, en pull request eller en kommentar. En molnuppgift kan inte göra det och skulle misslyckas efter att ha använt sin budget.",
+  "94e2336d0fb6d452": "Kör på den här datorn",
   "8b21ccdccad92c0a": "Checking LibraOS credit…",
   "eb6e2b6aae32f93b": "Cloud Workers aren’t set up. Check the cloud configuration and account key file.",
   "d016144cc5a6dbad": "The repository owner must install the Cloud Workers GitHub App on this repository.",

@@ -3592,6 +3592,9 @@
       "v": "v"
     }
   ],
+  "264ff5bcdde342a4": "Una tarea en la nube entrega una rama en este repositorio, que abres con «Revisar cambios». No puede abrir ni comentar issues o pull requests, ni acceder a otros repositorios.",
+  "84e6b0dc280d7798": "Este objetivo pide un issue, un pull request o un comentario. Una tarea en la nube no puede hacerlo y fallaría tras gastar su presupuesto.",
+  "94e2336d0fb6d452": "Ejecutar en este equipo",
   "8b21ccdccad92c0a": "Checking LibraOS credit…",
   "eb6e2b6aae32f93b": "Cloud Workers aren’t set up. Check the cloud configuration and account key file.",
   "d016144cc5a6dbad": "The repository owner must install the Cloud Workers GitHub App on this repository.",

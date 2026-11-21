@@ -3591,6 +3591,9 @@
       "v": "v"
     }
   ],
+  "264ff5bcdde342a4": "클라우드 작업은 이 저장소의 브랜치를 결과로 남기며, ‘변경 사항 검토’로 열 수 있습니다. 이슈나 풀 리퀘스트를 열거나 댓글을 달 수 없고, 다른 저장소에도 접근할 수 없습니다.",
+  "84e6b0dc280d7798": "이 목표는 이슈, 풀 리퀘스트 또는 댓글을 요구합니다. 클라우드 작업은 할 수 없어 예산을 쓴 뒤 실패합니다.",
+  "94e2336d0fb6d452": "이 컴퓨터에서 실행",
   "8b21ccdccad92c0a": "Checking LibraOS credit…",
   "eb6e2b6aae32f93b": "Cloud Workers aren’t set up. Check the cloud configuration and account key file.",
   "d016144cc5a6dbad": "The repository owner must install the Cloud Workers GitHub App on this repository.",

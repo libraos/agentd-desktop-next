@@ -3592,6 +3592,9 @@
       "v": "v"
     }
   ],
+  "264ff5bcdde342a4": "A cloud task delivers a branch in this repository, which you open with Review changes. It cannot open or comment on issues or pull requests, or reach other repositories.",
+  "84e6b0dc280d7798": "This goal asks for an issue, a pull request or a comment. A cloud task cannot do that and would fail after using its budget.",
+  "94e2336d0fb6d452": "Run on this computer",
   "8b21ccdccad92c0a": "Checking LibraOS credit…",
   "eb6e2b6aae32f93b": "Cloud Workers aren’t set up. Check the cloud configuration and account key file.",
   "d016144cc5a6dbad": "The repository owner must install the Cloud Workers GitHub App on this repository.",

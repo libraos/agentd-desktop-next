@@ -3592,6 +3592,9 @@
       "v": "v"
     }
   ],
+  "264ff5bcdde342a4": "Une tâche cloud livre une branche dans ce dépôt, que vous ouvrez avec « Vérifier les modifications ». Elle ne peut ni ouvrir ni commenter des issues ou des pull requests, ni accéder à d'autres dépôts.",
+  "84e6b0dc280d7798": "Cet objectif demande une issue, une pull request ou un commentaire. Une tâche cloud ne peut pas le faire et échouerait après avoir consommé son budget.",
+  "94e2336d0fb6d452": "Exécuter sur cet ordinateur",
   "8b21ccdccad92c0a": "Checking LibraOS credit…",
   "eb6e2b6aae32f93b": "Cloud Workers aren’t set up. Check the cloud configuration and account key file.",
   "d016144cc5a6dbad": "The repository owner must install the Cloud Workers GitHub App on this repository.",
