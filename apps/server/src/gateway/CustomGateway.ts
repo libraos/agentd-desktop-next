@@ -5,6 +5,7 @@ import {
   type CustomGatewayList,
   type CustomGatewaySetting,
   type LibraosGatewayModel,
+  customGatewayAgentsOf,
 } from "@t3tools/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -42,6 +43,11 @@ export class CustomGateway extends Context.Service<
       id: string,
       name: string,
     ) => Effect.Effect<CustomGatewayList, CustomGatewayError>;
+    /** Turns off the listed models for every agent of the gateway; at least one stays on. */
+    readonly setHiddenModels: (
+      id: string,
+      hiddenModels: ReadonlyArray<string>,
+    ) => Effect.Effect<CustomGatewayList, CustomGatewayError>;
     /** Removes the gateway's agents and key; nothing else. */
     readonly remove: (id: string) => Effect.Effect<CustomGatewayList, CustomGatewayError>;
     /** Gives the agents the gateway's current list; one it cannot read leaves the last one. */
@@ -72,6 +78,13 @@ function readGatewayUrl(raw: string): string | null {
     return null;
   }
 }
+
+const ALL_AGENTS = ["claude", "codex", "opencode"] as const;
+
+const agentsOf = (instances: Record<string, unknown>, id: string) => {
+  const ids = customGatewayInstanceIds(id);
+  return ALL_AGENTS.filter((agent) => Object.hasOwn(instances, ids[agent]));
+};
 
 const baseOf = (url: string) => `${url.replace(/\/v1$/, "")}/v1`;
 
@@ -112,11 +125,19 @@ export const make = Effect.fn("CustomGateway.make")(function* () {
     const current = yield* readSettings;
     const gateways = yield* Effect.forEach(current.customGateways, (gateway) =>
       readKey(gateway.id).pipe(
-        Effect.map((key) => ({
-          ...gateway,
-          hasKey: key !== null,
-          modelCount: customGatewayModels(current.providerInstances, gateway.id)?.length ?? 0,
-        })),
+        Effect.map((key) => {
+          const models = (customGatewayModels(current.providerInstances, gateway.id) ?? []).map(
+            (model) => model.id,
+          );
+          return {
+            ...gateway,
+            hasKey: key !== null,
+            agents: agentsOf(current.providerInstances, gateway.id),
+            modelCount: models.length,
+            models,
+            hiddenModels: gateway.hiddenModels ?? [],
+          };
+        }),
       ),
     );
     return { gateways };
@@ -138,6 +159,12 @@ export const make = Effect.fn("CustomGateway.make")(function* () {
           // Without one, Claude Code would send the person's own Claude login to this gateway.
           if (input.format === "anthropic" && key === null) {
             return yield* fail("An Anthropic-format gateway needs a key.");
+          }
+          const agents = customGatewayAgentsOf(input.format).filter(
+            (agent) => input.agents === undefined || input.agents.includes(agent),
+          );
+          if (agents.length === 0) {
+            return yield* fail("Pick at least one agent that works with this format.");
           }
           const existing = (yield* readSettings).customGateways;
           let id = newCustomGatewayId();
@@ -173,7 +200,10 @@ export const make = Effect.fn("CustomGateway.make")(function* () {
               .set(customGatewayKeySecret(id), textEncoder.encode(key))
               .pipe(Effect.catch(storageFailure("store the gateway's key")));
           }
-          const instances = customGatewayInstances({ ...gateway, key, models });
+          const ids = customGatewayInstanceIds(id);
+          const instances = customGatewayInstances({ ...gateway, key, models }).filter(
+            ({ instanceId }) => agents.some((agent) => ids[agent] === instanceId),
+          );
           yield* settings
             .updateProviderInstances((current) => ({
               ...current,
@@ -187,7 +217,14 @@ export const make = Effect.fn("CustomGateway.make")(function* () {
             .pipe(Effect.catch(storageFailure("save the gateway")));
           return {
             kind: "added",
-            gateway: { ...gateway, hasKey: key !== null, modelCount: models.length },
+            gateway: {
+              ...gateway,
+              hasKey: key !== null,
+              modelCount: models.length,
+              models: models.map((model) => model.id),
+              hiddenModels: [],
+              agents,
+            },
           } satisfies CustomGatewayAddResult;
         }),
       )
@@ -211,6 +248,44 @@ export const make = Effect.fn("CustomGateway.make")(function* () {
         }),
       )
       .pipe(Effect.andThen(list), Effect.withSpan("CustomGateway.rename"));
+
+  const setHiddenModels: CustomGateway["Service"]["setHiddenModels"] = (id, hiddenModels) =>
+    lock
+      .withPermits(1)(
+        Effect.gen(function* () {
+          const gateway = yield* find(id);
+          const current = yield* readSettings;
+          const shown = customGatewayModels(current.providerInstances, id) ?? [];
+          const known = [
+            ...shown,
+            ...(gateway.hiddenModels ?? [])
+              .filter((model) => !shown.some((entry) => entry.id === model))
+              .map((model) => ({ id: model })),
+          ];
+          const hidden = known
+            .map((model) => model.id)
+            .filter((model) => hiddenModels.includes(model));
+          const models = known.filter((model) => !hidden.includes(model.id));
+          if (models.length === 0) return yield* fail("Keep at least one model on.");
+          const updated = { ...gateway, hiddenModels: hidden };
+          yield* settings
+            .updateProviderInstances((instances) => withCustomGateway(instances, gateway, models))
+            .pipe(Effect.catch(storageFailure("update the gateway's agents")));
+          yield* settings
+            .updateSettings({
+              customGateways: current.customGateways.map((entry) =>
+                entry.id === id ? updated : entry,
+              ),
+            })
+            .pipe(Effect.catch(storageFailure("save the gateway")));
+        }),
+      )
+      // A client that goes away mid-save must not leave a model off with no record of it.
+      .pipe(
+        Effect.uninterruptible,
+        Effect.andThen(list),
+        Effect.withSpan("CustomGateway.setHiddenModels"),
+      );
 
   const remove: CustomGateway["Service"]["remove"] = (id) =>
     lock
@@ -243,10 +318,12 @@ export const make = Effect.fn("CustomGateway.make")(function* () {
           // Ids typed because the list was unreadable stay until it can be read.
           if (answer.kind !== "models") return yield* fail(answer.message);
           if (answer.models.length === 0) return yield* fail(`${gateway.name} lists no models.`);
+          const hidden = gateway.hiddenModels ?? [];
+          const offered = answer.models.filter((model) => !hidden.includes(model.id));
+          // Every listed model turned off would leave agents with nothing: offer the list again.
+          const models = offered.length > 0 ? offered : answer.models;
           yield* settings
-            .updateProviderInstances((current) =>
-              withCustomGateway(current, gateway, answer.models),
-            )
+            .updateProviderInstances((current) => withCustomGateway(current, gateway, models))
             .pipe(Effect.catch(storageFailure("update the gateway's agents")));
         }),
       )
@@ -259,7 +336,15 @@ export const make = Effect.fn("CustomGateway.make")(function* () {
     },
   );
 
-  return CustomGateway.of({ list, add, rename, remove, refreshModels, connection });
+  return CustomGateway.of({
+    list,
+    add,
+    rename,
+    setHiddenModels,
+    remove,
+    refreshModels,
+    connection,
+  });
 });
 
 export const layer = Layer.effect(CustomGateway, make()).pipe(Layer.provide(FetchHttpClient.layer));

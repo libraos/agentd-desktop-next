@@ -103,6 +103,7 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   // A custom gateway's key goes to this host's agents' sessions, as the Gateway key does.
   [WS_METHODS.customGatewayAdd]: AuthEnvironmentMaintainScope,
   [WS_METHODS.customGatewayRename]: AuthEnvironmentMaintainScope,
+  [WS_METHODS.customGatewaySetHiddenModels]: AuthEnvironmentMaintainScope,
   [WS_METHODS.customGatewayRemove]: AuthEnvironmentMaintainScope,
   [WS_METHODS.customGatewayRefreshModels]: AuthEnvironmentMaintainScope,
   [ORCHESTRATION_V2_WS_METHODS.stopWorkflow]: AuthOrchestrationOperateScope,

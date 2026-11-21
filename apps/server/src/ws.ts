@@ -3682,6 +3682,8 @@ export const layerWsRpc = (
         [WS_METHODS.customGatewayList]: (_input) => customGateway.list,
         [WS_METHODS.customGatewayAdd]: (input) => customGateway.add(input),
         [WS_METHODS.customGatewayRename]: (input) => customGateway.rename(input.id, input.name),
+        [WS_METHODS.customGatewaySetHiddenModels]: (input) =>
+          customGateway.setHiddenModels(input.id, input.hiddenModels),
         [WS_METHODS.customGatewayRemove]: (input) => customGateway.remove(input.id),
         [WS_METHODS.customGatewayRefreshModels]: (input) => customGateway.refreshModels(input.id),
       });

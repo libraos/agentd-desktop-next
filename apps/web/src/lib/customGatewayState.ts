@@ -40,6 +40,12 @@ const customGatewayEnvironment = {
     scheduler,
     onSettled: refreshList,
   }),
+  setHiddenModels: createEnvironmentRpcCommand(connectionAtomRuntime, {
+    label: "environment-data:custom-gateway:set-hidden-models",
+    tag: WS_METHODS.customGatewaySetHiddenModels,
+    scheduler,
+    onSettled: refreshList,
+  }),
   remove: createEnvironmentRpcCommand(connectionAtomRuntime, {
     label: "environment-data:custom-gateway:remove",
     tag: WS_METHODS.customGatewayRemove,
@@ -63,6 +69,7 @@ export function useCustomGatewayCommands(environmentId: EnvironmentId | null) {
     canChange,
     add: useAtomCommand(customGatewayEnvironment.add, options),
     rename: useAtomCommand(customGatewayEnvironment.rename, options),
+    setHiddenModels: useAtomCommand(customGatewayEnvironment.setHiddenModels, options),
     remove: useAtomCommand(customGatewayEnvironment.remove, options),
   };
 }

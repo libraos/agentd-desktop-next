@@ -432,6 +432,7 @@ import {
   CustomGatewayError,
   CustomGatewayIdInput,
   CustomGatewayList,
+  CustomGatewayHiddenModelsInput,
   CustomGatewayRenameInput,
 } from "./customGateway.ts";
 import {
@@ -765,6 +766,7 @@ export const WS_METHODS = {
   customGatewayList: "customGateway.list",
   customGatewayAdd: "customGateway.add",
   customGatewayRename: "customGateway.rename",
+  customGatewaySetHiddenModels: "customGateway.setHiddenModels",
   customGatewayRemove: "customGateway.remove",
   customGatewayRefreshModels: "customGateway.refreshModels",
 } as const;
@@ -2567,6 +2569,12 @@ const WsCustomGatewayRenameRpc = Rpc.make(WS_METHODS.customGatewayRename, {
   error: CustomGatewayRpcError,
 });
 
+const WsCustomGatewaySetHiddenModelsRpc = Rpc.make(WS_METHODS.customGatewaySetHiddenModels, {
+  payload: CustomGatewayHiddenModelsInput,
+  success: CustomGatewayList,
+  error: CustomGatewayRpcError,
+});
+
 const WsCustomGatewayRemoveRpc = Rpc.make(WS_METHODS.customGatewayRemove, {
   payload: CustomGatewayIdInput,
   success: CustomGatewayList,
@@ -2832,6 +2840,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsCustomGatewayListRpc,
   WsCustomGatewayAddRpc,
   WsCustomGatewayRenameRpc,
+  WsCustomGatewaySetHiddenModelsRpc,
   WsCustomGatewayRemoveRpc,
   WsCustomGatewayRefreshModelsRpc,
   WsOrchestrationV2DispatchCommandRpc,

@@ -9,7 +9,7 @@ import { useCustomGatewayCommands, useCustomGateways } from "../../lib/customGat
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
-/** The environment's custom gateways, each with Rename and Remove. Nothing while there are none. */
+/** The environment's custom gateways, each with its models, Rename and Remove. Nothing while there are none. */
 export function CustomGatewayList({ environmentId }: { readonly environmentId: EnvironmentId }) {
   const gt = useGT();
   const { data } = useCustomGateways(environmentId);
@@ -39,7 +39,11 @@ function GatewayRow({
   const gt = useGT();
   const m = useMessages();
   const id = useId();
-  const { canChange, rename, remove } = useCustomGatewayCommands(environmentId);
+  const { canChange, rename, remove, setHiddenModels } = useCustomGatewayCommands(environmentId);
+  const [choosingModels, setChoosingModels] = useState(false);
+  // The choice being saved, so a box answers the click before the server does.
+  const [savingHidden, setSavingHidden] = useState<ReadonlyArray<string> | null>(null);
+  const hiddenModels = savingHidden ?? gateway.hiddenModels;
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(gateway.name);
   const [busy, setBusy] = useState(false);
@@ -78,7 +82,29 @@ function GatewayRow({
     if (result._tag === "Failure") setError(failure(result));
   };
 
+  const setModelHidden = async (model: string, hidden: boolean) => {
+    const next = hidden
+      ? [...gateway.hiddenModels, model]
+      : gateway.hiddenModels.filter((entry) => entry !== model);
+    setBusy(true);
+    setError(null);
+    setSavingHidden(next);
+    const result = await setHiddenModels({
+      environmentId,
+      input: { id: gateway.id, hiddenModels: next },
+    });
+    setSavingHidden(null);
+    setBusy(false);
+    if (result._tag === "Failure") setError(failure(result));
+  };
+  const allModels = [...gateway.models, ...gateway.hiddenModels].toSorted((a, b) =>
+    a.localeCompare(b),
+  );
+
   const format = gateway.format === "openai" ? "OpenAI" : "Anthropic";
+  const agents = gateway.agents
+    .map((agent) => (agent === "claude" ? "Claude Code" : agent === "codex" ? "Codex" : "opencode"))
+    .join(", ");
 
   return (
     <li className="space-y-2 rounded-lg border border-border bg-card px-4 py-3 text-sm">
@@ -119,11 +145,27 @@ function GatewayRow({
             <p className="truncate font-medium text-foreground">{gateway.name}</p>
             <p className="truncate text-xs text-muted-foreground">
               {gateway.url} · {format} ·{" "}
-              {gt("{count, plural, one {{count} model} other {{count} models}}", {
-                count: gateway.modelCount,
-              })}
+              {gateway.hiddenModels.length > 0
+                ? gt("{on} of {count} models on", {
+                    on: gateway.modelCount,
+                    count: allModels.length,
+                  })
+                : gt("{count, plural, one {{count} model} other {{count} models}}", {
+                    count: gateway.modelCount,
+                  })}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {gt("Used by {agents}", { agents })}
             </p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-expanded={choosingModels}
+            onClick={() => setChoosingModels(!choosingModels)}
+          >
+            <T>Models</T>
+          </Button>
           <Button variant="outline" size="sm" disabled={disabled} onClick={() => setRenaming(true)}>
             <T>Rename</T>
           </Button>
@@ -132,6 +174,30 @@ function GatewayRow({
           </Button>
         </div>
       )}
+      {choosingModels ? (
+        <fieldset className="space-y-1">
+          <legend className="text-xs text-muted-foreground">
+            <T>Models its agents offer. Turn one off to leave it out of the model list.</T>
+          </legend>
+          <div className="flex max-h-60 flex-wrap gap-2 overflow-y-auto">
+            {allModels.map((model) => (
+              <label
+                key={model}
+                className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-1.5 has-checked:border-primary/60 has-disabled:cursor-not-allowed has-disabled:opacity-60"
+              >
+                <input
+                  type="checkbox"
+                  checked={!hiddenModels.includes(model)}
+                  disabled={disabled}
+                  onChange={(event) => void setModelHidden(model, !event.currentTarget.checked)}
+                  className="accent-primary"
+                />
+                {model}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
       {error === null ? null : (
         <p role="alert" className="text-destructive-foreground">
           {error}

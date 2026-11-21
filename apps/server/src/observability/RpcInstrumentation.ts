@@ -282,6 +282,7 @@ const RPC_AGGREGATES = {
   [WS_METHODS.customGatewayList]: "customGateway",
   [WS_METHODS.customGatewayAdd]: "customGateway",
   [WS_METHODS.customGatewayRename]: "customGateway",
+  [WS_METHODS.customGatewaySetHiddenModels]: "customGateway",
   [WS_METHODS.customGatewayRemove]: "customGateway",
   [WS_METHODS.customGatewayRefreshModels]: "customGateway",
 } as const satisfies Readonly<Record<WsRpcMethod, string>>;
