@@ -71,11 +71,11 @@ function pickerRegistry(showOtherAgents: boolean, allowedDrivers: readonly strin
 }
 
 it.each([
-  { profile: "fresh", showOtherAgents: false, expected: ["Codex", "Claude"] },
+  { profile: "fresh", showOtherAgents: false, expected: ["Claude", "Codex"] },
   {
     profile: "opted in",
     showOtherAgents: true,
-    expected: ["Codex", "Claude", "Existing Work Agent"],
+    expected: ["Claude", "Codex", "Existing Work Agent"],
   },
   {
     profile: "managed",
@@ -132,16 +132,17 @@ it.each([
     await screen
       .getByRole("button", { name: locked ? "cursor model" : "codex model", exact: true })
       .click();
-    // Every agent's model has the same id here, so they are one row; its other sources open under it.
-    const others = document.querySelector<HTMLElement>("button[data-model-source]");
-    if (others) await page.elementLocator(others).click();
-    await vi.waitFor(() =>
-      expect(
-        [...document.querySelectorAll<HTMLElement>("[data-model-source]")].map(
-          (source) => source.dataset.modelSource,
-        ),
-      ).toEqual(expected),
-    );
+    // Every agent's model has the same id here, so they are one row that offers each when pointed at.
+    await page.getByRole("option").first().hover();
+    await vi.waitFor(() => {
+      const choices = [...document.querySelectorAll<HTMLElement>("[data-model-source-choice]")].map(
+        (source) => source.dataset.modelSourceChoice,
+      );
+      const sources = [...document.querySelectorAll<HTMLElement>("[data-model-source]")].map(
+        (source) => source.dataset.modelSource,
+      );
+      expect(choices.length > 0 ? choices : sources).toEqual(expected);
+    });
   },
 );
 
@@ -379,7 +380,7 @@ it("lists a model reported twice by one provider once, with contiguous jump shor
   );
 });
 
-it("lists a gateway's model once, with the other agent that runs it under the row", async () => {
+it("lists a gateway's model once and offers each agent that runs it when pointed at", async () => {
   const gatewayCodex = ProviderInstanceId.make("gw-abc-codex");
   const gatewayOpencode = ProviderInstanceId.make("gw-abc-opencode");
   const entries = deriveProviderInstanceEntries(
@@ -429,15 +430,11 @@ it("lists a gateway's model once, with the other agent that runs it under the ro
     );
   expect(sources()).toEqual(["Codex", "Work GW · Codex"]);
 
-  await page
-    .elementLocator(document.querySelector<HTMLElement>("button[data-model-source]")!)
-    .click();
-  await vi.waitFor(() =>
-    expect(sources()).toEqual(["Codex", "Work GW · Codex", "Work GW · opencode"]),
-  );
-  await page
-    .getByRole("option", { name: /chat-small/ })
-    .last()
-    .click();
+  // Pointing at the model offers each agent that runs it.
+  await page.getByRole("option", { name: /chat-small/ }).hover();
+  const choice = document.querySelector<HTMLElement>(
+    '[data-model-source-choice="Work GW · opencode"]',
+  )!;
+  await page.elementLocator(choice).click();
   expect(onInstanceModelChange).toHaveBeenLastCalledWith(gatewayOpencode, "chat-small");
 });

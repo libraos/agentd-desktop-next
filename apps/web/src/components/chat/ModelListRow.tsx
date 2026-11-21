@@ -12,6 +12,23 @@ import { cn } from "~/lib/utils";
 import { modelPickerModelKey } from "./modelPickerKeys";
 import { ProviderInstanceIcon } from "./ProviderInstanceIcon";
 
+export interface ModelRowSource {
+  readonly instanceId: ProviderInstanceId;
+  readonly slug: string;
+  readonly label: string;
+  readonly color: string;
+}
+
+function SourceDot({ color }: { readonly color: string }) {
+  return (
+    <span
+      className="size-2 shrink-0 rounded-full"
+      style={{ backgroundColor: color }}
+      aria-hidden="true"
+    />
+  );
+}
+
 export const ModelListRow = memo(function ModelListRow(props: {
   index: number;
   slug: string;
@@ -27,6 +44,11 @@ export const ModelListRow = memo(function ModelListRow(props: {
   sourceLabel: string;
   /** Another source of the model in the row above, listed under it. */
   isVariant?: boolean;
+  /** The source's color: its accent, else its provider's. */
+  sourceColor: string;
+  /** Every source of a model that has several, this row's included; shown while the row is pointed at. */
+  sources?: ReadonlyArray<ModelRowSource> | undefined;
+  onPickSource?: (instanceId: ProviderInstanceId, slug: string) => void;
   /** Given when the model has other sources: lists them under this row. */
   onToggleVariants?: () => void;
   variantsExpanded?: boolean;
@@ -109,10 +131,35 @@ export const ModelListRow = memo(function ModelListRow(props: {
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
+        {/* Pointing at a model with several sources offers each one, in its color. */}
+        {props.sources && !props.disabledReason ? (
+          <span className="hidden items-center gap-1 group-hover:flex">
+            {props.sources.map((source) => (
+              <Button
+                key={source.instanceId}
+                size="xs"
+                variant={source.instanceId === props.instanceId ? "outline" : "ghost-muted"}
+                data-model-source-choice={source.label}
+                aria-pressed={source.instanceId === props.instanceId}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  props.onPickSource?.(source.instanceId, source.slug);
+                }}
+                onKeyDown={(event) => {
+                  event.stopPropagation();
+                }}
+              >
+                <SourceDot color={source.color} />
+                <span className="max-w-24 truncate">{source.label}</span>
+              </Button>
+            ))}
+          </span>
+        ) : null}
         {props.onToggleVariants ? (
           <Button
             size="xs"
             variant="ghost-muted"
+            className={cn(props.sources && !props.disabledReason && "group-hover:hidden")}
             data-model-source={props.sourceLabel}
             aria-expanded={props.variantsExpanded === true}
             aria-label={gt("{source}. Other sources of this model", { source: props.sourceLabel })}
@@ -124,6 +171,7 @@ export const ModelListRow = memo(function ModelListRow(props: {
               event.stopPropagation();
             }}
           >
+            <SourceDot color={props.sourceColor} />
             <span className="max-w-28 truncate">{props.sourceLabel}</span>
             <ChevronDownIcon
               className={cn("size-3", props.variantsExpanded && "rotate-180")}
@@ -132,10 +180,11 @@ export const ModelListRow = memo(function ModelListRow(props: {
           </Button>
         ) : (
           <span
-            className="max-w-28 truncate text-xs text-muted-foreground"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground"
             data-model-source={props.sourceLabel}
           >
-            {props.sourceLabel}
+            <SourceDot color={props.sourceColor} />
+            <span className="max-w-28 truncate">{props.sourceLabel}</span>
           </span>
         )}
         <Tooltip>
