@@ -91,10 +91,11 @@ const ownName = (id: string, family: string) => {
   return owner === family && name !== "" && rest.length === 0 ? name : undefined;
 };
 
-// Claude Code swaps these for a model of its own (case-insensitively); the adapter pins only the
-// four lowercase family aliases back to themselves (`compileClaudeModelSelection`).
+// Claude Code swaps these for a model of its own (case-insensitively; `default` is its default
+// model); the adapter pins only the four lowercase family aliases back to themselves
+// (`compileClaudeModelSelection`).
 const CLAUDE_CODE_PINNED_ALIASES = new Set(["opus", "sonnet", "haiku", "fable"]);
-const CLAUDE_CODE_REWRITES = /^(?:best|opusplan|opus|sonnet|haiku|fable)$|\[1m\]$/i;
+const CLAUDE_CODE_REWRITES = /^(?:default|best|opusplan|opus|sonnet|haiku|fable)$|\[1m\]$/i;
 const claudeCodeSendsAsIs = (slug: string) =>
   CLAUDE_CODE_PINNED_ALIASES.has(slug) || !CLAUDE_CODE_REWRITES.test(slug);
 // Claude Code otherwise remaps old Opus ids (`claude-opus-4-1`) to its current Opus, and moves a
@@ -103,6 +104,12 @@ const CLAUDE_CODE_KEEP_MODEL = [
   "CLAUDE_CODE_DISABLE_LEGACY_MODEL_REMAP",
   "CLAUDE_CODE_NO_MODEL_FALLBACK",
 ];
+
+/** The keep-model flags any Claude Code process sending to the Gateway gets, however configured. */
+export function gatewayClaudeEnvironment(baseUrl: string | undefined): Record<string, string> {
+  if (URL.parse(baseUrl?.trim() ?? "")?.origin !== LIBRAOS_GATEWAY_ORIGIN) return {};
+  return Object.fromEntries(CLAUDE_CODE_KEEP_MODEL.map((name) => [name, "1"]));
+}
 
 // The agent's own family drops its prefix (agentd's workers ask so) to keep its catalog options,
 // and its full id is a row too, with the same options; a bare id equal to that name is the bare

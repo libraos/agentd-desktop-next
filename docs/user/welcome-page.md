@@ -51,12 +51,13 @@ by catalog name and by full Gateway id (`openai/gpt-5.5`), with the same options
 except that a full Claude id has no 1M context choice; both run that model,
 unless the key also lists the bare id (`gpt-5.5`) as a route of its own: the
 catalog-named row then runs that route. Claude Code leaves out the few ids
-it would run as another model, such as `best` or a name ending in `[1m]`; Codex
-still lists them.
+it would run as another model, such as `best`, `default` or a name ending in
+`[1m]`; Codex still lists them.
 
 **Custom endpoint** connects any OpenAI- or Anthropic-compatible gateway: enter its
 **Endpoint URL**, pick the **Format** (OpenAI adds Codex and opencode agents,
-Anthropic adds Claude Code and opencode agents), add a **Key** if it needs one,
+Anthropic adds Claude Code and opencode agents), add its **Key** (an
+Anthropic-format gateway needs one; an OpenAI-format one only if it asks),
 and press **Add gateway**; if its model list can't be read, list the **Model ids**
 yourself. Other options on that screen show **Not available yet**;
 use a provider instance's environment variables for those

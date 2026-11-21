@@ -8,10 +8,7 @@ import { HttpClient, HttpClientResponse } from "effect/http";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import { compileClaudeModelSelection } from "../claudeModelOptions.ts";
-import {
-  BUNDLED_CLAUDE_MODEL_CATALOG,
-  scopeClaudeModelCatalog,
-} from "../provider/ClaudeModelCatalog.ts";
+import { BUNDLED_CLAUDE_MODEL_CATALOG } from "../provider/ClaudeModelCatalog.ts";
 
 import {
   askGatewayModels,
@@ -127,34 +124,50 @@ it.effect("an agent's own Gateway key decides its models", () => {
 it.effect(
   "a hand-configured Claude agent runs a key's bare alias id as the picker shows it",
   () => {
+    let listed = [{ id: "opus" }, { id: "anthropic/claude-opus-5-5" }];
     const http = HttpClient.make((request) =>
-      Effect.sync(() =>
-        HttpClientResponse.fromWeb(request, Response.json({ data: [{ id: "opus" }] })),
-      ),
+      Effect.sync(() => HttpClientResponse.fromWeb(request, Response.json({ data: listed }))),
     );
     return Effect.gen(function* () {
       // Its own settings list no models: only the key's answer says `opus` is the Gateway's id.
-      const { keyModels, served } = yield* rememberServedModels(
+      const { keyModels, routed } = yield* rememberServedModels(
         yield* makeGatewayKeyModels("anthropic"),
       );
-      const compile = Effect.map(served, (models) =>
+      const compile = Effect.map(routed(BUNDLED_CLAUDE_MODEL_CATALOG), (catalog) =>
         compileClaudeModelSelection(
           { instanceId: ProviderInstanceId.make("claudeAgent"), model: "opus" },
-          scopeClaudeModelCatalog(BUNDLED_CLAUDE_MODEL_CATALOG, models),
+          catalog,
         ),
       );
-      assert.strictEqual((yield* compile).pinnedAlias, undefined);
-
+      // A turn dispatched before the key's list arrives waits for it, rather than expanding the
+      // alias with Claude's whole catalog.
+      const early = yield* compile.pipe(Effect.forkChild);
       yield* keyModels({ endpoint: "https://api.libraos.com", key: KEY });
-      const compiled = yield* compile;
+      const compiled = yield* Fiber.join(early);
       assert.strictEqual(compiled.apiModelId, "opus");
       assert.strictEqual(compiled.pinnedAlias, "opus");
+
+      // The key drops the literal `opus`: it stays `opus`, not the Opus 5.5 its alias names.
+      listed = [{ id: "anthropic/claude-opus-5-5" }];
+      yield* keyModels({ endpoint: "https://api.libraos.com", key: KEY });
+      const revoked = yield* compile;
+      assert.strictEqual(revoked.apiModelId, "opus");
+      assert.strictEqual(revoked.pinnedAlias, "opus");
 
       // Another endpoint serves every model: Claude Code's own alias applies again.
       yield* keyModels({ endpoint: "https://hub.example.com", key: KEY });
       assert.strictEqual((yield* compile).pinnedAlias, undefined);
     }).pipe(Effect.provideService(HttpClient.HttpClient, http));
   },
+);
+
+it.effect("a Claude agent no check sends to the Gateway routes once its check ends", () =>
+  Effect.gen(function* () {
+    const { settle, routed } = yield* rememberServedModels(() => Effect.undefined);
+    const waiting = yield* routed(BUNDLED_CLAUDE_MODEL_CATALOG).pipe(Effect.forkChild);
+    yield* settle;
+    assert.strictEqual(yield* Fiber.join(waiting), BUNDLED_CLAUDE_MODEL_CATALOG);
+  }),
 );
 
 it.effect("a Gateway that stalls while sending its list times out", () => {

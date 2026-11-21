@@ -7,10 +7,15 @@ import type { EndpointKeyModels } from "@t3tools/provider-core/server/snapshotPr
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
+import * as Deferred from "effect/Deferred";
 import * as Ref from "effect/Ref";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import {
+  type ClaudeModelCatalog,
+  scopeClaudeModelCatalog,
+} from "../provider/ClaudeModelCatalog.ts";
 import {
   GATEWAY_KEY_SECRET,
   gatewayAgentModels,
@@ -142,12 +147,41 @@ export const makeGatewayKeyModels = Effect.fn("LibraosGateway.makeGatewayKeyMode
 /**
  * Keeps the list `keyModels` last gave this agent, so its turns read an id the way its picker
  * showed it even when the agent's own settings list no models (a hand-configured endpoint).
+ * `routed` waits for the first answer (or `settle`, when no check reaches the Gateway), so a turn
+ * dispatched while the list is still pending does not read the agent's whole catalog.
  */
 export const rememberServedModels = Effect.fn("LibraosGateway.rememberServedModels")(function* (
   keyModels: EndpointKeyModels,
 ) {
-  const served = yield* Ref.make<ReadonlyArray<CustomModelSetting>>([]);
+  const served = yield* Ref.make<ReadonlyArray<CustomModelSetting> | undefined>(undefined);
+  const answered = yield* Deferred.make<void>();
+  const settle = Deferred.succeed(answered, undefined).pipe(Effect.asVoid);
   const remembering: EndpointKeyModels = (input) =>
-    keyModels(input).pipe(Effect.tap((models) => Ref.set(served, models ?? [])));
-  return { keyModels: remembering, served: Ref.get(served) };
+    keyModels(input).pipe(
+      Effect.tap((models) => Ref.set(served, models)),
+      Effect.ensuring(settle),
+    );
+  const routed = Effect.fn("LibraosGateway.routedCatalog")(function* (catalog: ClaudeModelCatalog) {
+    // Same allowance as Claude's model routes; an expired wait counts as settled.
+    yield* Deferred.await(answered).pipe(Effect.timeoutOption("2 minutes"), Effect.andThen(settle));
+    const models = yield* Ref.get(served);
+    return models === undefined ? catalog : gatewayClaudeCatalog(catalog, models);
+  });
+  return { keyModels: remembering, settle, routed };
 });
+
+/**
+ * The key's models are its exact ids: Claude's catalog aliases do not apply, so a literal `opus`
+ * the key dropped is sent as `opus` (and refused there), not as the model the alias names.
+ */
+function gatewayClaudeCatalog(
+  catalog: ClaudeModelCatalog,
+  models: ReadonlyArray<CustomModelSetting>,
+): ClaudeModelCatalog {
+  const scoped = scopeClaudeModelCatalog(catalog, models);
+  return {
+    models: scoped.models.map((entry) =>
+      entry.model.aliases?.length ? { ...entry, model: { ...entry.model, aliases: [] } } : entry,
+    ),
+  };
+}

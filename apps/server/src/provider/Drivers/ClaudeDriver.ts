@@ -39,7 +39,7 @@ import {
 } from "../ClaudeProvider.ts";
 import { makeManagedServerProvider } from "@t3tools/provider-core/server/managedProvider";
 import * as ModelCatalog from "@t3tools/provider-core/server/ModelCatalog";
-import { resolveClaudeModelCatalog, scopeClaudeModelCatalog } from "../ClaudeModelCatalog.ts";
+import { resolveClaudeModelCatalog } from "../ClaudeModelCatalog.ts";
 import {
   makeClaudeCodeModelRoutes,
   resolveClaudeModelSettingsKey,
@@ -177,18 +177,9 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
       Effect.provideService(HttpClient.HttpClient, httpClient),
       Effect.flatMap(rememberServedModels),
     );
-    // A turn reads the picked id against the key's models, as the snapshot listed them; routing
-    // waits for the first probe, which is also what asks the key.
+    // A turn reads the picked id against the key's models, as the snapshot listed them.
     const routeModelCatalog: typeof modelRoutes.route = (catalog, cwd, launchSettings) =>
-      modelRoutes
-        .route(catalog, cwd, launchSettings)
-        .pipe(
-          Effect.flatMap((routed) =>
-            Effect.map(gatewayKeyModels.served, (served) =>
-              scopeClaudeModelCatalog(routed, served),
-            ),
-          ),
-        );
+      modelRoutes.route(catalog, cwd, launchSettings).pipe(Effect.flatMap(gatewayKeyModels.routed));
     // Retain reports until the registry subscribes; end its listener on teardown.
     const workspaceRescans = yield* Queue.unbounded<string, Cause.Done>();
     yield* Effect.addFinalizer(() => Queue.end(workspaceRescans));
@@ -320,6 +311,7 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
       ),
       // Disabled, failed version checks and interruption never reach the probe.
       Effect.ensuring(modelRoutes.settle),
+      Effect.ensuring(gatewayKeyModels.settle),
       Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
       Effect.provideService(FileSystem.FileSystem, fileSystem),
       Effect.provideService(Path.Path, path),
