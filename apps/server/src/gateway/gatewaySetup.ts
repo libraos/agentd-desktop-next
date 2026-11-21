@@ -5,6 +5,7 @@ import {
   LIBRAOS_GATEWAY_ORIGIN,
   ProviderDriverKind,
   ProviderInstanceId,
+  type CustomModelEntry,
   type LibraosGatewayModel,
   type ProviderInstanceConfig,
   type ProviderInstanceConfigMap,
@@ -90,14 +91,65 @@ export function redactGatewayText(text: string, key?: string | null): string {
 /** A key the Gateway will not serve at all, as opposed to a Gateway that is down or busy. */
 export const isKeyRefusal = (status: number): boolean => status === 401 || status === 403;
 
-// Claude Code asks for `claude-…` and Codex for `gpt-…`, as agentd's workers do; the Gateway's ids
-// carry the model family in front.
-export function gatewayFamilyModels(models: ReadonlyArray<LibraosGatewayModel>, family: string) {
-  return models.flatMap((model) => {
-    const [owner, name, ...rest] = model.id.split("/");
-    if (owner !== family || !name || rest.length > 0) return [];
-    return [{ slug: name, ...(model.name ? { name: model.name } : {}) }];
-  });
+const ownName = (id: string, family: string) => {
+  const [owner = "", name = "", ...rest] = id.split("/");
+  return owner === family && name !== "" && rest.length === 0 ? name : undefined;
+};
+
+// Claude Code swaps these for a model of its own (case-insensitively; `default` is its default
+// model); the adapter pins only the four lowercase family aliases back to themselves
+// (`compileClaudeModelSelection`).
+const CLAUDE_CODE_PINNED_ALIASES = new Set(["opus", "sonnet", "haiku", "fable"]);
+const CLAUDE_CODE_REWRITES = /^(?:default|best|opusplan|opus|sonnet|haiku|fable)$|\[1m\]$/i;
+const claudeCodeSendsAsIs = (slug: string) =>
+  CLAUDE_CODE_PINNED_ALIASES.has(slug) || !CLAUDE_CODE_REWRITES.test(slug);
+// Claude Code otherwise remaps old Opus ids (`claude-opus-4-1`) to its current Opus, and moves a
+// Claude model the Gateway calls unavailable down to an older one.
+const CLAUDE_CODE_KEEP_MODEL = [
+  "CLAUDE_CODE_DISABLE_LEGACY_MODEL_REMAP",
+  "CLAUDE_CODE_NO_MODEL_FALLBACK",
+];
+
+/** The keep-model flags any Claude Code process sending to the Gateway gets, however configured. */
+export function gatewayClaudeEnvironment(baseUrl: string | undefined): Record<string, string> {
+  if (URL.parse(baseUrl?.trim() ?? "")?.origin !== LIBRAOS_GATEWAY_ORIGIN) return {};
+  return Object.fromEntries(CLAUDE_CODE_KEEP_MODEL.map((name) => [name, "1"]));
+}
+
+// The agent's own family drops its prefix (agentd's workers ask so) to keep its catalog options,
+// and its full id is a row too, with the same options; a bare id equal to that name is the bare
+// row's request. A slug depends on its id alone, so saved choices survive key changes. Other models
+// keep their full id, their family and none of the agent's options (Codex would lend a GPT model's).
+export function gatewayAgentModels(models: ReadonlyArray<LibraosGatewayModel>, family: string) {
+  // An id the agent would send as another model is not offered, or kept whole when that avoids it.
+  const sendsAsIs = family === "anthropic" ? claudeCodeSendsAsIs : () => true;
+  const own = (id: string) => {
+    const name = ownName(id, family);
+    return name !== undefined && sendsAsIs(name) ? name : undefined;
+  };
+  const ownNames = new Set(models.flatMap((model) => own(model.id) ?? []));
+  const ownModels: Array<CustomModelEntry> = [];
+  const ownFullIds: Array<CustomModelEntry> = [];
+  const other: Array<CustomModelEntry> = [];
+  for (const model of models) {
+    const named = model.name ? { name: model.name } : {};
+    const name = own(model.id);
+    if (name !== undefined) {
+      ownModels.push({ slug: name, ...named });
+      // No options here: the snapshot and Claude's runtime catalog give it those of `name`.
+      ownFullIds.push({ slug: model.id, ...named, subProvider: family });
+      continue;
+    }
+    if (ownNames.has(model.id) || !sendsAsIs(model.id)) continue;
+    const owner = model.id.split("/")[0] ?? "";
+    other.push({
+      slug: model.id,
+      ...named,
+      ...(owner !== "" && model.id.includes("/") ? { subProvider: owner } : {}),
+      capabilities: { optionDescriptors: [] },
+    });
+  }
+  return [...ownModels, ...ownFullIds, ...other];
 }
 
 const tomlString = (value: string) => JSON.stringify(value);
@@ -123,6 +175,8 @@ interface GatewayShape {
   readonly agents: ReadonlyArray<GatewayAgent>;
   /** A rename rewrites the provider name inside opencode's config. */
   readonly renamable: boolean;
+  /** Variables set to "1" for Claude Code, added to agents connected before they existed. */
+  readonly claudeEnvironment: ReadonlyArray<string>;
   readonly agentModels: (
     models: ReadonlyArray<LibraosGatewayModel>,
     agent: GatewayAgent,
@@ -139,8 +193,10 @@ const LIBRAOS_SHAPE: GatewayShape = {
   opencodeNpm: "@ai-sdk/openai-compatible",
   agents: ["claude", "codex"],
   renamable: false,
+  claudeEnvironment: CLAUDE_CODE_KEEP_MODEL,
+  // Every key model runs on both agents, by the rules of `gatewayAgentModels`.
   agentModels: (models, agent) =>
-    gatewayFamilyModels(models, agent === "claude" ? "anthropic" : "openai"),
+    gatewayAgentModels(models, agent === "claude" ? "anthropic" : "openai"),
 };
 
 function codexLaunchArgs(shape: GatewayShape): string {
@@ -203,6 +259,7 @@ function shapeInstances(
       environment: [
         plain("ANTHROPIC_BASE_URL", shape.origin),
         ...(key === null ? [] : [secret("ANTHROPIC_API_KEY", key)]),
+        ...shape.claudeEnvironment.map((name) => plain(name, "1")),
       ],
       // The gateway's models replace Claude's catalog: any other model would fail there.
       config: { customModels: shape.agentModels(models, "claude"), onlyCustomModels: true },
@@ -285,6 +342,7 @@ function customShape(gateway: Omit<CustomGatewayInput, "key">, hasKey: boolean):
     opencodeNpm: gateway.format === "anthropic" ? "@ai-sdk/anthropic" : "@ai-sdk/openai-compatible",
     agents: [gateway.format === "anthropic" ? "claude" : "codex"],
     renamable: true,
+    claudeEnvironment: [],
     // A custom gateway's ids are what its agents ask for, as given.
     agentModels: (models) =>
       models.map((model) => ({ slug: model.id, ...(model.name ? { name: model.name } : {}) })),
@@ -456,8 +514,19 @@ function withShapeModels(
     const existing = current[instanceId];
     if (existing === undefined) continue;
     const config = isRecord(existing.config) ? existing.config : {};
+    const environment = existing.environment ?? [];
+    // Claude agents connected before these variables existed get them too.
+    const missing =
+      agent === "claude"
+        ? shape.claudeEnvironment.filter(
+            (name) => !environment.some((variable) => variable.name === name),
+          )
+        : [];
     set(instanceId, {
       ...existing,
+      ...(missing.length > 0
+        ? { environment: [...environment, ...missing.map((name) => plain(name, "1"))] }
+        : {}),
       config: {
         ...config,
         ...(models === null ? {} : { customModels: shape.agentModels(models, agent) }),

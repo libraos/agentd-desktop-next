@@ -170,6 +170,10 @@ const CUSTOM_MODEL_CLAUDE_SETTINGS = Schema.decodeSync(ClaudeSettings)({
     },
   ],
 });
+const GATEWAY_ALIAS_CLAUDE_SETTINGS = Schema.decodeSync(ClaudeSettings)({
+  customModels: [{ slug: "opus", capabilities: { optionDescriptors: [] } }],
+  onlyCustomModels: true,
+});
 const ALIAS_CUSTOM_MODEL_CLAUDE_SETTINGS = Schema.decodeSync(ClaudeSettings)({
   customModels: ["haiku", "sonnet"],
 });
@@ -504,27 +508,27 @@ describe("ClaudeAdapterV2 runtime query policy", () => {
   });
 
   it("sends a custom model named like a Claude Code alias to the API unchanged", () => {
-    const options = ClaudeAdapterV2.makeClaudeQueryOptions({
-      modelSelection: { instanceId: CLAUDE_TEST_MODEL_SELECTION.instanceId, model: "opus" },
-      modelCatalog: scopeClaudeModelCatalog(
-        BUNDLED_CLAUDE_MODEL_CATALOG,
-        CUSTOM_MODEL_CLAUDE_SETTINGS.customModels,
-      ),
-      nativeThreadId: "native-custom-alias",
-      resume: false,
-      cwd: "/workspace",
-      settings: CUSTOM_MODEL_CLAUDE_SETTINGS,
-    });
-    // Claude Code expands a bare alias to its own model unless ANTHROPIC_DEFAULT_<ALIAS>_MODEL overrides it.
-    const settingsEnv =
-      typeof options.settings === "object" && options.settings !== null
-        ? (options.settings as { env?: Record<string, string> }).env
-        : undefined;
-    const aliasOverride =
-      settingsEnv?.ANTHROPIC_DEFAULT_OPUS_MODEL ?? options.env?.ANTHROPIC_DEFAULT_OPUS_MODEL;
-    const requestedModel =
-      options.model === "opus" ? (aliasOverride ?? "claude-opus-5-5") : options.model;
-    assert.equal(requestedModel, "opus");
+    // A user-added `opus`, and a Gateway key's bare `opus` id (written with no options).
+    for (const settings of [CUSTOM_MODEL_CLAUDE_SETTINGS, GATEWAY_ALIAS_CLAUDE_SETTINGS]) {
+      const options = ClaudeAdapterV2.makeClaudeQueryOptions({
+        modelSelection: { instanceId: CLAUDE_TEST_MODEL_SELECTION.instanceId, model: "opus" },
+        modelCatalog: scopeClaudeModelCatalog(BUNDLED_CLAUDE_MODEL_CATALOG, settings.customModels),
+        nativeThreadId: "native-custom-alias",
+        resume: false,
+        cwd: "/workspace",
+        settings,
+      });
+      // Claude Code expands a bare alias to its own model unless ANTHROPIC_DEFAULT_<ALIAS>_MODEL overrides it.
+      const settingsEnv =
+        typeof options.settings === "object" && options.settings !== null
+          ? (options.settings as { env?: Record<string, string> }).env
+          : undefined;
+      const aliasOverride =
+        settingsEnv?.ANTHROPIC_DEFAULT_OPUS_MODEL ?? options.env?.ANTHROPIC_DEFAULT_OPUS_MODEL;
+      const requestedModel =
+        options.model === "opus" ? (aliasOverride ?? "claude-opus-5-5") : options.model;
+      assert.equal(requestedModel, "opus");
+    }
   });
 
   it("projects AskUserQuestion input with question text as the answer key", () => {
@@ -7355,6 +7359,67 @@ describe("ClaudeAdapterV2 background wake turns", () => {
         assert.deepEqual(harness.liveSelectionChanges, [
           { effortLevel: "high", fastMode: null, ultracode: null },
         ]);
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            IdAllocator.layer,
+            McpProviderSessions.layer,
+            NodeServices.layer,
+            NodeCrypto.layer,
+          ),
+        ),
+      ),
+    ),
+  );
+
+  it.effect("sends Ultrathink for a full id only the routed catalog knows", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        // A hand-configured Gateway instance: the key lists the full id, settings save none.
+        const harness = yield* makeWakeHarnessWithOptions({
+          routeModelCatalog: (catalog) =>
+            Effect.succeed(
+              scopeClaudeModelCatalog(catalog, [
+                { slug: "anthropic/claude-sonnet-4-6", subProvider: "anthropic" },
+              ]),
+            ),
+        });
+        const idAllocator = yield* IdAllocator.IdAllocatorV2;
+        const input = makeClaudeTestTurnInput({
+          threadId: harness.threadId,
+          providerThread: harness.providerThread,
+          now: yield* DateTime.now,
+          attemptId: RunAttemptId.make("attempt-gateway-full-id-ultrathink"),
+          text: "Fix the bug.",
+          attachments: [],
+          modelSelection: {
+            ...CLAUDE_TEST_MODEL_SELECTION,
+            model: "anthropic/claude-sonnet-4-6",
+          },
+        });
+        yield* harness.runtime.startTurn(input);
+        assert.equal(harness.offeredMessages[0]?.message.content, "Ultrathink:\nFix the bug.");
+
+        yield* harness.runtime.steerTurn({
+          threadId: harness.threadId,
+          runId: input.runId,
+          providerThread: harness.providerThread,
+          providerTurnId: idAllocator.derive.providerTurn({
+            driver: ClaudeAdapterV2.CLAUDE_PROVIDER,
+            nativeTurnId: `turn:${input.attemptId}`,
+          }),
+          message: {
+            createdBy: "user",
+            creationSource: "web",
+            messageId: MessageId.make("steer-gateway-full-id-ultrathink"),
+            text: "Also check the tests.",
+            attachments: [],
+          },
+        });
+        assert.equal(
+          harness.offeredMessages[1]?.message.content,
+          "Ultrathink:\nAlso check the tests.",
+        );
       }).pipe(
         Effect.provide(
           Layer.mergeAll(

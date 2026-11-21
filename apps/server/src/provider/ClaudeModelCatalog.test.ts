@@ -453,6 +453,36 @@ describe("Claude model catalog", () => {
     );
   });
 
+  it("caps a Gateway full id's catalog effort labels like its catalog row", () => {
+    const sonnet = BUNDLED_CLAUDE_MODEL_CATALOG.models.find(
+      (entry) => entry.model.slug === "claude-sonnet-4-6",
+    )!.model;
+    const fullId = {
+      ...sonnet,
+      slug: "anthropic/claude-sonnet-4-6",
+      isCustom: true,
+      subProvider: "anthropic",
+    };
+    const labels = (sources: Parameters<typeof capClaudeCatalogEffort>[2]) =>
+      capClaudeCatalogEffort(BUNDLED_CLAUDE_MODEL_CATALOG, [sonnet, fullId], sources).map(
+        (model) => {
+          const effort = model.capabilities?.optionDescriptors?.find(
+            (descriptor) => descriptor.id === "effort",
+          );
+          return effort?.type === "select" ? effort.options.map((option) => option.label) : [];
+        },
+      );
+
+    for (const sources of [
+      [{ maxEffortLevel: "low" as const }],
+      [{ modelMaxEffortLevels: new Map([["claude-sonnet-4-6", "low" as const]]) }],
+    ]) {
+      const [bare, full] = labels(sources);
+      assert.include(bare ?? [], "Max (capped to Low)");
+      assert.deepStrictEqual(full, bare);
+    }
+  });
+
   it("resolves maxEffortLevel per settings source and per model key like Claude Code", () => {
     const opus = {
       slug: "claude-opus-5-5",

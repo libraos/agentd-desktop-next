@@ -192,6 +192,23 @@ describe("CodexAdapterV2 runtime policy", () => {
       }),
   );
 
+  it.effect("runs another family's Gateway model by its full id", () =>
+    Effect.gen(function* () {
+      const params = yield* CodexAdapterV2.buildCodexTurnStartParams({
+        nativeThreadId: "native-gateway",
+        codexInput: [{ type: "text", text: "test" }],
+        runtimePolicy: { runtimeMode: "full-access", interactionMode: "default", cwd: null },
+        modelSelection: {
+          instanceId: ProviderInstanceId.make("libraosCodex"),
+          model: "gemini/gemini-2.5-pro",
+        },
+      });
+      assert.equal(params.model, "gemini/gemini-2.5-pro");
+      assert.deepEqual(params.collaborationMode?.settings, { model: "gemini/gemini-2.5-pro" });
+      assert.notProperty(params, "effort");
+    }),
+  );
+
   it.effect("derives concrete Codex turn policies from every T3 runtime mode", () =>
     Effect.gen(function* () {
       const build = (
