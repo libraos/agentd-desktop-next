@@ -177,6 +177,7 @@ import { copyThreadReference } from "../lib/copyThreadReference";
 import { subscribeSnapShotComposerFocus } from "../lib/desktopSnapShot";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { FileMetadataThreadProvider } from "../hooks/FileMetadataThreadProvider";
+import { CodeSurfacesContext } from "./chat/codeSurfacesContext";
 import { RIGHT_PANEL_INLINE_LAYOUT_MEDIA_QUERY } from "../rightPanelLayout";
 import { PopoverCreateHandle } from "./ui/popover";
 import {
@@ -1138,9 +1139,13 @@ export default function ChatView(props: ChatViewProps) {
   );
   const canReuseTerminal = activeThreadKnownSessionsRaw !== null;
   const previewPanelOpen = activeRightPanelKind === "preview" && browserAvailable;
-  // A chat keeps only the AgentD background-tasks surface, opened by its own entry points.
+  // A chat keeps AgentD's background tasks and the files its links open.
   const rightPanelSurfaceShown =
-    showCodeSurfaces || (!embedded && activeRightPanelSurface?.kind === "background-tasks");
+    showCodeSurfaces ||
+    (!embedded &&
+      (activeRightPanelSurface?.kind === "background-tasks" ||
+        activeRightPanelSurface?.kind === "file" ||
+        activeRightPanelSurface?.kind === "files"));
   const rightPanelOpen = rightPanelSurfaceShown && rightPanelState.isOpen;
   const { active: panelAnimationsActive, durationMs: panelAnimationDurationMs } =
     usePanelAnimationSettings();
@@ -4151,15 +4156,15 @@ export default function ChatView(props: ChatViewProps) {
           onAddBackgroundTasks={() =>
             activateRightPanelSurfaceStable({ id: "background-tasks", kind: "background-tasks" })
           }
-          browserAvailable={canOperatePreview && browserAvailable}
-          terminalAvailable={activeProject !== null && canOperateTerminal}
-          diffAvailable={isServerThread && isGitRepo}
+          browserAvailable={showCodeSurfaces && canOperatePreview && browserAvailable}
+          terminalAvailable={showCodeSurfaces && activeProject !== null && canOperateTerminal}
+          diffAvailable={showCodeSurfaces && isServerThread && isGitRepo}
           filesAvailable={activeProject !== null}
-          pullRequestAvailable={pullRequestSurfaceAvailable}
-          pullRequestsAvailable={linkedItemsSurfaceAvailable}
-          deviceAvailable={activeThreadRef !== null}
+          pullRequestAvailable={showCodeSurfaces && pullRequestSurfaceAvailable}
+          pullRequestsAvailable={showCodeSurfaces && linkedItemsSurfaceAvailable}
+          deviceAvailable={showCodeSurfaces && activeThreadRef !== null}
           backgroundTasksAvailable={activeThreadRef !== null}
-          sideChatAvailable={sideChat.available}
+          sideChatAvailable={showCodeSurfaces && sideChat.available}
           sideChatDisabledReason={sideChatDisabledReason}
         >
           {rightPanelContent}
@@ -4183,7 +4188,9 @@ export default function ChatView(props: ChatViewProps) {
       cwd={activeWorkspaceRoot}
       checkpoints={serverProjection?.checkpoints}
     >
-      {content}
+      <CodeSurfacesContext value={embedded || !activeProjectIsScratch}>
+        {content}
+      </CodeSurfacesContext>
     </FileMetadataThreadProvider>
   );
 }
