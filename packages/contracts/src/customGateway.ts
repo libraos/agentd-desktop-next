@@ -30,6 +30,12 @@ export const customGatewayAgentsOf = (
 ): ReadonlyArray<CustomGatewayAgent> =>
   format === "anthropic" ? ["claude", "opencode"] : ["codex", "opencode"];
 
+/** What agentd's `[dispatch] TOOL_base_url` takes for a gateway: Claude Code an origin, the others `/v1`. */
+export function customGatewayWorkerUrl(agent: CustomGatewayAgent, url: string): string {
+  const origin = url.trim().replace(/\/+$/, "").replace(/\/v1$/, "");
+  return agent === "claude" ? origin : `${origin}/v1`;
+}
+
 /** Stored in server settings; the key is in the server's secret store. */
 export const CustomGatewaySetting = Schema.Struct({
   id: CustomGatewayId,

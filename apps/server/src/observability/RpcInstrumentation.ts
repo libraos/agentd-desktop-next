@@ -271,6 +271,8 @@ const RPC_AGGREGATES = {
   [WS_METHODS.agentdSetTeamNode]: "agentd",
   [WS_METHODS.agentdTeamNodeForeground]: "agentd",
   [WS_METHODS.agentdEula]: "agentd",
+  [WS_METHODS.agentdWorkerGateway]: "agentd",
+  [WS_METHODS.agentdSetWorkerGateway]: "agentd",
   [WS_METHODS.agentdSetupStart]: "agentd",
   [WS_METHODS.agentdSubscribeSetup]: "agentd",
   [WS_METHODS.agentdSkillsList]: "agentd",

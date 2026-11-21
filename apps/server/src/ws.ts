@@ -88,6 +88,7 @@ import {
   RelayClientInstallFailedError,
   type RelayClientInstallProgressEvent,
   type ServerConfig as ClientServerConfig,
+  AgentdCommandError,
   type ServerConfigStreamEvent,
   type ServerLifecycleStreamEvent,
   type ServerProvider,
@@ -250,6 +251,12 @@ import * as AgentdSkills from "./agentd/AgentdSkills.ts";
 import { enteredKeyFiles, startErrorFor } from "./agentd/cloudFailure.ts";
 import * as LibraosGateway from "./gateway/LibraosGateway.ts";
 import * as CustomGateway from "./gateway/CustomGateway.ts";
+import {
+  readWorkerGatewayRecord,
+  workerGatewayChoice,
+  workerGatewayRecordText,
+  workerGatewayKeyFile,
+} from "./agentd/workerGatewaySetting.ts";
 import * as ProcessDiagnostics from "./diagnostics/ProcessDiagnostics.ts";
 import * as ProcessResourceMonitor from "./diagnostics/ProcessResourceMonitor.ts";
 import * as ResourceTelemetry from "./resourceTelemetry/ResourceTelemetry.ts";
@@ -1609,6 +1616,19 @@ export const layerWsRpc = (
       const agentdSkills = yield* AgentdSkills.AgentdSkillsService;
       const libraosGateway = yield* LibraosGateway.LibraosGateway;
       const customGateway = yield* CustomGateway.CustomGateway;
+      const secretPaths = yield* Path.Path;
+      const workerGatewayFiles = yield* FileSystem.FileSystem;
+      const workerGatewayRecordPath = secretPaths.join(
+        config.stateDir,
+        "agentd-worker-gateways.json",
+      );
+      const workerGatewayChosen = workerGatewayFiles.readFileString(workerGatewayRecordPath).pipe(
+        Effect.orElseSucceed(() => ""),
+        Effect.map(readWorkerGatewayRecord),
+      );
+      const workerGateway = Effect.all([agentd.workerGateway, workerGatewayChosen]).pipe(
+        Effect.map(([read, chosen]) => ({ ...read, chosen })),
+      );
       const triage = yield* TriageService.TriageService;
       const hostResources = yield* HostResources.HostResources;
       const processResourceMonitor = yield* ProcessResourceMonitor.ProcessResourceMonitor;
@@ -3671,6 +3691,33 @@ export const layerWsRpc = (
         [WS_METHODS.agentdSetTeamNode]: (input) => teamNode.set(input),
         [WS_METHODS.agentdTeamNodeForeground]: (_input) => teamNode.foreground,
         [WS_METHODS.agentdEula]: (_input) => agentd.eula,
+        [WS_METHODS.agentdWorkerGateway]: (_input) => workerGateway,
+        [WS_METHODS.agentdSetWorkerGateway]: Effect.fn("ws.agentd.setWorkerGateway")(
+          function* (input) {
+            const { gateway } = input;
+            let choice = null;
+            if (gateway !== null) {
+              const { gateways } = yield* customGateway.list.pipe(
+                Effect.mapError(
+                  (error) => new AgentdCommandError({ message: error.message, notSetUp: false }),
+                ),
+              );
+              const made = workerGatewayChoice({ tool: input.tool, gateway }, gateways, (id) =>
+                workerGatewayKeyFile(config.secretsDir, secretPaths.join, id),
+              );
+              if ("refused" in made) {
+                return yield* new AgentdCommandError({ message: made.refused, notSetUp: false });
+              }
+              choice = made;
+            }
+            yield* agentd.setWorkerGateway(input.tool, choice);
+            const chosen = { ...(yield* workerGatewayChosen), [input.tool]: gateway?.id ?? null };
+            yield* workerGatewayFiles
+              .writeFileString(workerGatewayRecordPath, workerGatewayRecordText(chosen))
+              .pipe(Effect.ignore);
+            return yield* workerGateway;
+          },
+        ),
         [WS_METHODS.agentdSetupStart]: (_input) => agentdInit.start,
         [WS_METHODS.agentdSubscribeSetup]: (_input) => agentdInit.subscribe,
         [WS_METHODS.agentdSkillsList]: (_input) => agentdSkills.list,
