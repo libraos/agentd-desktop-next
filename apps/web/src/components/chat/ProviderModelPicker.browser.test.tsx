@@ -132,7 +132,7 @@ it.each([
     expect(
       [
         ...document.querySelectorAll<HTMLElement>(
-          '[data-model-picker-provider]:not([data-model-picker-provider="favorites"])',
+          '[data-model-picker-provider]:not([data-model-picker-provider="favorites"], [data-model-picker-provider="all"])',
         ),
       ].map((element) => element.dataset.modelPickerProvider),
     ).toEqual(expected);
@@ -365,6 +365,7 @@ it("lists a model reported twice by one provider once, with contiguous jump shor
       page
         .getByRole("option")
         .elements()
+        .filter((row) => row.querySelector("[data-model-picker-source]") === null)
         .map((row) => [
           row.textContent?.match(/Model [A-Z]/)?.[0],
           row.querySelector("kbd")?.textContent?.slice(-1),
@@ -376,6 +377,67 @@ it("lists a model reported twice by one provider once, with contiguous jump shor
       ["Model D", "4"],
     ]),
   );
+});
+
+it("lists a gateway's models once under its name and lets the agent that runs them be switched", async () => {
+  const gatewayCodex = ProviderInstanceId.make("gw-abc-codex");
+  const gatewayOpencode = ProviderInstanceId.make("gw-abc-opencode");
+  const entries = deriveProviderInstanceEntries(
+    [
+      { instanceId: ProviderInstanceId.make("codex"), driver: "codex", displayName: "Codex" },
+      { instanceId: gatewayCodex, driver: "codex", displayName: "Codex · Work GW" },
+      { instanceId: gatewayOpencode, driver: "opencode", displayName: "opencode · Work GW" },
+    ].map((provider) => ({
+      ...provider,
+      driver: ProviderDriverKind.make(provider.driver),
+      enabled: true,
+      installed: true,
+      version: null,
+      status: "ready" as const,
+      auth: { status: "authenticated" as const },
+      checkedAt: "2026-01-01T00:00:00.000Z",
+      models: [],
+      slashCommands: [],
+      skills: [],
+    })),
+  );
+  const gatewayModels = [{ slug: "chat-small", name: "chat-small" }];
+  const onInstanceModelChange = vi.fn();
+  await using screen = await render(
+    <ProviderModelPicker
+      environmentId={null}
+      activeInstanceId={ProviderInstanceId.make("codex")}
+      model="gpt"
+      lockedProvider={null}
+      instanceEntries={entries}
+      modelOptionsByInstance={
+        new Map([
+          [ProviderInstanceId.make("codex"), [{ slug: "gpt", name: "GPT" }]],
+          [gatewayCodex, gatewayModels],
+          [gatewayOpencode, gatewayModels],
+        ])
+      }
+      triggerAriaLabel="Choose model"
+      onInstanceModelChange={onInstanceModelChange}
+    />,
+  );
+  await screen.getByRole("button", { name: "Choose model" }).click();
+  await expect.element(page.getByRole("option", { name: /chat-small/ })).toBeVisible();
+  expect(
+    [...document.querySelectorAll<HTMLElement>("[data-model-picker-source]")].map(
+      (heading) => heading.dataset.modelPickerSource,
+    ),
+  ).toEqual(["Codex", "Work GW"]);
+  expect(page.getByRole("option", { name: /chat-small/ }).elements()).toHaveLength(1);
+
+  // An option's children are presentational, so the agent switch has no role to find it by.
+  await page
+    .elementLocator(
+      document.querySelector<HTMLElement>('[data-model-picker-source-agent="gw-abc-opencode"]')!,
+    )
+    .click();
+  await page.getByRole("option", { name: /chat-small/ }).click();
+  expect(onInstanceModelChange).toHaveBeenLastCalledWith(gatewayOpencode, "chat-small");
 });
 
 it("opens on the active provider when every favorite belongs to a disabled provider", async () => {

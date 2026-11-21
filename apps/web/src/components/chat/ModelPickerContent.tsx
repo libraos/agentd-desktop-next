@@ -7,6 +7,7 @@ import {
   type ProviderDriverKind,
   type ResolvedKeybindingsConfig,
   MODEL_PICKER_JUMP_KEYBINDING_COMMANDS,
+  customGatewayIdOfInstance,
   isManagedDriverAllowed,
   isProviderDriverOffered,
 } from "@t3tools/contracts";
@@ -28,12 +29,13 @@ import {
 } from "react";
 import { ChevronRightIcon } from "lucide-react";
 import { ModelListRow } from "./ModelListRow";
-import { ModelPickerSidebar } from "./ModelPickerSidebar";
+import { ModelPickerSidebar, type ModelPickerTab } from "./ModelPickerSidebar";
 import { useProviderWorkspaceSnapshotRefresh } from "./useProviderWorkspaceSnapshotRefresh";
 import { getProviderStatusMessage, hasProviderSetup } from "./ProviderStatusBanner";
 import {
   modelPickerLegacySectionKey,
   modelPickerModelKey,
+  modelPickerSourceKey,
   modelPickerSubProviderSectionKey,
   parseModelPickerLegacySectionKey,
   parseModelPickerModelKey,
@@ -145,12 +147,13 @@ function shouldOfferModelPickerSetup(
 
 function adjacentModelPickerProvider(input: {
   entries: ReadonlyArray<ProviderInstanceEntry>;
-  selectedInstanceId: ProviderInstanceId | "favorites";
+  selectedInstanceId: ModelPickerTab;
   direction: 1 | -1;
   disabledInstanceIds: ReadonlySet<ProviderInstanceId> | undefined;
   selectableUnavailableInstanceIds: ReadonlySet<ProviderInstanceId> | undefined;
 }) {
-  const providers: Array<ProviderInstanceId | "favorites"> = [
+  const providers: Array<ModelPickerTab> = [
+    "all",
     "favorites",
     ...input.entries
       .filter(
@@ -436,36 +439,39 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
     !isProviderInstancePickerReady(activeEntry);
   const activeInstanceNeedsSetup =
     onOpenProviderSetup !== undefined && activeEntry !== undefined && offersSetup(activeEntry);
-  const [requestedInstanceId, setSelectedInstanceId] = useState<ProviderInstanceId | "favorites">(
-    () => {
-      if (
-        props.lockedProvider !== null ||
-        activeInstanceHasSelectableUnavailableModel ||
-        activeInstanceNeedsSetup
-      ) {
-        return props.activeInstanceId;
-      }
-      const hasPickableFavorite = favorites.some((favorite) => {
-        const entry = instanceEntries.find((entry) => entry.instanceId === favorite.provider);
-        return (
-          entry !== undefined &&
-          (modelOptionsByInstance.get(favorite.provider) ?? []).some(
-            (option) =>
-              option.slug === favorite.model &&
-              shouldIncludeModelPickerOption({
-                entry,
-                option,
-                activeInstanceId: props.activeInstanceId,
-                activeModel: activeModelSlug,
-              }),
-          )
-        );
-      });
-      return hasPickableFavorite ? "favorites" : props.activeInstanceId;
-    },
-  );
+  const [requestedInstanceId, setSelectedInstanceId] = useState<ModelPickerTab>(() => {
+    if (
+      props.lockedProvider !== null ||
+      activeInstanceHasSelectableUnavailableModel ||
+      activeInstanceNeedsSetup
+    ) {
+      return props.activeInstanceId;
+    }
+    const hasPickableFavorite = favorites.some((favorite) => {
+      const entry = instanceEntries.find((entry) => entry.instanceId === favorite.provider);
+      return (
+        entry !== undefined &&
+        (modelOptionsByInstance.get(favorite.provider) ?? []).some(
+          (option) =>
+            option.slug === favorite.model &&
+            shouldIncludeModelPickerOption({
+              entry,
+              option,
+              activeInstanceId: props.activeInstanceId,
+              activeModel: activeModelSlug,
+            }),
+        )
+      );
+    });
+    return hasPickableFavorite ? "favorites" : "all";
+  });
+  // Which agent runs a gateway's models, by source key.
+  const [gatewayAgentBySource, setGatewayAgentBySource] = useState<
+    Readonly<Record<string, ProviderInstanceId>>
+  >({});
   const selectedInstanceId =
     requestedInstanceId === "favorites" ||
+    requestedInstanceId === "all" ||
     instanceEntries.some((entry) => entry.instanceId === requestedInstanceId)
       ? requestedInstanceId
       : (instanceEntries.find(isProviderInstancePickerReady)?.instanceId ??
@@ -474,7 +480,10 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
   const { scanning: workspaceModelsScanning } = useProviderWorkspaceSnapshotRefresh({
     environmentId: props.environmentId,
     gitCwd: props.workspaceCwd ?? null,
-    instanceId: selectedInstanceId === "favorites" ? undefined : selectedInstanceId,
+    instanceId:
+      selectedInstanceId === "favorites" || selectedInstanceId === "all"
+        ? undefined
+        : selectedInstanceId,
   });
   const favoritesSet = new Set(favorites.map((fav) => providerModelKey(fav.provider, fav.model)));
   const [expandedLegacyInstances, setExpandedLegacyInstances] = useState(
@@ -504,7 +513,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
     searchInputRef.current?.focus({ preventScroll: true });
   };
 
-  const handleSelectInstance = (instanceId: ProviderInstanceId | "favorites") => {
+  const handleSelectInstance = (instanceId: ModelPickerTab) => {
     setSelectedInstanceId(instanceId);
     // Focusing the search on touch raises the on-screen keyboard on every provider tap.
     if (window.matchMedia("(pointer: coarse)").matches) return;
@@ -649,8 +658,8 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
   const isSearching = searchQuery.trim().length > 0;
   // Fit the tallest tab so switching tabs never resizes the popup and moves the rail under the cursor.
   const tallestTabUnits = (() => {
-    const unitsByTab = new Map<ProviderInstanceId | "favorites", number>();
-    const addRow = (tab: ProviderInstanceId | "favorites") => {
+    const unitsByTab = new Map<ModelPickerTab, number>();
+    const addRow = (tab: ModelPickerTab) => {
       const previous = unitsByTab.get(tab);
       unitsByTab.set(
         tab,
@@ -666,6 +675,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
         tabsWithLegacyRow.add(model.instanceId);
       } else {
         addRow(model.instanceId);
+        addRow("all");
       }
     }
     for (const instanceId of tabsWithLegacyRow) addRow(instanceId);
@@ -705,14 +715,84 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
     return [...available, ...disabled];
   })();
   const showSidebar = !isSearching && sidebarInstanceEntries.length > 0;
+  // Where models come from: each sign-in, and each gateway once however many agents run it.
+  const sources = (() => {
+    const byKey = new Map<
+      string,
+      { key: string; title: string; members: ProviderInstanceEntry[] }
+    >();
+    for (const entry of sidebarInstanceEntries) {
+      if (!matchesLockedProvider(entry)) continue;
+      if (!isProviderInstancePickerReady(entry) && entry.instanceId !== props.activeInstanceId) {
+        continue;
+      }
+      const gatewayId = customGatewayIdOfInstance(entry.instanceId);
+      const key = modelPickerSourceKey(gatewayId === null ? entry.instanceId : `gw:${gatewayId}`);
+      const existing = byKey.get(key);
+      if (existing) {
+        existing.members.push(entry);
+        continue;
+      }
+      const [, ...gatewayName] = entry.displayName.split(" · ");
+      byKey.set(key, {
+        key,
+        title:
+          gatewayId !== null && gatewayName.length > 0
+            ? gatewayName.join(" · ")
+            : entry.displayName,
+        members: [entry],
+      });
+    }
+    return [...byKey.values()].map((source) => ({
+      ...source,
+      shownInstanceId: (
+        source.members.find((member) => member.instanceId === gatewayAgentBySource[source.key]) ??
+        source.members.find((member) => member.instanceId === props.activeInstanceId) ??
+        source.members[0]!
+      ).instanceId,
+    }));
+  })();
+  const sourceInstanceIds = new Set(sources.map((source) => source.shownInstanceId));
+  const otherAgentInstanceIds = new Set(
+    sources.flatMap((source) =>
+      source.members
+        .filter((member) => member.instanceId !== source.shownInstanceId)
+        .map((member) => member.instanceId),
+    ),
+  );
+  const chooseGatewayAgent = (sourceKey: string, instanceId: ProviderInstanceId) => {
+    setGatewayAgentBySource((current) => ({ ...current, [sourceKey]: instanceId }));
+    const source = sources.find((candidate) => candidate.key === sourceKey);
+    if (
+      activeModelSlug &&
+      instanceId !== props.activeInstanceId &&
+      source?.members.some((member) => member.instanceId === props.activeInstanceId)
+    ) {
+      handleModelSelect(activeModelSlug, instanceId);
+    }
+  };
+  /** A gateway's heading row, picked: its models move to the next agent that can run them. */
+  const cycleGatewayAgent = (sourceKey: string): boolean => {
+    const source = sources.find((candidate) => candidate.key === sourceKey);
+    if (!source) return false;
+    const index = source.members.findIndex(
+      (member) => member.instanceId === source.shownInstanceId,
+    );
+    const next = source.members[(index + 1) % source.members.length];
+    if (next && next.instanceId !== source.shownInstanceId) {
+      chooseGatewayAgent(sourceKey, next.instanceId);
+    }
+    return true;
+  };
   const instanceOrder = instanceEntries.map((entry) => entry.instanceId);
 
   const filteredModels = (() => {
     let result = flatModels;
 
     if (searchQuery.trim()) {
-      const candidates =
-        lockedProvider !== null ? result.filter((m) => matchesLockedProvider(m)) : result;
+      const candidates = result.filter(
+        (m) => matchesLockedProvider(m) && !otherAgentInstanceIds.has(m.instanceId),
+      );
       return rankModelPickerSearch(candidates, searchQuery, (model) => ({
         name: model.name,
         ...(model.shortName ? { shortName: model.shortName } : {}),
@@ -723,6 +803,9 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
       }));
     }
 
+    if (selectedInstanceId === "all") {
+      return result.filter((m) => sourceInstanceIds.has(m.instanceId));
+    }
     if (lockedProvider !== null) {
       result = result.filter((m) => matchesLockedProvider(m));
       if (selectedInstanceId === "favorites") {
@@ -743,79 +826,89 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
     });
   })();
 
-  const legacySection = (() => {
+  type SubProviderSection = {
+    key: string;
+    name: string;
+    unavailableReason: string | undefined;
+    models: ReadonlyArray<ModelPickerItem>;
+    isExpanded: boolean;
+  };
+  // The rows shown: a tab lists one agent; "all" lists every source under its name.
+  const layout = (() => {
+    const keys: string[] = [];
+    const models: ModelPickerItem[] = [];
+    const legacyExpandedByKey = new Map<string, boolean>();
+    const subProviderSectionByKey = new Map<string, SubProviderSection>();
+    const sourceByKey = new Map<string, (typeof sources)[number]>();
+    const keyOf = (model: ModelPickerItem) => modelPickerModelKey(model.instanceId, model.slug);
+    const addModels = (shown: ReadonlyArray<ModelPickerItem>) => {
+      keys.push(...shown.map(keyOf));
+      models.push(...shown);
+    };
+    // A provider whose models run on several backends, such as fx, lists each
+    // backend as a collapsible heading.
+    const addInstance = (instanceId: ProviderInstanceId, items: ReadonlyArray<ModelPickerItem>) => {
+      const subProviders = subProvidersByInstance.get(instanceId);
+      if (subProviders) {
+        const { ungrouped, groups } = groupModelsBySubProvider(
+          items,
+          subProviders,
+          (model) => model.subProvider,
+        );
+        addModels(ungrouped);
+        for (const { subProvider, models: sectionModels } of groups) {
+          const key = modelPickerSubProviderSectionKey(instanceId, subProvider.name);
+          const isExpanded = expandedSubProviderKeys.has(key);
+          subProviderSectionByKey.set(key, {
+            key,
+            name: subProvider.name,
+            unavailableReason: subProvider.unavailableReason,
+            models: sectionModels,
+            isExpanded,
+          });
+          keys.push(key);
+          if (isExpanded) addModels(sectionModels);
+        }
+        return;
+      }
+      const isLegacy = (model: ModelPickerItem) =>
+        model.isLegacy === true &&
+        !favoritesSet.has(providerModelKey(model.instanceId, model.slug));
+      const legacyModels = items.filter(isLegacy);
+      const isExpanded = expandedLegacyInstances.has(instanceId);
+      addModels(isExpanded ? items : items.filter((model) => !isLegacy(model)));
+      // The toggle trails the list, so expanding it reveals older models above it.
+      if (legacyModels.length > 0) {
+        const key = modelPickerLegacySectionKey(instanceId);
+        legacyExpandedByKey.set(key, isExpanded);
+        keys.push(key);
+      }
+    };
     if (isSearching || selectedInstanceId === "favorites") {
-      return null;
+      addModels(filteredModels);
+    } else if (selectedInstanceId === "all") {
+      for (const source of sources) {
+        const items = sortProviderModelItems(
+          filteredModels.filter((model) => model.instanceId === source.shownInstanceId),
+          { favoriteModelKeys: favoritesSet, groupFavorites: true },
+        );
+        if (items.length === 0) continue;
+        sourceByKey.set(source.key, source);
+        keys.push(source.key);
+        addInstance(source.shownInstanceId, items);
+      }
+    } else {
+      addInstance(selectedInstanceId, filteredModels);
     }
-    const currentModels: ModelPickerItem[] = [];
-    const legacyModels: ModelPickerItem[] = [];
-    for (const model of filteredModels) {
-      const isLegacy =
-        model.isLegacy && !favoritesSet.has(providerModelKey(model.instanceId, model.slug));
-      (isLegacy ? legacyModels : currentModels).push(model);
-    }
-    if (legacyModels.length === 0) {
-      return null;
-    }
-    return {
-      key: modelPickerLegacySectionKey(selectedInstanceId),
-      currentModels,
-      legacyModels,
-      isExpanded: expandedLegacyInstances.has(selectedInstanceId),
-    };
+    return { keys, models, legacyExpandedByKey, subProviderSectionByKey, sourceByKey };
   })();
-
-  // A provider whose models run on several backends, such as fx, lists each
-  // backend as a collapsible heading. Search and Favorites stay flat.
-  const subProviderSections = (() => {
-    const subProviders =
-      isSearching || selectedInstanceId === "favorites"
-        ? undefined
-        : subProvidersByInstance.get(selectedInstanceId);
-    if (!subProviders || selectedInstanceId === "favorites") return null;
-    const { ungrouped, groups } = groupModelsBySubProvider(
-      filteredModels,
-      subProviders,
-      (model) => model.subProvider,
-    );
-    return {
-      ungrouped,
-      sections: groups.map(({ subProvider, models }) => {
-        const key = modelPickerSubProviderSectionKey(selectedInstanceId, subProvider.name);
-        return {
-          key,
-          name: subProvider.name,
-          unavailableReason: subProvider.unavailableReason,
-          models,
-          isExpanded: expandedSubProviderKeys.has(key),
-        };
-      }),
-    };
-  })();
-  const subProviderSectionByKey = new Map(
-    subProviderSections?.sections.map((section) => [section.key, section] as const),
-  );
-
-  const visibleModels = (() => {
-    if (subProviderSections) {
-      return [
-        ...subProviderSections.ungrouped,
-        ...subProviderSections.sections.flatMap((section) =>
-          section.isExpanded ? section.models : [],
-        ),
-      ];
-    }
-    if (!legacySection) {
-      return filteredModels;
-    }
-    return [
-      ...legacySection.currentModels,
-      ...(legacySection.isExpanded ? legacySection.legacyModels : []),
-    ];
-  })();
+  const visibleModels = layout.models;
+  const subProviderSectionByKey = layout.subProviderSectionByKey;
 
   const selectedEntry =
-    selectedInstanceId === "favorites" ? undefined : entryByInstanceId.get(selectedInstanceId);
+    selectedInstanceId === "favorites" || selectedInstanceId === "all"
+      ? undefined
+      : entryByInstanceId.get(selectedInstanceId);
   const providerSetupEntries =
     !isSearching && canOpenProviderSetup
       ? instanceEntries.filter(
@@ -829,9 +922,10 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
       : [];
 
   const updateRequiredNotices = instanceEntries.flatMap((entry) => {
-    const shown = isSearching
-      ? matchesLockedProvider(entry)
-      : entry.instanceId === selectedEntry?.instanceId;
+    const shown =
+      isSearching || selectedInstanceId === "all"
+        ? matchesLockedProvider(entry)
+        : entry.instanceId === selectedEntry?.instanceId;
     const notice = shown
       ? formatProviderUpdateRequiredNotice(entry.snapshot, searchQuery, messages, locale)
       : null;
@@ -854,22 +948,9 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
         modelPickerSubProviderSectionKey(instanceId, subProvider.name),
       ),
     ),
+    ...sources.map((source) => source.key),
   ])();
-  const filteredItemKeys = ((): string[] => {
-    const keyOf = (model: ModelPickerItem) => modelPickerModelKey(model.instanceId, model.slug);
-    if (subProviderSections) {
-      return [
-        ...subProviderSections.ungrouped.map(keyOf),
-        ...subProviderSections.sections.flatMap((section) => [
-          section.key,
-          ...(section.isExpanded ? section.models.map(keyOf) : []),
-        ]),
-      ];
-    }
-    const modelKeys = visibleModels.map(keyOf);
-    // The toggle trails the list, so expanding it reveals older models above it.
-    return legacySection ? [...modelKeys, legacySection.key] : modelKeys;
-  })();
+  const filteredItemKeys = layout.keys;
   const filteredModelByKey = ((): ReadonlyMap<string, ModelPickerItem> =>
     new Map(
       visibleModels.map(
@@ -888,6 +969,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
       .map((entry) => entry.instanceId),
   );
   const modelListExtraData = {
+    layout,
     badgedInstanceIds,
     favoritesSet,
     modelJumpLabelByKey,
@@ -923,7 +1005,11 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
       setSearchQuery("");
       handleSelectInstance(next);
       announce(
-        next === "favorites" ? gt("Favorites") : (entryByInstanceId.get(next)?.displayName ?? next),
+        next === "favorites"
+          ? gt("Favorites")
+          : next === "all"
+            ? gt("All models")
+            : (entryByInstanceId.get(next)?.displayName ?? next),
         "model-picker",
       );
       return;
@@ -979,6 +1065,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
             onFocusSearch={focusSearchInput}
             instanceEntries={sidebarInstanceEntries}
             showFavorites
+            showAll
             {...(selectableUnavailableInstanceIds ? { selectableUnavailableInstanceIds } : {})}
             {...(lockedDisabledInstanceIds
               ? {
@@ -1029,6 +1116,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
               toggleSubProviderSection(modelKey);
               return;
             }
+            if (cycleGatewayAgent(modelKey)) return;
             const model = parseModelPickerModelKey(modelKey);
             if (model) {
               handleModelSelect(
@@ -1125,6 +1213,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
                     toggleSubProviderSection(highlightedModelKeyRef.current);
                     return;
                   }
+                  if (cycleGatewayAgent(highlightedModelKeyRef.current)) return;
                   const model = parseModelPickerModelKey(highlightedModelKeyRef.current);
                   if (model) {
                     handleModelSelect(model.slug, model.instanceId, e.shiftKey);
@@ -1142,17 +1231,63 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
               itemKeys={filteredItemKeys}
               extraData={modelListExtraData}
               renderItem={({ item: modelKey, index }) => {
-                if (legacySection?.key === modelKey) {
+                const source = layout.sourceByKey.get(modelKey);
+                if (source) {
                   return (
                     <ComboboxItem
                       hideIndicator
                       index={index}
                       value={modelKey}
-                      aria-expanded={legacySection.isExpanded}
+                      disabled={source.members.length < 2}
+                      className="mt-1 w-full"
+                    >
+                      <div
+                        className="flex min-w-0 flex-1 items-center gap-2"
+                        data-model-picker-source={source.title}
+                      >
+                        <span className="min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground">
+                          {source.title}
+                        </span>
+                        {source.members.length > 1 ? (
+                          <span
+                            role="group"
+                            aria-label={gt("Agent that runs {source}", { source: source.title })}
+                            className="flex shrink-0 items-center gap-0.5 rounded-md bg-muted p-0.5"
+                          >
+                            {source.members.map((member) => (
+                              <button
+                                key={member.instanceId}
+                                type="button"
+                                aria-pressed={member.instanceId === source.shownInstanceId}
+                                data-model-picker-source-agent={member.instanceId}
+                                className="cursor-pointer rounded-sm px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground aria-pressed:bg-background aria-pressed:text-foreground"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  chooseGatewayAgent(source.key, member.instanceId);
+                                }}
+                              >
+                                {member.displayName.split(" · ")[0]}
+                              </button>
+                            ))}
+                          </span>
+                        ) : null}
+                      </div>
+                    </ComboboxItem>
+                  );
+                }
+                const legacyExpanded = layout.legacyExpandedByKey.get(modelKey);
+                if (legacyExpanded !== undefined) {
+                  return (
+                    <ComboboxItem
+                      hideIndicator
+                      index={index}
+                      value={modelKey}
+                      aria-expanded={legacyExpanded}
                       className="group w-full cursor-pointer"
                     >
                       <span className="text-sm leading-snug text-muted-foreground group-hover:text-foreground group-data-highlighted:text-foreground">
-                        {legacySection.isExpanded
+                        {legacyExpanded
                           ? gt("Show less", { $context: "collapses the list of older models" })
                           : gt("Show more", { $context: "expands the list of older models" })}
                       </span>
