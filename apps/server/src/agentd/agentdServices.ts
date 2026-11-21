@@ -51,6 +51,21 @@ export function serviceAgentd(
   return ours && !inMount(installed.path) ? installed.path : null;
 }
 
+// agentd connects no client to an agentd whose path has a space or a quote.
+const UNCONNECTABLE = /[\s"']/;
+
+/**
+ * The agentd `init` runs as, which is the one it connects clients to. The bundled one, unless its
+ * path is one agentd refuses (macOS: `/Applications/AgentD Next.app/...`); then the copy the app
+ * installed for the terminal, the same agentd.
+ */
+export function setupAgentd(bundled: string, installed: AgentdInstallRecord | null): string {
+  if (!UNCONNECTABLE.test(bundled)) return bundled;
+  const ours =
+    installed !== null && ["installed", "replaced", "unchanged"].includes(installed.action);
+  return ours && !UNCONNECTABLE.test(installed.path) ? installed.path : bundled;
+}
+
 function unescapeXml(text: string): string {
   return text
     .replace(/&quot;/g, '"')
