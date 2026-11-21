@@ -457,6 +457,7 @@ function StartTaskDialog({
               </TaskField>
               <StartTaskCloud
                 cloud={cloud}
+                goal={filled.goal}
                 disabled={starting || drafting || offeredId !== null || !canStart}
               />
               {!cloud.enabled && !cloud.waiting ? (

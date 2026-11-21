@@ -389,6 +389,28 @@ it("starts a cloud task with a dollar cap and a provider key path, without the l
   });
 });
 
+it("warns that a cloud task cannot open an issue or a pull request, and offers this computer", async () => {
+  setup("main");
+  state.cloud = {
+    supported: true,
+    project: "fork-owner/export",
+    balanceUsd: 20,
+    balanceText: null,
+    defaultBudget: null,
+    problem: null,
+  };
+  await using _screen = await renderDialog();
+  const option = page.getByRole("checkbox", { name: "Run in the cloud" });
+  const here = page.getByRole("button", { name: "Run on this computer" });
+  await option.click();
+  await userEvent.fill(page.getByLabelText("Goal"), "Fix export");
+  await expect.element(page.getByText("Available LibraOS credit: $20.00")).toBeVisible();
+  await expect.element(here).not.toBeInTheDocument();
+  await userEvent.fill(page.getByLabelText("Goal"), "Reply to the review on PR #12");
+  await here.click();
+  await expect.element(option).not.toBeChecked();
+});
+
 it("fills where and with what budget a task runs from Settings → Workers", async () => {
   setup("feature/export", true, { agentdDefaultBudget: "45m,$3" });
   {

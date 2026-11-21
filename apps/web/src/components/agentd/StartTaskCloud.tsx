@@ -25,6 +25,7 @@ import {
 import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import { useEnvironment, usePrimaryEnvironmentId } from "~/state/environments";
 import { CommandBlock } from "../CommandBlock";
+import { Alert, AlertAction, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
@@ -39,6 +40,7 @@ import {
   cloudPlanProblem,
   defaultCloudPlan,
   defaultModelAccess,
+  goalAsksBeyondCloudReach,
   keyFileProblem,
   type KeyFileProblem,
   looksLikeKey,
@@ -222,9 +224,11 @@ export function useStartTaskCloud(
 export function StartTaskCloud({
   cloud,
   disabled,
+  goal,
 }: {
   readonly cloud: ReturnType<typeof useStartTaskCloud>;
   readonly disabled: boolean;
+  readonly goal: string;
 }) {
   const gt = useGT();
   const locale = useLocale();
@@ -314,6 +318,32 @@ export function StartTaskCloud({
               Cloud repository: <Var>{setup.project}</Var>
             </T>
           </p>
+          <p className="text-xs text-muted-foreground">
+            <T>
+              A cloud task delivers a branch in this repository, which you open with Review changes.
+              It cannot open or comment on issues or pull requests, or reach other repositories.
+            </T>
+          </p>
+          {goalAsksBeyondCloudReach(goal) ? (
+            <Alert variant="warning">
+              <AlertDescription>
+                <T>
+                  This goal asks for an issue, a pull request or a comment. A cloud task cannot do
+                  that and would fail after using its budget.
+                </T>
+              </AlertDescription>
+              <AlertAction>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  disabled={disabled}
+                  onClick={() => cloud.setRequested(false)}
+                >
+                  <T>Run on this computer</T>
+                </Button>
+              </AlertAction>
+            </Alert>
+          ) : null}
           {cloud.checkingBalance ? (
             <p role="status" className="text-xs text-muted-foreground">
               <T>Checking LibraOS credit…</T>

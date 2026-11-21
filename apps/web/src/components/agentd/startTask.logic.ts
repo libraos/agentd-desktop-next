@@ -284,6 +284,24 @@ export function modelAccessChoices(subscription: AgentdCloudSubscription | null 
 }
 
 /** A key typed or pasted where its file's path belongs. */
+const GITHUB_THING = String.raw`(?:issues?|pull requests?|prs?|reviews?|review comments?|discussions?)`;
+const GITHUB_ASK = new RegExp(
+  [
+    String.raw`\b(?:open|create|file|raise|submit|comment on|reply to|respond to|answer|close|label|merge|approve)\b[^.\n]{0,60}\b${GITHUB_THING}\b`,
+    String.raw`\b(?:push|publish|commit)\b[^.\n]{0,40}\b(?:another|a different|other) repo`,
+    "(?:开|提|创建|新建|回复|评论|关闭|合并)[^。\\n]{0,20}(?:issue|pr|pull request|议题|评审)",
+  ].join("|"),
+  "i",
+);
+
+/**
+ * Whether a goal asks for something a cloud task cannot deliver: its token only pushes a branch
+ * to the task's repository, so issues, pull requests, comments and other repositories are out.
+ */
+export function goalAsksBeyondCloudReach(goal: string): boolean {
+  return GITHUB_ASK.test(goal);
+}
+
 export function looksLikeKey(value: string): boolean {
   const text = value.trim();
   return text.startsWith("sk-") || (text.length > 30 && !/[/\\]/.test(text));
