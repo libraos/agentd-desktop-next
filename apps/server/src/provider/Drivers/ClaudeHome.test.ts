@@ -31,6 +31,21 @@ it.layer(NodeServices.layer)("ClaudeHome", (it) => {
       }),
     );
 
+    it.effect("keeps a gateway's Claude apart from the login on the same home", () =>
+      Effect.gen(function* () {
+        const home = { CLAUDE_CONFIG_DIR: "/tmp/claude-shared" };
+        expect(yield* makeClaudeContinuationGroupKey({ homePath: "" }, home)).toBe(
+          "claude:home:/tmp/claude-shared",
+        );
+        expect(
+          yield* makeClaudeContinuationGroupKey(
+            { homePath: "" },
+            { ...home, ANTHROPIC_BASE_URL: "https://gw.example.com" },
+          ),
+        ).toBe("claude:home:/tmp/claude-shared:endpoint:https://gw.example.com");
+      }),
+    );
+
     it.effect("uses inherited CLAUDE_CONFIG_DIR when homePath is empty", () =>
       Effect.gen(function* () {
         const path = yield* Path.Path;

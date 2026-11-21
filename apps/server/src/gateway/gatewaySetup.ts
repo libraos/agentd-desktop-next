@@ -44,9 +44,15 @@ export function readGatewayKey(raw: string): { key: string } | { problem: string
 
 const ModelList = Schema.Struct({
   data: Schema.Array(
-    Schema.Struct({ id: Schema.String, name: Schema.optional(Schema.NullOr(Schema.String)) }),
+    Schema.Struct({
+      id: Schema.String,
+      name: Schema.optional(Schema.NullOr(Schema.String)),
+      type: Schema.optional(Schema.NullOr(Schema.String)),
+    }),
   ),
 });
+// Models a gateway marks as making media or vectors; an agent cannot chat with them.
+const NOT_CHAT_TYPES = new Set(["video", "audio", "image", "embedding", "embeddings", "rerank"]);
 const ErrorBody = Schema.Struct({ error: Schema.Struct({ message: Schema.String }) });
 const decodeModelList = Schema.decodeUnknownOption(ModelList);
 const decodeErrorBody = Schema.decodeUnknownOption(ErrorBody);
@@ -55,7 +61,7 @@ export function parseGatewayModels(body: unknown): ReadonlyArray<LibraosGatewayM
   const list = decodeModelList(body);
   if (Option.isNone(list)) return null;
   return list.value.data
-    .filter((model) => model.id.trim() !== "")
+    .filter((model) => model.id.trim() !== "" && !NOT_CHAT_TYPES.has(model.type ?? ""))
     .map((model) => (model.name ? { id: model.id, name: model.name } : { id: model.id }));
 }
 

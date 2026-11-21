@@ -149,7 +149,11 @@ export const makeClaudeContinuationGroupKey = Effect.fn("makeClaudeContinuationG
     environment?: NodeJS.ProcessEnv,
   ): Effect.fn.Return<string, never, Path.Path> {
     const resolvedHomePath = yield* resolveClaudeHomePath(config, environment);
-    return `claude:home:${resolvedHomePath}`;
+    // Another endpoint (a gateway) is its own group: its threads never resume on the login.
+    const endpoint = environment?.ANTHROPIC_BASE_URL?.trim();
+    return endpoint
+      ? `claude:home:${resolvedHomePath}:endpoint:${endpoint}`
+      : `claude:home:${resolvedHomePath}`;
   },
 );
 
