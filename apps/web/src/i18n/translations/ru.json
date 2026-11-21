@@ -3592,6 +3592,9 @@
       "v": "v"
     }
   ],
+  "264ff5bcdde342a4": "Облачная задача создаёт ветку в этом репозитории, которую можно открыть через «Проверить изменения». Она не может создавать или комментировать issues и pull requests и не имеет доступа к другим репозиториям.",
+  "84e6b0dc280d7798": "Эта цель требует issue, pull request или комментария. Облачная задача этого не может и завершится ошибкой, израсходовав бюджет.",
+  "94e2336d0fb6d452": "Запустить на этом компьютере",
   "8b21ccdccad92c0a": "Checking LibraOS credit…",
   "eb6e2b6aae32f93b": "Cloud Workers aren’t set up. Check the cloud configuration and account key file.",
   "d016144cc5a6dbad": "The repository owner must install the Cloud Workers GitHub App on this repository.",
