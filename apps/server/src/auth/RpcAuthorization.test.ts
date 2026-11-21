@@ -83,6 +83,8 @@ describe("RPC authorization scopes", () => {
 
   it("keeps Cloud Workers key file checks behind the filesystem read and host permissions", () => {
     expect(requiredScopeForRpcMethod(WS_METHODS.agentdCloudKeyFile)).toBe(AuthFilesystemReadScope);
+    // A backup is the whole ledger, encrypted to a key the caller chooses.
+    expect(requiredScopeForRpcMethod(WS_METHODS.agentdBackupCreate)).toBe(AuthFilesystemReadScope);
     // Workspace write grants don't reach host files outside the workspaces.
     expect(requiredScopeForRpcMethod(WS_METHODS.agentdCloudKeyFileFix)).toBe(
       AuthEnvironmentMaintainScope,
@@ -570,6 +572,7 @@ it.effect("separates host file URLs from readable attachment URLs", () =>
       { _tag: "media-file", threadId: ThreadId.make("thread"), path: "/repo/image.png" },
       { _tag: "draft-workspace-file", cwd: "/repo", path: "file.txt" },
       { _tag: "native-app-icon", app: { _tag: "app-path", path: "/private/Secret.app" } },
+      { _tag: "agentd-backup", fileName: "agentd-backup-20261121T101500Z-0a1b2c3d.age" },
     ] as const) {
       expect(
         yield* client[WS_METHODS.assetsCreateUrl]({ resource }).pipe(Effect.flip),

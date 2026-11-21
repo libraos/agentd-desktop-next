@@ -380,6 +380,8 @@ import {
 } from "./resourceTelemetry.ts";
 import {
   AgentdApproval,
+  AgentdBackupCreated,
+  AgentdBackupCreateInput,
   AgentdCommandOutput,
   AgentdConnectAgentInput,
   AgentdError,
@@ -744,6 +746,7 @@ export const WS_METHODS = {
   agentdPeople: "agentd.people",
   agentdConnectAgent: "agentd.connectAgent",
   agentdJoinTeam: "agentd.joinTeam",
+  agentdBackupCreate: "agentd.backupCreate",
   agentdCloudSetup: "agentd.cloudSetup",
   agentdCloudReview: "agentd.cloudReview",
   agentdCloudConfigure: "agentd.cloudConfigure",
@@ -2427,6 +2430,12 @@ const WsAgentdJoinTeamRpc = Rpc.make(WS_METHODS.agentdJoinTeam, {
   error: AgentdRpcError,
 });
 
+const WsAgentdBackupCreateRpc = Rpc.make(WS_METHODS.agentdBackupCreate, {
+  payload: AgentdBackupCreateInput,
+  success: AgentdBackupCreated,
+  error: AgentdRpcError,
+});
+
 const WsAgentdCloudSetupRpc = Rpc.make(WS_METHODS.agentdCloudSetup, {
   payload: AgentdCloudSetupInput,
   success: AgentdCloudSetup,
@@ -2833,6 +2842,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsAgentdPeopleRpc,
   WsAgentdConnectAgentRpc,
   WsAgentdJoinTeamRpc,
+  WsAgentdBackupCreateRpc,
   WsAgentdCloudSetupRpc,
   WsAgentdCloudReviewRpc,
   WsAgentdCloudConfigureRpc,

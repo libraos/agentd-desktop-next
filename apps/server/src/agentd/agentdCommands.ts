@@ -44,6 +44,22 @@ function text(name: string, value: string): string {
 
 const CLOUD_SESSION = "agentd-new";
 
+const AGE_RECIPIENT = /^age1[02-9ac-hj-np-z]{58}$/;
+
+function backupRecipient(value: string): string {
+  if (!AGE_RECIPIENT.test(value)) {
+    throw new AgentdArgumentError({ message: "not an age public key (age1...)" });
+  }
+  return value;
+}
+
+function absolute(value: string): string {
+  if (!/^(\/|[A-Za-z]:[\\/]|\\\\)/.test(value) || value.includes("\0")) {
+    throw new AgentdArgumentError({ message: "not an absolute path" });
+  }
+  return value;
+}
+
 /** An agentd server's address: http(s) with a host, normalized so agentd cannot read it as a flag. */
 function agentdServerUrl(value: string): string {
   let url: URL;
@@ -174,6 +190,16 @@ export const agentdArgs = {
     agentdServerUrl(server),
     "--ticket-file",
     "-",
+  ],
+  // The public key only: the private key never leaves the device that asked.
+  backupCreate: (output: string, recipient: string) => [
+    "backup",
+    "create",
+    "-o",
+    absolute(output),
+    "--recipient",
+    backupRecipient(recipient),
+    "--json",
   ],
   cloudHelp: () => ["handoff", "offer", "--help"],
   cloudBalance: () => ["cloud", "balance", "--json"],

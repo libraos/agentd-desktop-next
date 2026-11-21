@@ -186,5 +186,11 @@ export function createAgentdEnvironmentAtoms<R, E>(
       tag: WS_METHODS.agentdSetupStart,
       scheduler,
     }),
+    // A backup of this computer's agentd memory, encrypted to the asking device's public key.
+    backupCreate: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:agentd:backup-create",
+      tag: WS_METHODS.agentdBackupCreate,
+      scheduler,
+    }),
   };
 }

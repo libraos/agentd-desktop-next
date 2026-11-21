@@ -26,6 +26,7 @@ import { HttpClientRequest, HttpClientResponse, HttpServerResponse } from "effec
 import { vi } from "vite-plus/test";
 
 import * as AssetSigner from "./AssetSigner.ts";
+import { agentdBackupsDir } from "../agentd/agentdBackup.ts";
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import * as ServerConfig from "../config.ts";
 import { makeFakeWslHost } from "../testUtils/fakeWsl.ts";
@@ -236,6 +237,43 @@ describe("AssetAccess", () => {
 
       yield* fs.remove(imagePath);
       expect(yield* resolveAsset(token, suffix.slice(separator + 1))).toBeNull();
+    }).pipe(Effect.scoped, Effect.provide(layerTest)),
+  );
+
+  it.effect("serves the newest agentd backup as a download, and nothing else from its folder", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const { stateDir } = yield* ServerConfig.ServerConfig;
+      const dir = agentdBackupsDir(yield* Path.Path, stateDir);
+      yield* fs.makeDirectory(dir, { recursive: true });
+      const fileName = "agentd-backup-20261121T101500Z-0a1b2c3d.age";
+      yield* fs.writeFileString(`${dir}/${fileName}`, "age-encryption.org/v1\n");
+      yield* fs.writeFileString(`${dir}/notes.txt`, "not a backup");
+      const open = (relativeUrl: string) => {
+        const suffix = relativeUrl.slice(`${ASSET_ROUTE_PREFIX}/`.length);
+        const separator = suffix.indexOf("/");
+        return resolveAsset(suffix.slice(0, separator), suffix.slice(separator + 1));
+      };
+      const result = yield* issueAssetUrl({ resource: { _tag: "agentd-backup", fileName } });
+      const asset = yield* open(result.relativeUrl);
+      expect(asset).toMatchObject({ kind: "file", download: true, fileName });
+      if (asset?.kind !== "file") return;
+      const response = yield* assetFileResponse(asset);
+      expect(response.headers["content-type"]).toBe("application/octet-stream");
+
+      // A signed claim naming another file, by a name the contract would refuse, opens nothing.
+      const signer = yield* AssetSigner.AssetSigner;
+      for (const name of ["notes.txt", "../statev2.sqlite", fileName.replace(".age", ".txt")]) {
+        const payload = Buffer.from(
+          JSON.stringify({ version: 1, kind: "agentd-backup", fileName: name, expiresAt: 4e12 }),
+        ).toString("base64url");
+        const token = `${payload}.${yield* signer.sign(payload)}`;
+        expect(yield* resolveAsset(token, encodeURIComponent(name))).toBeNull();
+      }
+
+      // Replaced by a newer backup: the old link no longer opens.
+      yield* fs.remove(`${dir}/${fileName}`);
+      expect(yield* open(result.relativeUrl)).toBeNull();
     }).pipe(Effect.scoped, Effect.provide(layerTest)),
   );
 
