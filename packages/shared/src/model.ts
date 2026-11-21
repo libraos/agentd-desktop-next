@@ -423,7 +423,18 @@ export function normalizeCustomModelSlug(model: string | null | undefined): stri
 export interface CustomModelDefinition {
   readonly slug: string;
   readonly name: string;
+  readonly subProvider?: string;
   readonly capabilities: ModelCapabilities | null;
+}
+
+/**
+ * The catalog slug a family-prefixed entry with no options of its own stands for (`gpt-5.5` for
+ * `openai/gpt-5.5` under `openai`), whose options it then offers.
+ */
+export function familyCatalogSlug(entry: CustomModelDefinition): string | undefined {
+  if (entry.capabilities !== null || !entry.subProvider) return undefined;
+  const prefix = `${entry.subProvider}/`;
+  return entry.slug.startsWith(prefix) ? entry.slug.slice(prefix.length) : undefined;
 }
 
 const decodeCustomModelCapabilities = Schema.decodeUnknownOption(ModelCapabilities);
@@ -437,7 +448,12 @@ export function readCustomModelEntries(value: unknown): CustomModelDefinition[] 
       typeof raw === "string"
         ? { slug: raw }
         : raw !== null && typeof raw === "object"
-          ? (raw as { slug?: unknown; name?: unknown; capabilities?: unknown })
+          ? (raw as {
+              slug?: unknown;
+              name?: unknown;
+              subProvider?: unknown;
+              capabilities?: unknown;
+            })
           : null;
     if (!record) continue;
     const slug = normalizeCustomModelSlug(typeof record.slug === "string" ? record.slug : null);
@@ -449,9 +465,12 @@ export function readCustomModelEntries(value: unknown): CustomModelDefinition[] 
       record.capabilities === undefined || record.capabilities === null
         ? null
         : Option.getOrNull(decodeCustomModelCapabilities(record.capabilities));
+    const subProvider =
+      typeof record.subProvider === "string" ? normalizeCustomModelSlug(record.subProvider) : null;
     entries.push({
       slug,
       name,
+      ...(subProvider ? { subProvider } : {}),
       capabilities: capabilities
         ? createModelCapabilities({ optionDescriptors: capabilities.optionDescriptors ?? [] })
         : null,

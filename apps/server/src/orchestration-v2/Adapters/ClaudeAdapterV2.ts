@@ -13420,9 +13420,26 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
               pdfBudgets.get(nativeThreadId)!,
               persistAttachmentBudget(nativeThreadId),
             );
+            // The query compiles with the routed catalog (a Gateway key's full ids), so the prefix must too.
+            const liveQuery = yield* Ref.get(queryContext);
+            const promptCatalog =
+              liveQuery !== null &&
+              liveQuery.nativeThreadId === nativeThreadId &&
+              !liveQuery.stopping
+                ? yield* routedCatalogFor(liveQuery)
+                : yield* routeModelCatalog(
+                    modelCatalog,
+                    turnInput.runtimePolicy.cwd,
+                    yield* readClaudeLaunchArgSettings({
+                      settings: adapterOptions.settings,
+                      cwd: turnInput.runtimePolicy.cwd,
+                      fileSystem,
+                      path,
+                    }),
+                  );
             const promptText = applyClaudePromptEffortPrefix(
               turnInput.message.text,
-              compileClaudeModelSelection(turnInput.modelSelection, modelCatalog).promptEffort,
+              compileClaudeModelSelection(turnInput.modelSelection, promptCatalog).promptEffort,
             );
             const appContext = turnInput.appContext ?? [];
             const delivered = deliveredAppContext.get(nativeThreadId);
@@ -14005,7 +14022,10 @@ export const makeClaudeAdapterV2 = Effect.fn("makeClaudeAdapterV2")(function* (
                 turnInput.message.text,
                 (
                   liveSteerSelection ??
-                  compileClaudeModelSelection(currentTurn.input.modelSelection, modelCatalog)
+                  compileClaudeModelSelection(
+                    currentTurn.input.modelSelection,
+                    yield* routedCatalogFor(existing),
+                  )
                 ).promptEffort,
               ),
               attachments: turnInput.message.attachments,

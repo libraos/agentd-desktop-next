@@ -18,7 +18,7 @@ import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 import * as ChildProcess from "effect/process/ChildProcess";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
-import { readCustomModelEntries } from "@t3tools/shared/model";
+import { familyCatalogSlug, readCustomModelEntries } from "@t3tools/shared/model";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import { createProviderVersionAdvisory } from "./maintenanceResolver.ts";
 import { collectUint8StreamText } from "./collectStreamText.ts";
@@ -243,7 +243,8 @@ export function providerModelsFromSettings(
 }
 
 // The endpoint's own list wins: a catalog entry it serves keeps its name and options, one it does
-// not serve is dropped, and a model the catalog lacks is added as a custom model.
+// not serve is dropped, and a model the catalog lacks is added as a custom model, under the family
+// its entry names, with the options of the catalog model its family-prefixed id names.
 function onlyCustomProviderModels(
   builtInModels: ReadonlyArray<ServerProviderModel>,
   entries: ReturnType<typeof readCustomModelEntries>,
@@ -259,8 +260,12 @@ function onlyCustomProviderModels(
     added.push({
       slug: entry.slug,
       name: entry.name,
+      ...(entry.subProvider ? { subProvider: entry.subProvider } : {}),
       isCustom: true,
-      capabilities: entry.capabilities ?? customModelCapabilities,
+      capabilities:
+        entry.capabilities ??
+        builtInModels.find((model) => model.slug === familyCatalogSlug(entry))?.capabilities ??
+        customModelCapabilities,
     });
   }
   return [...kept, ...added];

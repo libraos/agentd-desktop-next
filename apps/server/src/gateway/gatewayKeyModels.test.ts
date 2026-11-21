@@ -3,12 +3,29 @@ import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 import * as TestClock from "effect/testing/TestClock";
 import * as Option from "effect/Option";
+import { ProviderInstanceId } from "@t3tools/contracts";
 import { HttpClient, HttpClientResponse } from "effect/http";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import { compileClaudeModelSelection } from "../claudeModelOptions.ts";
+import { BUNDLED_CLAUDE_MODEL_CATALOG } from "../provider/ClaudeModelCatalog.ts";
 
-import { askGatewayModels, makeGatewayKeyModels } from "./gatewayKeyModels.ts";
+import {
+  askGatewayModels,
+  makeGatewayKeyModels,
+  rememberServedModels,
+} from "./gatewayKeyModels.ts";
 import { GATEWAY_KEY_SECRET } from "./gatewaySetup.ts";
+
+// Another family's model keeps its Gateway id, sits under its family and has no agent options.
+const otherFamily = (slug: string, name?: string) => ({
+  slug,
+  ...(name ? { name } : {}),
+  subProvider: slug.split("/")[0],
+  capabilities: { optionDescriptors: [] },
+});
+// The agent's own family by its full id: options come from the catalog model it names.
+const ownFullId = (slug: string) => ({ slug, subProvider: slug.split("/")[0] });
 
 const KEY = "lk_codex_key_0123456789";
 const CONNECTED = "lk_connected_key_5555";
@@ -29,7 +46,11 @@ const secretStore = ServerSecretStore.ServerSecretStore.of({
 it.effect("an agent's own Gateway key decides its models", () => {
   const requests: Array<string | undefined> = [];
   let answer: Response = Response.json({
-    data: [{ id: "openai/gpt-6-astra" }, { id: "anthropic/claude-opus-5-5" }],
+    data: [
+      { id: "anthropic/claude-opus-5-5" },
+      { id: "openai/gpt-6-astra" },
+      { id: "gemini/gemini-2.5-pro" },
+    ],
   });
   const http = HttpClient.make((request) =>
     Effect.sync(() => {
@@ -41,7 +62,13 @@ it.effect("an agent's own Gateway key decides its models", () => {
     const keyModels = yield* makeGatewayKeyModels("openai");
     const ask = (endpoint: string) => keyModels({ endpoint, key: KEY });
 
-    assert.deepStrictEqual(yield* ask("https://api.libraos.com"), [{ slug: "gpt-6-astra" }]);
+    const allowed = [
+      { slug: "gpt-6-astra" },
+      ownFullId("openai/gpt-6-astra"),
+      otherFamily("anthropic/claude-opus-5-5"),
+      otherFamily("gemini/gemini-2.5-pro"),
+    ];
+    assert.deepStrictEqual(yield* ask("https://api.libraos.com"), allowed);
     assert.deepStrictEqual(requests, [`Bearer ${KEY}`]);
 
     // Another endpoint is not asked: the key goes only where the agent sends it anyway.
@@ -50,7 +77,7 @@ it.effect("an agent's own Gateway key decides its models", () => {
 
     // An outage keeps what the key allowed, never the agent's whole catalog.
     answer = Response.json({ error: { message: "Upstream unavailable." } }, { status: 503 });
-    assert.deepStrictEqual(yield* ask("https://api.libraos.com"), [{ slug: "gpt-6-astra" }]);
+    assert.deepStrictEqual(yield* ask("https://api.libraos.com"), allowed);
     assert.deepStrictEqual(
       yield* keyModels({ endpoint: "https://api.libraos.com", key: "lk_other_key_9876543210" }),
       [],
@@ -93,6 +120,55 @@ it.effect("an agent's own Gateway key decides its models", () => {
     Effect.provideService(ServerSecretStore.ServerSecretStore, secretStore),
   );
 });
+
+it.effect(
+  "a hand-configured Claude agent runs a key's bare alias id as the picker shows it",
+  () => {
+    let listed = [{ id: "opus" }, { id: "anthropic/claude-opus-5-5" }];
+    const http = HttpClient.make((request) =>
+      Effect.sync(() => HttpClientResponse.fromWeb(request, Response.json({ data: listed }))),
+    );
+    return Effect.gen(function* () {
+      // Its own settings list no models: only the key's answer says `opus` is the Gateway's id.
+      const { keyModels, routed } = yield* rememberServedModels(
+        yield* makeGatewayKeyModels("anthropic"),
+      );
+      const compile = Effect.map(routed(BUNDLED_CLAUDE_MODEL_CATALOG), (catalog) =>
+        compileClaudeModelSelection(
+          { instanceId: ProviderInstanceId.make("claudeAgent"), model: "opus" },
+          catalog,
+        ),
+      );
+      // A turn dispatched before the key's list arrives waits for it, rather than expanding the
+      // alias with Claude's whole catalog.
+      const early = yield* compile.pipe(Effect.forkChild);
+      yield* keyModels({ endpoint: "https://api.libraos.com", key: KEY });
+      const compiled = yield* Fiber.join(early);
+      assert.strictEqual(compiled.apiModelId, "opus");
+      assert.strictEqual(compiled.pinnedAlias, "opus");
+
+      // The key drops the literal `opus`: it stays `opus`, not the Opus 5.5 its alias names.
+      listed = [{ id: "anthropic/claude-opus-5-5" }];
+      yield* keyModels({ endpoint: "https://api.libraos.com", key: KEY });
+      const revoked = yield* compile;
+      assert.strictEqual(revoked.apiModelId, "opus");
+      assert.strictEqual(revoked.pinnedAlias, "opus");
+
+      // Another endpoint serves every model: Claude Code's own alias applies again.
+      yield* keyModels({ endpoint: "https://hub.example.com", key: KEY });
+      assert.strictEqual((yield* compile).pinnedAlias, undefined);
+    }).pipe(Effect.provideService(HttpClient.HttpClient, http));
+  },
+);
+
+it.effect("a Claude agent no check sends to the Gateway routes once its check ends", () =>
+  Effect.gen(function* () {
+    const { settle, routed } = yield* rememberServedModels(() => Effect.undefined);
+    const waiting = yield* routed(BUNDLED_CLAUDE_MODEL_CATALOG).pipe(Effect.forkChild);
+    yield* settle;
+    assert.strictEqual(yield* Fiber.join(waiting), BUNDLED_CLAUDE_MODEL_CATALOG);
+  }),
+);
 
 it.effect("a Gateway that stalls while sending its list times out", () => {
   // Headers arrive, the body never ends.

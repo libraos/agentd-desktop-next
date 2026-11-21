@@ -78,6 +78,7 @@ import {
   formatClaudeVersionUpgradeMessage,
   resolveClaudeModelsForVersion,
   resolveClaudeUpdateRequiredModels,
+  scopeClaudeModelCatalog,
   withUltracodeToggle,
 } from "./ClaudeModelCatalog.ts";
 
@@ -86,16 +87,28 @@ const DEFAULT_CLAUDE_MODEL_CAPABILITIES: ModelCapabilities = createModelCapabili
 });
 
 function claudeProviderModels(
+  modelCatalog: ClaudeModelCatalog,
   builtInModels: ReadonlyArray<ServerProviderModel>,
   settings: Pick<ClaudeSettings, "customModels" | "onlyCustomModels">,
 ): ReadonlyArray<ServerProviderModel> {
+  // A custom model shows the options its turns compile with (a Gateway full id's catalog options).
+  const compiled = new Map(
+    scopeClaudeModelCatalog(modelCatalog, settings.customModels)
+      .models.filter((entry) => entry.model.isCustom)
+      .map((entry) => [entry.model.slug, entry.model.capabilities]),
+  );
   return providerModelsFromSettings(
     builtInModels,
     settings.customModels,
     DEFAULT_CLAUDE_MODEL_CAPABILITIES,
     { onlyCustomModels: settings.onlyCustomModels },
   ).map((model) =>
-    model.isCustom ? { ...model, capabilities: withUltracodeToggle(model.capabilities) } : model,
+    model.isCustom
+      ? {
+          ...model,
+          capabilities: compiled.get(model.slug) ?? withUltracodeToggle(model.capabilities),
+        }
+      : model,
   );
 }
 
@@ -687,6 +700,7 @@ const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(functio
   const resolvedEnvironment = environment ?? process.env;
   const checkedAt = DateTime.formatIso(yield* DateTime.now);
   const allModels = claudeProviderModels(
+    modelCatalog,
     modelCatalog.models.map((entry) => entry.model),
     claudeSettings,
   );
@@ -823,6 +837,7 @@ const probeClaudeProviderStatus = Effect.fn("checkClaudeProviderStatus")(functio
   const models = capClaudeCatalogEffort(
     modelCatalog,
     claudeProviderModels(
+      modelCatalog,
       [
         ...resolveClaudeModelsForVersion(modelCatalog, parsedVersion),
         ...claudeReportedModels(
@@ -962,6 +977,7 @@ export const makePendingClaudeProvider = Effect.fn("ClaudeProvider.makePendingCl
   ): Effect.fn.Return<ServerProviderDraft> {
     const checkedAt = yield* nowIso;
     const models = claudeProviderModels(
+      modelCatalog,
       modelCatalog.models.map((entry) => entry.model),
       claudeSettings,
     );

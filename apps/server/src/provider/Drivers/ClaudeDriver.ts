@@ -1,4 +1,4 @@
-import { makeGatewayKeyModels } from "../../gateway/gatewayKeyModels.ts";
+import { makeGatewayKeyModels, rememberServedModels } from "../../gateway/gatewayKeyModels.ts";
 import { ClaudeSettings, isLibraosGatewayInstanceId, ProviderDriverKind } from "@t3tools/contracts";
 import * as Cache from "effect/Cache";
 import type * as Cause from "effect/Cause";
@@ -173,6 +173,13 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
         ),
       stateDir,
     );
+    const gatewayKeyModels = yield* makeGatewayKeyModels("anthropic").pipe(
+      Effect.provideService(HttpClient.HttpClient, httpClient),
+      Effect.flatMap(rememberServedModels),
+    );
+    // A turn reads the picked id against the key's models, as the snapshot listed them.
+    const routeModelCatalog: typeof modelRoutes.route = (catalog, cwd, launchSettings) =>
+      modelRoutes.route(catalog, cwd, launchSettings).pipe(Effect.flatMap(gatewayKeyModels.routed));
     // Retain reports until the registry subscribes; end its listener on teardown.
     const workspaceRescans = yield* Queue.unbounded<string, Cause.Done>();
     yield* Effect.addFinalizer(() => Queue.end(workspaceRescans));
@@ -190,7 +197,7 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
         onUsageLimits: (update) => snapshot.applyUsageLimits(update),
         onSessionInit: (cwd) => Queue.offer(workspaceRescans, cwd).pipe(Effect.asVoid),
         modelCatalog,
-        routeModelCatalog: modelRoutes.route,
+        routeModelCatalog,
       },
     ).pipe(
       Effect.mapError(
@@ -207,7 +214,7 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
       effectiveConfig,
       processEnv,
       modelCatalog,
-      modelRoutes.route,
+      routeModelCatalog,
     );
 
     // Per-instance capabilities cache: keyed on binary + resolved HOME so
@@ -273,9 +280,6 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
       Effect.map((result) => result.capabilities),
     );
 
-    const gatewayKeyModels = yield* makeGatewayKeyModels("anthropic").pipe(
-      Effect.provideService(HttpClient.HttpClient, httpClient),
-    );
     const checkProvider = catalogService.refreshInBackground.pipe(
       Effect.andThen(
         modelCatalog.pipe(
@@ -294,7 +298,7 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
                   Effect.provideService(Path.Path, path),
                 ),
 
-              gatewayKeyModels,
+              gatewayKeyModels.keyModels,
             ),
           ),
           Effect.tap((provider) =>
@@ -307,6 +311,7 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
       ),
       // Disabled, failed version checks and interruption never reach the probe.
       Effect.ensuring(modelRoutes.settle),
+      Effect.ensuring(gatewayKeyModels.settle),
       Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
       Effect.provideService(FileSystem.FileSystem, fileSystem),
       Effect.provideService(Path.Path, path),
