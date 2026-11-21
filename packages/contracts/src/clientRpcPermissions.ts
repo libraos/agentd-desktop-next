@@ -3,6 +3,7 @@ import { GitPreparePullRequestThreadInput, GitRunStackedActionInput } from "./gi
 import {
   AuthAccessWriteScope,
   AuthEnvironmentMaintainScope,
+  AuthFilesystemReadScope,
   AuthOrchestrationOperateScope,
   AuthOrchestrationReadScope,
   AuthPreviewOperateScope,
@@ -84,6 +85,9 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   // Connecting an agent edits its config on this host; joining a team links the host to a server.
   [WS_METHODS.agentdConnectAgent]: AuthEnvironmentMaintainScope,
   [WS_METHODS.agentdJoinTeam]: AuthEnvironmentMaintainScope,
+  // A backup holds all of agentd's ledger, which filesystem:read can already read, encrypted to
+  // a key the caller names: so only a caller that may read every file may ask for one.
+  [WS_METHODS.agentdBackupCreate]: AuthFilesystemReadScope,
   // Cloud setup writes agentd's account key and [cloud] settings on this host.
   [WS_METHODS.agentdCloudConfigure]: AuthEnvironmentMaintainScope,
   // Making a key file private changes a mode anywhere the server user can, not only in a workspace.

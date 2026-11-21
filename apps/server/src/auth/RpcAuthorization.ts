@@ -329,7 +329,9 @@ const requiredScopesForRpcCall = (
       resource._tag === "workspace-file" ||
       resource._tag === "media-file" ||
       resource._tag === "draft-workspace-file" ||
-      (resource._tag === "native-app-icon" && resource.app._tag === "app-path")
+      (resource._tag === "native-app-icon" && resource.app._tag === "app-path") ||
+      // The ledger, if encrypted: as agentd.backupCreate that made it.
+      resource._tag === "agentd-backup"
         ? AuthFilesystemReadScope
         : AuthOrchestrationReadScope,
     ];

@@ -13,6 +13,8 @@ import {
   AgentdWhoJson,
   AgentdWorkerTool,
   type AgentdApproval,
+  type AgentdBackupCreated,
+  type AgentdBackupCreateInput,
   type AgentdCloudSetup,
   type AgentdCloudReview,
   type AgentdCloudReviewInput,
@@ -59,6 +61,7 @@ import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import * as Scope from "effect/Scope";
+import * as Semaphore from "effect/Semaphore";
 import * as Stream from "effect/Stream";
 
 import * as BackgroundPolicy from "../background/BackgroundPolicy.ts";
@@ -67,6 +70,7 @@ import { makeAgentdCloud } from "./agentdCloud.ts";
 import { makeCloudReview } from "./agentdCloudReview.ts";
 import { AgentdArgumentError, agentdArgs, agentdTicket } from "./agentdCommands.ts";
 import * as AgentdJson from "./agentdJson.ts";
+import { AGENTD_BACKUP_FILE, agentdBackupFileName } from "./agentdBackup.ts";
 import { blockingRefusal } from "./blockedStart.ts";
 import { detectServices, repairServices, serviceAgentd, setupAgentd } from "./agentdServices.ts";
 import { makeClaudeTrust, projectFolder } from "./claudeTrust.ts";
@@ -137,6 +141,14 @@ export class AgentdBridge extends Context.Service<
     readonly enrolWorker: (server: string, ticket: string) => Effect.Effect<void, AgentdError>;
     readonly foreground: (minutes: number) => Effect.Effect<void, AgentdError>;
     readonly eula: Effect.Effect<AgentdEula, AgentdError>;
+    /**
+     * Makes a backup of agentd's ledger in `dir`, encrypted to `input.recipient`, and removes the
+     * backups made before it there. One at a time: a second waits for the first.
+     */
+    readonly backupCreate: (
+      input: AgentdBackupCreateInput,
+      dir: string,
+    ) => Effect.Effect<Omit<AgentdBackupCreated, "relativeUrl" | "expiresAt">, AgentdError>;
   }
 >()("t3/agentd/AgentdBridge") {}
 
@@ -253,6 +265,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
       readonly stdin?: string;
       readonly jsonOnFailure?: boolean;
       readonly command?: string;
+      readonly timeout?: Duration.Input;
     } = {},
   ) {
     const command = options.command ?? (yield* binary);
@@ -261,7 +274,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
         command,
         args: argv,
         stdin: options.stdin,
-        timeout: Duration.seconds(60),
+        timeout: options.timeout ?? Duration.seconds(60),
         maxOutputBytes: 16 * 1024 * 1024,
       })
       .pipe(
@@ -289,6 +302,8 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     }
     return output.stdout;
   });
+
+  const backupLock = yield* Semaphore.make(1);
 
   const cloudKeyFile = makeCloudKeyFile({
     isAbsolute: pathService.isAbsolute,
@@ -881,7 +896,46 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
       yield* run(agentdArgs.foreground(minutes));
     }),
     eula,
+    backupCreate: Effect.fn("AgentdBridge.backupCreate")(function* (input, dir) {
+      return yield* backupLock.withPermits(1)(
+        Effect.gen(function* () {
+          const nowMs = yield* Clock.currentTimeMillis;
+          const fileName = agentdBackupFileName(nowMs, crypto.getRandomValues(new Uint8Array(4)));
+          const output = pathService.join(dir, fileName);
+          const argv = yield* args(() => agentdArgs.backupCreate(output, input.recipient));
+          yield* fs
+            .makeDirectory(dir, { recursive: true, mode: 0o700 })
+            .pipe(Effect.mapError(() => commandError("The backups folder could not be made.")));
+          const before = yield* fs
+            .readDirectory(dir)
+            .pipe(Effect.orElseSucceed((): ReadonlyArray<string> => []));
+          // A ledger of a few hundred megabytes takes minutes to copy, compress and encrypt.
+          const answer = yield* run(argv, { timeout: Duration.minutes(15) });
+          const made = yield* decodeBackupCreated(answer).pipe(
+            Effect.mapError(() =>
+              commandError("agentd's answer to backup create could not be read."),
+            ),
+          );
+          yield* Effect.forEach(
+            before.filter((name) => AGENTD_BACKUP_FILE.test(name) && name !== fileName),
+            (name) => fs.remove(pathService.join(dir, name)).pipe(Effect.ignore),
+            { discard: true },
+          );
+          return { fileName, bytes: made.size, sha256: made.sha256, created: made.created };
+        }),
+      );
+    }),
   });
 });
+
+const decodeBackupCreated = Schema.decodeEffect(
+  Schema.fromJsonString(
+    Schema.Struct({
+      size: Schema.Number,
+      sha256: Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/)),
+      created: Schema.String,
+    }),
+  ),
+);
 
 export const layer = Layer.effect(AgentdBridge, make());

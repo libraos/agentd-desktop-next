@@ -1957,6 +1957,65 @@ describe("AgentdBridge", () => {
     }),
   );
 
+  it.effect("makes a backup to the device's public key and keeps only the newest", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const dir = yield* fs.makeTempDirectoryScoped();
+      const older = "agentd-backup-20261120T080000Z-00000000.age";
+      yield* fs.writeFileString(`${dir}/${older}`, "old");
+      yield* fs.writeFileString(`${dir}/keep.txt`, "not ours");
+      const runs: Array<ProcessRunner.ProcessRunInput> = [];
+      const bridge = yield* makeBridge({ AGENTD_BIN: process.execPath }, (input) => {
+        runs.push(input);
+        return Effect.succeed(
+          output(
+            JSON.stringify({
+              path: input.args[3],
+              size: 2048,
+              sha256: "a".repeat(64),
+              created: "2026-11-21T10:15:00Z",
+              names: ["ledger.db"],
+            }),
+          ),
+        );
+      });
+      const recipient = `age1${"q".repeat(58)}`;
+      const made = yield* bridge.backupCreate({ recipient }, dir);
+      expect(made).toEqual({
+        fileName: expect.stringMatching(/^agentd-backup-\d{8}T\d{6}Z-[0-9a-f]{8}\.age$/),
+        bytes: 2048,
+        sha256: "a".repeat(64),
+        created: "2026-11-21T10:15:00Z",
+      });
+      expect(runs.map((run) => [run.args, run.stdin])).toEqual([
+        [
+          ["backup", "create", "-o", `${dir}/${made.fileName}`, "--recipient", recipient, "--json"],
+          undefined,
+        ],
+      ]);
+      expect([...(yield* fs.readDirectory(dir))].sort()).toEqual(["keep.txt"]);
+
+      // A recipient that is not an age public key, such as a private key, reaches no agentd.
+      for (const bad of [
+        `AGE-SECRET-KEY-1${"Q".repeat(58)}`,
+        `-${recipient}`,
+        `age1${"b".repeat(58)}`,
+      ]) {
+        const refused = yield* Effect.flip(bridge.backupCreate({ recipient: bad }, dir));
+        expect(refused).toMatchObject({ message: "not an age public key (age1...)" });
+      }
+      expect(runs).toHaveLength(1);
+
+      // A failed backup removes no earlier one.
+      const failing = yield* makeBridge({ AGENTD_BIN: process.execPath }, () =>
+        Effect.succeed(output("", 1)),
+      );
+      yield* fs.writeFileString(`${dir}/${older}`, "old");
+      yield* Effect.flip(failing.backupCreate({ recipient }, dir));
+      expect([...(yield* fs.readDirectory(dir))].sort()).toEqual([older, "keep.txt"]);
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
   it.effect("combines issue and repository holdings without naming the user or finished work", () =>
     Effect.gen(function* () {
       const cwd = "C:\\work\\app";

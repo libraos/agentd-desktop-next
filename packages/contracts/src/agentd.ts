@@ -1,5 +1,7 @@
 import * as Schema from "effect/Schema";
 
+import { AgentdBackupFileName } from "./assets.ts";
+
 // agentd is the authority for tasks, approvals and workers; these are its `--json` answers as the
 // server reads them and the shapes it serves. Fields agentd may leave out are optional or null.
 
@@ -508,6 +510,28 @@ export type AgentdJoinTeamInput = typeof AgentdJoinTeamInput.Type;
 /** What agentd printed for a command with no JSON answer (connect, join). */
 export const AgentdCommandOutput = Schema.Struct({ output: Schema.String });
 export type AgentdCommandOutput = typeof AgentdCommandOutput.Type;
+
+/**
+ * A backup of agentd's ledger, encrypted to an age public key (age1...) that the asking device
+ * made and keeps the private key of: no secret reaches this host, and the file is useless to anyone
+ * without that device's key.
+ */
+export const AgentdBackupRecipient = Schema.String.check(
+  Schema.isPattern(/^age1[02-9ac-hj-np-z]{58}$/),
+);
+export const AgentdBackupCreateInput = Schema.Struct({ recipient: AgentdBackupRecipient });
+export type AgentdBackupCreateInput = typeof AgentdBackupCreateInput.Type;
+
+/** The backup made, with a signed URL to download it from until expiresAt. */
+export const AgentdBackupCreated = Schema.Struct({
+  fileName: AgentdBackupFileName,
+  bytes: Schema.Number,
+  sha256: Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/)),
+  created: Schema.String,
+  relativeUrl: Schema.String,
+  expiresAt: Schema.Number,
+});
+export type AgentdBackupCreated = typeof AgentdBackupCreated.Type;
 
 export const AgentdCloudKeyFile = AbsolutePath.check(Schema.isPattern(/^[^\0\r\n]{2,4096}$/));
 export const AgentdCloudBudget = Schema.String.check(

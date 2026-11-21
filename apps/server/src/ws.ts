@@ -1,4 +1,4 @@
-import { OrchestrationDispatchCommandError } from "@t3tools/contracts";
+import { AgentdCommandError, OrchestrationDispatchCommandError } from "@t3tools/contracts";
 // @effect-diagnostics-next-line nodeBuiltinImport:off -- A synchronous digest inside the pure provider mapping.
 import * as NodeCrypto from "node:crypto";
 import * as HostProcess from "@t3tools/shared/HostProcess";
@@ -244,6 +244,7 @@ import { requiredScopeForDeviceList, rpcAuthorizationError } from "./auth/RpcAut
 import * as RpcAuthorization from "./auth/RpcAuthorization.ts";
 import { RpcInstrumentation, rpcInstrumentationLayer } from "./observability/RpcInstrumentation.ts";
 import * as AgentdBridge from "./agentd/AgentdBridge.ts";
+import { agentdBackupsDir } from "./agentd/agentdBackup.ts";
 import * as AgentdTeamNode from "./agentd/AgentdTeamNode.ts";
 import * as AgentdInit from "./agentd/agentdInit.ts";
 import * as AgentdSkills from "./agentd/AgentdSkills.ts";
@@ -3121,6 +3122,7 @@ export const layerWsRpc = (
             if (
               input.resource._tag === "attachment" ||
               input.resource._tag === "native-app-icon" ||
+              input.resource._tag === "agentd-backup" ||
               input.resource._tag === "environment-theme-background" ||
               input.resource._tag === "tool-output-image" ||
               input.resource._tag === SOURCE_CONTROL_MEDIA_ASSET ||
@@ -3659,6 +3661,22 @@ export const layerWsRpc = (
         [WS_METHODS.agentdPeople]: (input) => agentd.people(input),
         [WS_METHODS.agentdConnectAgent]: (input) => agentd.connectAgent(input),
         [WS_METHODS.agentdJoinTeam]: (input) => agentd.joinTeam(input),
+        [WS_METHODS.agentdBackupCreate]: Effect.fnUntraced(function* (input) {
+          const path = yield* Path.Path;
+          const made = yield* agentd.backupCreate(input, agentdBackupsDir(path, config.stateDir));
+          const url = yield* issueAssetUrl({
+            resource: { _tag: "agentd-backup", fileName: made.fileName },
+          }).pipe(
+            Effect.mapError(
+              () =>
+                new AgentdCommandError({
+                  message: "The backup was made but no download link could be signed for it.",
+                  notSetUp: false,
+                }),
+            ),
+          );
+          return { ...made, relativeUrl: url.relativeUrl, expiresAt: url.expiresAt };
+        }),
         [WS_METHODS.agentdCloudSetup]: (input) => agentd.cloudSetup(input),
         [WS_METHODS.agentdCloudReview]: (input) => agentd.cloudReview(input),
         [WS_METHODS.agentdCloudConfigure]: (input) => agentd.cloudConfigure(input),

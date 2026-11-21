@@ -259,6 +259,7 @@ const RPC_AGGREGATES = {
   [WS_METHODS.agentdPeople]: "agentd",
   [WS_METHODS.agentdConnectAgent]: "agentd",
   [WS_METHODS.agentdJoinTeam]: "agentd",
+  [WS_METHODS.agentdBackupCreate]: "agentd",
   [WS_METHODS.agentdCloudSetup]: "agentd",
   [WS_METHODS.agentdCloudReview]: "agentd",
   [WS_METHODS.agentdCloudConfigure]: "agentd",

@@ -64,6 +64,7 @@ import * as NativeAppIconResolver from "./NativeAppIconResolver.ts";
 import { sourceControlDefinitions } from "../sourceControl/sourceControlDefinitions.ts";
 import { extractIcnsPng } from "./icns.ts";
 import { openMediaFile, readMediaFileHeader, type OpenMediaFile } from "./MediaFile.ts";
+import { AGENTD_BACKUP_FILE, agentdBackupsDir } from "../agentd/agentdBackup.ts";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 
 export const ASSET_ROUTE_PREFIX = "/api/assets";
@@ -174,6 +175,12 @@ const AssetClaimsSchema = Schema.Union([
     version: Schema.Literal(1),
     kind: Schema.Literal("native-app-icon"),
     app: NativeAppIconReference,
+    expiresAt: Schema.Number,
+  }),
+  Schema.Struct({
+    version: Schema.Literal(1),
+    kind: Schema.Literal("agentd-backup"),
+    fileName: Schema.String,
     expiresAt: Schema.Number,
   }),
   Schema.Struct({
@@ -884,6 +891,11 @@ export const issueAssetUrl = Effect.fn("AssetAccess.issueAssetUrl")(function* (i
       fileName = `${input.resource.themeId}-background`;
       break;
     }
+    case "agentd-backup": {
+      claims = { version: 1, kind: "agentd-backup", fileName: input.resource.fileName, expiresAt };
+      fileName = input.resource.fileName;
+      break;
+    }
     case "native-app-icon": {
       claims = {
         version: 1,
@@ -1048,6 +1060,30 @@ export const resolveAsset = Effect.fn("AssetAccess.resolveAsset")(function* (
       Effect.orElseSucceed(() => null),
     );
     return file ? ({ kind: "file", path: background.path, file } satisfies ResolvedAsset) : null;
+  }
+
+  if (claims.kind === "agentd-backup") {
+    // Only the newest backup is there; the name is checked again, as claims outlive a release.
+    if (!AGENTD_BACKUP_FILE.test(claims.fileName)) return null;
+    const config = yield* ServerConfig.ServerConfig;
+    const fileSystem = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const dir = yield* fileSystem
+      .realPath(agentdBackupsDir(path, config.stateDir))
+      .pipe(Effect.orElseSucceed(() => null));
+    if (dir === null) return null;
+    const backupPath = path.join(dir, claims.fileName);
+    const file = yield* openMediaFile(backupPath).pipe(Effect.orElseSucceed(() => null));
+    return file
+      ? ({
+          kind: "file",
+          path: backupPath,
+          mimeType: "application/octet-stream",
+          file,
+          download: true,
+          fileName: claims.fileName,
+        } satisfies ResolvedAsset)
+      : null;
   }
 
   if (claims.kind === "native-app-icon") {
