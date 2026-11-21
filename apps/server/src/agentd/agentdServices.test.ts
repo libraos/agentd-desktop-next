@@ -14,6 +14,7 @@ import {
   repairServices,
   schtasksText,
   serviceAgentd,
+  setupAgentd,
   taskEnvFile,
   taskNames,
   taskProgram,
@@ -182,6 +183,27 @@ describe("agentd services", () => {
     // The person's own agentd kept at the install location, or no install yet: nothing lasting.
     expect(serviceAgentd(mounted, "/tmp/.mount_AgentDab12", record("kept-newer"))).toBe(null);
     expect(serviceAgentd(mounted, undefined, null)).toBe(null);
+  });
+
+  it("sets up with the installed copy when the bundled agentd's path has a space", () => {
+    const inApp = "/Applications/AgentD Next.app/Contents/Resources/agentd/agentd";
+    const record = (action: "unchanged" | "kept-newer", path: string) => ({
+      action,
+      path,
+      directory: "/Users/me/.local/bin",
+      onPath: true,
+      pathLine: null,
+      skills: [],
+    });
+    const installed = "/Users/me/.local/bin/agentd";
+    expect(setupAgentd(inApp, record("unchanged", installed))).toBe(installed);
+    expect(setupAgentd("/opt/AgentD/agentd", record("unchanged", installed))).toBe(
+      "/opt/AgentD/agentd",
+    );
+    // The person's own agentd there, no install yet, or a copy clients take no better.
+    expect(setupAgentd(inApp, record("kept-newer", installed))).toBe(inApp);
+    expect(setupAgentd(inApp, null)).toBe(inApp);
+    expect(setupAgentd(inApp, record("unchanged", "/Users/my name/.local/bin/agentd"))).toBe(inApp);
   });
 
   it.effect("reports stale services, and re-registers them only when Repair is confirmed", () =>
