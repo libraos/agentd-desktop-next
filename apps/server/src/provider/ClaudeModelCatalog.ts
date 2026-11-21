@@ -490,11 +490,21 @@ export function capClaudeCatalogEffort(
     modelMaxEffortLevels: resolveClaudeModelMaxEffortLevels(catalog, source.modelMaxEffortLevels),
   }));
   return models.map((model) => {
-    // Custom model labels are user-authored, so they are left alone.
-    if (model.isCustom || !model.capabilities?.optionDescriptors) return model;
+    // Custom model labels are user-authored, so they are left alone, except a family-prefixed
+    // catalog id (a Gateway's `anthropic/claude-sonnet-4-6`), which shows its catalog model's.
+    const familySlug =
+      model.subProvider && model.slug.startsWith(`${model.subProvider}/`)
+        ? model.slug.slice(model.subProvider.length + 1)
+        : undefined;
+    const catalogSlug = !model.isCustom
+      ? model.slug
+      : catalog.models.some((entry) => !entry.model.isCustom && entry.model.slug === familySlug)
+        ? familySlug
+        : undefined;
+    if (catalogSlug === undefined || !model.capabilities?.optionDescriptors) return model;
     const modelMaxEffortLevel = resolvedSources.reduce<ClaudeEffortLevel | undefined>(
       (lowest, source) => {
-        const level = source.modelMaxEffortLevels.get(model.slug) ?? source.maxEffortLevel;
+        const level = source.modelMaxEffortLevels.get(catalogSlug) ?? source.maxEffortLevel;
         return level &&
           level !== "max" &&
           (!lowest || claudeEffortRank(level) < claudeEffortRank(lowest))
@@ -526,7 +536,7 @@ export function capClaudeCatalogEffort(
             options: descriptor.options.map((option) => {
               const idRank = claudeEffortRank(option.id);
               const sentRank = claudeEffortRank(
-                normalizeClaudeCatalogEffort(catalog, option.id, model.slug),
+                normalizeClaudeCatalogEffort(catalog, option.id, catalogSlug),
               );
               const displayedRank = idRank >= 0 ? idRank : sentRank;
               const runsRank = sentRank >= 0 ? sentRank : idRank;

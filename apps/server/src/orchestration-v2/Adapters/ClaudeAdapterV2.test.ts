@@ -7372,6 +7372,67 @@ describe("ClaudeAdapterV2 background wake turns", () => {
     ),
   );
 
+  it.effect("sends Ultrathink for a full id only the routed catalog knows", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        // A hand-configured Gateway instance: the key lists the full id, settings save none.
+        const harness = yield* makeWakeHarnessWithOptions({
+          routeModelCatalog: (catalog) =>
+            Effect.succeed(
+              scopeClaudeModelCatalog(catalog, [
+                { slug: "anthropic/claude-sonnet-4-6", subProvider: "anthropic" },
+              ]),
+            ),
+        });
+        const idAllocator = yield* IdAllocator.IdAllocatorV2;
+        const input = makeClaudeTestTurnInput({
+          threadId: harness.threadId,
+          providerThread: harness.providerThread,
+          now: yield* DateTime.now,
+          attemptId: RunAttemptId.make("attempt-gateway-full-id-ultrathink"),
+          text: "Fix the bug.",
+          attachments: [],
+          modelSelection: {
+            ...CLAUDE_TEST_MODEL_SELECTION,
+            model: "anthropic/claude-sonnet-4-6",
+          },
+        });
+        yield* harness.runtime.startTurn(input);
+        assert.equal(harness.offeredMessages[0]?.message.content, "Ultrathink:\nFix the bug.");
+
+        yield* harness.runtime.steerTurn({
+          threadId: harness.threadId,
+          runId: input.runId,
+          providerThread: harness.providerThread,
+          providerTurnId: idAllocator.derive.providerTurn({
+            driver: ClaudeAdapterV2.CLAUDE_PROVIDER,
+            nativeTurnId: `turn:${input.attemptId}`,
+          }),
+          message: {
+            createdBy: "user",
+            creationSource: "web",
+            messageId: MessageId.make("steer-gateway-full-id-ultrathink"),
+            text: "Also check the tests.",
+            attachments: [],
+          },
+        });
+        assert.equal(
+          harness.offeredMessages[1]?.message.content,
+          "Ultrathink:\nAlso check the tests.",
+        );
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            IdAllocator.layer,
+            McpProviderSessions.layer,
+            NodeServices.layer,
+            NodeCrypto.layer,
+          ),
+        ),
+      ),
+    ),
+  );
+
   it.effect.each([
     {
       content: { type: "advisor_tool_result_error", error_code: "overloaded" },
