@@ -18,6 +18,7 @@ import {
   normalizeCustomModelSlug,
   readCustomModelEntries,
   resolveSelectableModel,
+  type SelectableModelOption,
 } from "@t3tools/shared/model";
 import { getComposerProviderState } from "./components/chat/composerProviderState";
 import { type ClientSettings, UnifiedSettings } from "@t3tools/contracts/settings";
@@ -94,6 +95,19 @@ function listsModelsAtRuntime(entry: ProviderInstanceEntry): boolean {
   );
 }
 
+// A Gateway id is the model it names: one the key dropped stays itself (unavailable) rather than
+// resolving by alias or name to another row, such as a revoked literal `opus` to Opus 5.5.
+function resolveListedModel(
+  provider: ProviderDriverKind,
+  value: string | null | undefined,
+  options: ReadonlyArray<SelectableModelOption>,
+  exactIds: boolean,
+): string | null {
+  if (!exactIds) return resolveSelectableModel(provider, value, options);
+  const slug = value?.trim();
+  return options.find((option) => option.slug === slug)?.slug ?? null;
+}
+
 function appendUnavailableDynamicModelSelection(
   options: AppModelOption[],
   rawModels: ReadonlyArray<ServerProvider["models"][number]>,
@@ -101,13 +115,14 @@ function appendUnavailableDynamicModelSelection(
   runtimeCatalog: boolean,
   selectedModel: string | null | undefined,
   hiddenModels: ReadonlyArray<string>,
+  exactIds = false,
 ): AppModelOption[] {
   if (!runtimeCatalog) return options;
   const slug = normalizeCustomModelSlug(selectedModel);
   if (!slug) return options;
   if (isRuntimeModelDefaultAlias(provider, slug)) return options;
 
-  if (resolveSelectableModel(provider, slug, rawModels) !== null) return options;
+  if (resolveListedModel(provider, slug, rawModels, exactIds) !== null) return options;
   if (hiddenModels.includes(slug)) return options;
   if (options.some((option) => option.slug === slug)) return options;
 
@@ -279,6 +294,7 @@ export function getAppModelOptionsForInstance(
     listsModelsAtRuntime(entry),
     selectedModel,
     preferences.hiddenModels,
+    gatewayListed,
   );
 }
 
@@ -312,7 +328,8 @@ export function resolveAppModelSelectionForInstance(
     entry,
     resolutionOptions?.preserveUnavailableSelection ? selectedModel : null,
   );
-  const resolvedSelection = resolveSelectableModel(entry.driverKind, selectedModel, options);
+  const exactIds = listsGatewayModels(entry.instanceId, entry.snapshot);
+  const resolvedSelection = resolveListedModel(entry.driverKind, selectedModel, options, exactIds);
   if (resolvedSelection) {
     return resolvedSelection;
   }
@@ -322,7 +339,7 @@ export function resolveAppModelSelectionForInstance(
     if (
       unavailableSelection &&
       !hiddenModels.includes(unavailableSelection) &&
-      resolveSelectableModel(entry.driverKind, selectedModel, entry.models) === null &&
+      resolveListedModel(entry.driverKind, selectedModel, entry.models, exactIds) === null &&
       !isRuntimeModelDefaultAlias(entry.driverKind, unavailableSelection)
     ) {
       return unavailableSelection;
