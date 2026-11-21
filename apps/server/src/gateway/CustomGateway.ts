@@ -5,6 +5,7 @@ import {
   type CustomGatewayList,
   type CustomGatewaySetting,
   type LibraosGatewayModel,
+  customGatewayAgentsOf,
 } from "@t3tools/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -73,6 +74,13 @@ function readGatewayUrl(raw: string): string | null {
   }
 }
 
+const ALL_AGENTS = ["claude", "codex", "opencode"] as const;
+
+const agentsOf = (instances: Record<string, unknown>, id: string) => {
+  const ids = customGatewayInstanceIds(id);
+  return ALL_AGENTS.filter((agent) => Object.hasOwn(instances, ids[agent]));
+};
+
 const baseOf = (url: string) => `${url.replace(/\/v1$/, "")}/v1`;
 
 function typedModels(ids: ReadonlyArray<string>): ReadonlyArray<LibraosGatewayModel> {
@@ -115,6 +123,7 @@ export const make = Effect.fn("CustomGateway.make")(function* () {
         Effect.map((key) => ({
           ...gateway,
           hasKey: key !== null,
+          agents: agentsOf(current.providerInstances, gateway.id),
           modelCount: customGatewayModels(current.providerInstances, gateway.id)?.length ?? 0,
         })),
       ),
@@ -138,6 +147,12 @@ export const make = Effect.fn("CustomGateway.make")(function* () {
           // Without one, Claude Code would send the person's own Claude login to this gateway.
           if (input.format === "anthropic" && key === null) {
             return yield* fail("An Anthropic-format gateway needs a key.");
+          }
+          const agents = customGatewayAgentsOf(input.format).filter(
+            (agent) => input.agents === undefined || input.agents.includes(agent),
+          );
+          if (agents.length === 0) {
+            return yield* fail("Pick at least one agent that works with this format.");
           }
           const existing = (yield* readSettings).customGateways;
           let id = newCustomGatewayId();
@@ -173,7 +188,10 @@ export const make = Effect.fn("CustomGateway.make")(function* () {
               .set(customGatewayKeySecret(id), textEncoder.encode(key))
               .pipe(Effect.catch(storageFailure("store the gateway's key")));
           }
-          const instances = customGatewayInstances({ ...gateway, key, models });
+          const ids = customGatewayInstanceIds(id);
+          const instances = customGatewayInstances({ ...gateway, key, models }).filter(
+            ({ instanceId }) => agents.some((agent) => ids[agent] === instanceId),
+          );
           yield* settings
             .updateProviderInstances((current) => ({
               ...current,
@@ -187,7 +205,7 @@ export const make = Effect.fn("CustomGateway.make")(function* () {
             .pipe(Effect.catch(storageFailure("save the gateway")));
           return {
             kind: "added",
-            gateway: { ...gateway, hasKey: key !== null, modelCount: models.length },
+            gateway: { ...gateway, hasKey: key !== null, modelCount: models.length, agents },
           } satisfies CustomGatewayAddResult;
         }),
       )

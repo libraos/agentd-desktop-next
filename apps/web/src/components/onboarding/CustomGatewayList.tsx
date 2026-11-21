@@ -79,6 +79,9 @@ function GatewayRow({
   };
 
   const format = gateway.format === "openai" ? "OpenAI" : "Anthropic";
+  const agents = gateway.agents
+    .map((agent) => (agent === "claude" ? "Claude Code" : agent === "codex" ? "Codex" : "opencode"))
+    .join(", ");
 
   return (
     <li className="space-y-2 rounded-lg border border-border bg-card px-4 py-3 text-sm">
@@ -122,6 +125,9 @@ function GatewayRow({
               {gt("{count, plural, one {{count} model} other {{count} models}}", {
                 count: gateway.modelCount,
               })}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {gt("Used by {agents}", { agents })}
             </p>
           </div>
           <Button variant="outline" size="sm" disabled={disabled} onClick={() => setRenaming(true)}>

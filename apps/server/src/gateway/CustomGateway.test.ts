@@ -54,6 +54,42 @@ function setup(answer: () => Response) {
 
 const served = () => Response.json({ data: [{ id: "m1" }] });
 
+it.effect("add makes only the agents asked for", () => {
+  const { layer } = setup(served);
+  return Effect.gen(function* () {
+    const gateways = yield* CustomGateway.CustomGateway;
+    const result = yield* gateways.add({
+      url: URL,
+      format: "openai",
+      key: "k1",
+      agents: ["opencode"],
+    });
+    assert.strictEqual(result.kind, "added");
+    if (result.kind !== "added") return;
+    const id = result.gateway.id;
+    const instances = Object.keys(
+      (yield* (yield* ServerSettingsService).getSettings).providerInstances,
+    );
+    assert.include(instances, `gw-${id}-opencode`);
+    assert.notInclude(instances, `gw-${id}-codex`);
+    assert.deepStrictEqual((yield* gateways.list).gateways, [
+      {
+        id,
+        name: URL,
+        url: URL,
+        format: "openai",
+        hasKey: true,
+        agents: ["opencode"],
+        modelCount: 1,
+      },
+    ]);
+    const none = yield* gateways
+      .add({ url: URL, format: "openai", key: "k1", agents: ["claude"] })
+      .pipe(Effect.flip);
+    assert.strictEqual(none.message, "Pick at least one agent that works with this format.");
+  }).pipe(Effect.provide(layer));
+});
+
 it.effect("add names the gateway after its url", () => {
   const { secrets, asked, layer } = setup(served);
   return Effect.gen(function* () {

@@ -1,6 +1,11 @@
 import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import { thrownErrorMessage } from "@t3tools/client-runtime/errors";
-import type { CustomGatewayFormat, EnvironmentId } from "@t3tools/contracts";
+import {
+  customGatewayAgentsOf,
+  type CustomGatewayAgent,
+  type CustomGatewayFormat,
+  type EnvironmentId,
+} from "@t3tools/contracts";
 import { T, useGT, useMessages, Var } from "gt-react";
 import { useId, useState, type FormEvent } from "react";
 
@@ -14,22 +19,24 @@ const formats: ReadonlyArray<{ readonly id: CustomGatewayFormat; readonly label:
   { id: "anthropic", label: "Anthropic" },
 ];
 
+const agents: ReadonlyArray<{ readonly id: CustomGatewayAgent; readonly label: string }> = [
+  { id: "claude", label: "Claude Code" },
+  { id: "codex", label: "Codex" },
+  { id: "opencode", label: "opencode" },
+];
+
 /** Add a gateway by URL: its agents appear in the model picker under the name it is given. */
-export function CustomGatewayForm({
-  environmentId,
-  defaultFormat = "openai",
-}: {
-  readonly environmentId: EnvironmentId;
-  readonly defaultFormat?: CustomGatewayFormat;
-}) {
+export function CustomGatewayForm({ environmentId }: { readonly environmentId: EnvironmentId }) {
   const gt = useGT();
   const m = useMessages();
   const id = useId();
   const { canChange, add } = useCustomGatewayCommands(environmentId);
   const [url, setUrl] = useState("");
-  const [format, setFormat] = useState<CustomGatewayFormat>(defaultFormat);
+  const [format, setFormat] = useState<CustomGatewayFormat>("openai");
   const [key, setKey] = useState("");
   const [name, setName] = useState("");
+  // Agents the user turned off; the ones the format cannot serve are off whatever is here.
+  const [declined, setDeclined] = useState<ReadonlySet<CustomGatewayAgent>>(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // The gateway's model list could not be read: the user may type the ids instead.
@@ -37,6 +44,7 @@ export function CustomGatewayForm({
   const [models, setModels] = useState("");
   const disabled = busy || !canChange;
   const keyRequired = format === "anthropic";
+  const chosen = customGatewayAgentsOf(format).filter((agent) => !declined.has(agent));
 
   const save = async (typed: ReadonlyArray<string> | undefined) => {
     setBusy(true);
@@ -46,6 +54,7 @@ export function CustomGatewayForm({
       input: {
         url,
         format,
+        agents: chosen,
         ...(key.trim() === "" ? {} : { key }),
         ...(name.trim() === "" ? {} : { name }),
         ...(typed === undefined ? {} : { models: typed }),
@@ -127,13 +136,6 @@ export function CustomGatewayForm({
             </label>
           ))}
         </div>
-        <p className="text-xs text-muted-foreground">
-          {format === "openai" ? (
-            <T>Adds Codex and opencode agents.</T>
-          ) : (
-            <T>Adds Claude Code and opencode agents.</T>
-          )}
-        </p>
       </fieldset>
       <div className="space-y-1">
         <label htmlFor={`${id}-key`} className="block font-medium text-foreground">
@@ -169,6 +171,43 @@ export function CustomGatewayForm({
           onChange={(event) => setName(event.currentTarget.value)}
         />
       </div>
+      <fieldset className="space-y-1">
+        <legend className="font-medium text-foreground">
+          <T>Which agents should use this gateway?</T>
+        </legend>
+        <div className="flex flex-wrap gap-2">
+          {agents.map((agent) => {
+            const speaks = customGatewayAgentsOf(format).includes(agent.id);
+            return (
+              <label
+                key={agent.id}
+                className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-1.5 has-checked:border-primary/60 has-disabled:cursor-not-allowed has-disabled:opacity-60"
+              >
+                <input
+                  type="checkbox"
+                  checked={speaks && !declined.has(agent.id)}
+                  disabled={disabled || !speaks}
+                  onChange={(event) => {
+                    const next = new Set(declined);
+                    if (event.currentTarget.checked) next.delete(agent.id);
+                    else next.add(agent.id);
+                    setDeclined(next);
+                  }}
+                  className="accent-primary"
+                />
+                {agent.label}
+              </label>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {format === "openai" ? (
+            <T>Claude Code needs an Anthropic-format gateway.</T>
+          ) : (
+            <T>Codex needs an OpenAI-format gateway.</T>
+          )}
+        </p>
+      </fieldset>
       <p className="text-muted-foreground">
         <T>
           The key stays on this environment. Its models are read from the endpoint's model list.
@@ -183,7 +222,12 @@ export function CustomGatewayForm({
         <Button
           type="submit"
           size="sm"
-          disabled={disabled || url.trim() === "" || (keyRequired && key.trim() === "")}
+          disabled={
+            disabled ||
+            url.trim() === "" ||
+            chosen.length === 0 ||
+            (keyRequired && key.trim() === "")
+          }
         >
           {busy ? <T>Checking…</T> : <T>Add gateway</T>}
         </Button>
@@ -209,7 +253,7 @@ export function CustomGatewayForm({
             <Button
               type="button"
               size="sm"
-              disabled={disabled || typedModels.length === 0}
+              disabled={disabled || typedModels.length === 0 || chosen.length === 0}
               onClick={() => void save(typedModels)}
             >
               <T>Save with these models</T>

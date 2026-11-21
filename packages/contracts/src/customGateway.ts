@@ -21,6 +21,15 @@ export const customGatewayIdOfInstance = (instanceId: string): string | null =>
 export const isGatewayInstanceId = (instanceId: string): boolean =>
   isLibraosGatewayInstanceId(instanceId) || customGatewayIdOfInstance(instanceId) !== null;
 
+export const CustomGatewayAgent = Schema.Literals(["claude", "codex", "opencode"]);
+export type CustomGatewayAgent = typeof CustomGatewayAgent.Type;
+
+/** The agents that speak a format: opencode speaks both. */
+export const customGatewayAgentsOf = (
+  format: CustomGatewayFormat,
+): ReadonlyArray<CustomGatewayAgent> =>
+  format === "anthropic" ? ["claude", "opencode"] : ["codex", "opencode"];
+
 /** Stored in server settings; the key is in the server's secret store. */
 export const CustomGatewaySetting = Schema.Struct({
   id: CustomGatewayId,
@@ -37,6 +46,8 @@ export const CustomGatewaySummary = Schema.Struct({
   format: CustomGatewayFormat,
   hasKey: Schema.Boolean,
   modelCount: Schema.Number,
+  /** The agents this gateway has on this environment. */
+  agents: Schema.Array(CustomGatewayAgent),
 });
 export type CustomGatewaySummary = typeof CustomGatewaySummary.Type;
 
@@ -47,6 +58,8 @@ export const CustomGatewayAddInput = Schema.Struct({
   format: CustomGatewayFormat,
   key: Schema.optional(Bounded(4096)),
   name: Schema.optional(Bounded(200)),
+  /** The agents to add; without it, every agent that speaks the format. */
+  agents: Schema.optional(Schema.Array(CustomGatewayAgent)),
   /** Model ids typed by the user; given, the gateway's model list is not asked. */
   models: Schema.optional(Schema.Array(Bounded(256)).check(Schema.isMaxLength(500))),
 });
