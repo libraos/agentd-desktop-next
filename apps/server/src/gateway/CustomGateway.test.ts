@@ -239,6 +239,31 @@ it.effect("rename to blank falls back to the url", () => {
   }).pipe(Effect.provide(layer));
 });
 
+it.effect("each gateway's agents get a color of their own", () => {
+  const { layer } = setup(served);
+  return Effect.gen(function* () {
+    const gateways = yield* CustomGateway.CustomGateway;
+    const first = yield* gateways.add({ url: URL, format: "openai", key: "k1" });
+    const second = yield* gateways.add({
+      url: "http://localhost:4000",
+      format: "openai",
+      key: "k2",
+    });
+    if (first.kind !== "added" || second.kind !== "added") return assert.fail("not added");
+    const settings = yield* (yield* ServerSettingsService).getSettings;
+    const color = (id: string, agent: string) =>
+      instance(settings, `gw-${id}-${agent}`)?.accentColor;
+    assert.deepStrictEqual(
+      [
+        color(first.gateway.id, "codex"),
+        color(first.gateway.id, "opencode"),
+        color(second.gateway.id, "codex"),
+      ],
+      ["#2563eb", "#2563eb", "#16a34a"],
+    );
+  }).pipe(Effect.provide(layer));
+});
+
 it.effect("remove leaves the other gateway and the user's instances", () => {
   const { secrets, own, layer } = setup(served);
   return Effect.gen(function* () {

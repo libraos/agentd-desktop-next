@@ -349,6 +349,25 @@ function customShape(gateway: Omit<CustomGatewayInput, "key">, hasKey: boolean):
   };
 }
 
+const GATEWAY_ACCENT_COLORS = [
+  "#2563eb",
+  "#16a34a",
+  "#d97706",
+  "#db2777",
+  "#7c3aed",
+  "#0891b2",
+  "#dc2626",
+  "#65a30d",
+] as const;
+
+/** A color no provider has yet, so a new gateway's agents stand apart; the least used once all are taken. */
+export function nextGatewayAccentColor(current: ProviderInstanceConfigMap): string {
+  const uses = (color: string) =>
+    Object.values(current).filter((instance) => instance.accentColor?.toLowerCase() === color)
+      .length;
+  return GATEWAY_ACCENT_COLORS.reduce((best, color) => (uses(color) < uses(best) ? color : best));
+}
+
 export const customGatewayInstances = (
   gateway: CustomGatewayInput & { readonly models: ReadonlyArray<LibraosGatewayModel> },
 ): GatewayInstances =>
@@ -478,6 +497,12 @@ export function withCustomGateway(
     const existing = current[ids[agent]];
     if (existing !== undefined)
       named[ids[agent]] = { ...existing, displayName: `${label} · ${gateway.name}` };
+  }
+  // A gateway added before its agents had a color gets one now.
+  const own = Object.values(ids).filter((id) => named[id] !== undefined);
+  if (own.length > 0 && own.every((id) => named[id]!.accentColor === undefined)) {
+    const accentColor = nextGatewayAccentColor(current);
+    for (const id of own) named[id] = { ...named[id]!, accentColor };
   }
   if (codex !== undefined) {
     const config = isRecord(codex.config) ? codex.config : {};

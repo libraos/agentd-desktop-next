@@ -20,6 +20,7 @@ import { askModels } from "./gatewayKeyModels.ts";
 import {
   customGatewayInstanceIds,
   customGatewayInstances,
+  nextGatewayAccentColor,
   customGatewayKeySecret,
   customGatewayModels,
   newCustomGatewayId,
@@ -205,12 +206,18 @@ export const make = Effect.fn("CustomGateway.make")(function* () {
             ({ instanceId }) => agents.some((agent) => ids[agent] === instanceId),
           );
           yield* settings
-            .updateProviderInstances((current) => ({
-              ...current,
-              ...Object.fromEntries(
-                instances.map(({ instanceId, instance }) => [instanceId, instance]),
-              ),
-            }))
+            .updateProviderInstances((current) => {
+              const accentColor = nextGatewayAccentColor(current);
+              return {
+                ...current,
+                ...Object.fromEntries(
+                  instances.map(({ instanceId, instance }) => [
+                    instanceId,
+                    { ...instance, accentColor },
+                  ]),
+                ),
+              };
+            })
             .pipe(Effect.catch(storageFailure("add the gateway's agents")));
           yield* settings
             .updateSettings({ customGateways: [...existing, gateway] })
