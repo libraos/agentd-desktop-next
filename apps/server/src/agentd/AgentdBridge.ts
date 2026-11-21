@@ -68,7 +68,7 @@ import { makeCloudReview } from "./agentdCloudReview.ts";
 import { AgentdArgumentError, agentdArgs, agentdTicket } from "./agentdCommands.ts";
 import * as AgentdJson from "./agentdJson.ts";
 import { blockingRefusal } from "./blockedStart.ts";
-import { detectServices, repairServices, serviceAgentd } from "./agentdServices.ts";
+import { detectServices, repairServices, serviceAgentd, setupAgentd } from "./agentdServices.ts";
 import { makeClaudeTrust, projectFolder } from "./claudeTrust.ts";
 import { makeCloudKeyFile } from "./cloudKeyFile.ts";
 import {
@@ -132,6 +132,8 @@ export class AgentdBridge extends Context.Service<
     ) => Effect.Effect<ReadonlyArray<AgentdTaskOther>>;
     /** agentd's path, for the team node's long-lived worker. */
     readonly binary: Effect.Effect<string, AgentdError>;
+    /** The agentd `init` runs as: one clients can be connected to. */
+    readonly setupBinary: Effect.Effect<string, AgentdError>;
     readonly enrolWorker: (server: string, ticket: string) => Effect.Effect<void, AgentdError>;
     readonly foreground: (minutes: number) => Effect.Effect<void, AgentdError>;
     readonly eula: Effect.Effect<AgentdEula, AgentdError>;
@@ -346,6 +348,19 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
         })),
       )
     : null;
+  const setupBinary = bundledBinary
+    ? readInstallRecord.pipe(
+        Effect.map((installed) => setupAgentd(bundledBinary, installed)),
+        Effect.flatMap((chosen) =>
+          chosen === bundledBinary
+            ? binary
+            : fs.exists(chosen).pipe(
+                Effect.orElseSucceed(() => false),
+                Effect.flatMap((there) => (there ? Effect.succeed(chosen) : binary)),
+              ),
+        ),
+      )
+    : binary;
   const provideFiles = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     effect.pipe(
       Effect.provideService(FileSystem.FileSystem, fs),
@@ -856,6 +871,7 @@ export const make = Effect.fn("AgentdBridge.make")(function* () {
     taskDefaults,
     taskOthers,
     binary,
+    setupBinary,
     enrolWorker: Effect.fn("AgentdBridge.enrolWorker")(function* (server, ticket) {
       const argv = yield* args(() => agentdArgs.enrolWorker(server));
       const checked = yield* args(() => [agentdTicket(ticket)]);
