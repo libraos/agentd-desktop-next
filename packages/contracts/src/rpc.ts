@@ -398,6 +398,8 @@ import {
   AgentdTaskInput,
   AgentdTaskRow,
   AgentdEula,
+  AgentdWorkerGateway,
+  AgentdWorkerGatewayInput,
   AgentdSetupState,
   AgentdCloudSetup,
   AgentdCloudSetupInput,
@@ -754,6 +756,8 @@ export const WS_METHODS = {
   agentdSetTeamNode: "agentd.setTeamNode",
   agentdTeamNodeForeground: "agentd.teamNodeForeground",
   agentdEula: "agentd.eula",
+  agentdWorkerGateway: "agentd.workerGateway",
+  agentdSetWorkerGateway: "agentd.setWorkerGateway",
   agentdSetupStart: "agentd.setupStart",
   agentdSubscribeSetup: "agentd.subscribeSetup",
   agentdSkillsList: "agentd.skillsList",
@@ -2496,6 +2500,18 @@ const WsAgentdEulaRpc = Rpc.make(WS_METHODS.agentdEula, {
   error: AgentdRpcError,
 });
 
+const WsAgentdWorkerGatewayRpc = Rpc.make(WS_METHODS.agentdWorkerGateway, {
+  payload: Schema.Struct({}),
+  success: AgentdWorkerGateway,
+  error: AgentdRpcError,
+});
+
+const WsAgentdSetWorkerGatewayRpc = Rpc.make(WS_METHODS.agentdSetWorkerGateway, {
+  payload: AgentdWorkerGatewayInput,
+  success: AgentdWorkerGateway,
+  error: AgentdRpcError,
+});
+
 const WsAgentdSetupStartRpc = Rpc.make(WS_METHODS.agentdSetupStart, {
   payload: Schema.Struct({}),
   success: AgentdSetupState,
@@ -2829,6 +2845,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsAgentdSetTeamNodeRpc,
   WsAgentdTeamNodeForegroundRpc,
   WsAgentdEulaRpc,
+  WsAgentdWorkerGatewayRpc,
+  WsAgentdSetWorkerGatewayRpc,
   WsAgentdSetupStartRpc,
   WsAgentdSkillsListRpc,
   WsAgentdSkillsInstallRpc,

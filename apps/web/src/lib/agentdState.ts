@@ -104,6 +104,15 @@ export function useAgentdEula(target: EnvironmentId | null) {
   );
 }
 
+/** Which gateway and model this machine's workers use. */
+export function useAgentdWorkerGateway(target: EnvironmentId | null) {
+  const environmentId = useAgentdEnvironment(target);
+  return useEnvironmentQuery(
+    environmentId === null ? null : agentdEnvironment.workerGateway({ environmentId, input: {} }),
+    useMessages(),
+  );
+}
+
 /** The environment's `agentd init` run: its phase and output. */
 export function useAgentdSetup(target: EnvironmentId | null) {
   const environmentId = useAgentdEnvironment(target);
@@ -124,6 +133,7 @@ export function useAgentdCommands() {
     cloudConfigure: useAtomCommand(agentdEnvironment.cloudConfigure),
     cloudKeyFileFix: useAtomCommand(agentdEnvironment.cloudKeyFileFix),
     repairServices: useAtomCommand(agentdEnvironment.repairServices),
+    setWorkerGateway: useAtomCommand(agentdEnvironment.setWorkerGateway, { reportFailure: false }),
   };
 }
 
