@@ -1,6 +1,6 @@
 // @effect-diagnostics nodeBuiltinImport:off -- Pure path checks must follow the host OS's rules, which the Effect Path layer does not by default.
-import { existsSync } from "node:fs";
-import * as path from "node:path";
+import * as NodeFS from "node:fs";
+import * as NodePath from "node:path";
 
 import {
   GatewayMediaFailure,
@@ -91,13 +91,13 @@ function insideWorkspace(
   requested: string,
   refusal: string,
 ): Result.Result<string, GatewayMediaFailure> {
-  const target = path.resolve(workspace, requested);
-  const relative = path.relative(workspace, target);
+  const target = NodePath.resolve(workspace, requested);
+  const relative = NodePath.relative(workspace, target);
   if (
     relative === "" ||
     relative === ".." ||
-    relative.startsWith(`..${path.sep}`) ||
-    path.isAbsolute(relative)
+    relative.startsWith(`..${NodePath.sep}`) ||
+    NodePath.isAbsolute(relative)
   ) {
     return Result.fail(failure("invalid_request", refusal));
   }
@@ -112,9 +112,13 @@ export function resolveOutputPath(
   exists: (file: string) => boolean,
 ): Result.Result<string, GatewayMediaFailure> {
   return Result.map(
-    insideWorkspace(workspace, requested ?? path.join("generated-media", fallbackName), OUTSIDE),
+    insideWorkspace(
+      workspace,
+      requested ?? NodePath.join("generated-media", fallbackName),
+      OUTSIDE,
+    ),
     (target) => {
-      const extension = path.extname(target);
+      const extension = NodePath.extname(target);
       const stem = target.slice(0, target.length - extension.length);
       let candidate = target;
       for (let n = 1; exists(candidate); n += 1) candidate = `${stem}-${n}${extension}`;
@@ -155,7 +159,7 @@ export class GatewayMedia extends Context.Service<
   }
 >()("t3/gateway/GatewayMedia") {}
 
-export const make = Effect.fn("GatewayMedia.make")(function* () {
+const make = Effect.fn("GatewayMedia.make")(function* () {
   const gateways = yield* CustomGateway;
   const threads = yield* ThreadManagementService.ThreadManagementService;
   const projects = yield* ProjectService.ProjectService;
@@ -180,9 +184,7 @@ export const make = Effect.fn("GatewayMedia.make")(function* () {
         )
       : Effect.succeed(scope.thread);
 
-  const workspaceOf = Effect.fn("GatewayMedia.workspaceOf")(function* (
-    scope: McpInvocationScope,
-  ) {
+  const workspaceOf = Effect.fn("GatewayMedia.workspaceOf")(function* (scope: McpInvocationScope) {
     const caller = yield* threadOf(scope);
     const unreadable = () => failure("invalid_request", "Could not read this thread's workspace.");
     const { thread } = yield* threads
@@ -202,7 +204,9 @@ export const make = Effect.fn("GatewayMedia.make")(function* () {
     const { gateways: listed } = yield* gateways.list.pipe(
       Effect.mapError((error) => failure("gateway_error", error.message)),
     );
-    const id = yield* Effect.fromResult(chooseGateway(listed, requested, caller.providerInstanceId));
+    const id = yield* Effect.fromResult(
+      chooseGateway(listed, requested, caller.providerInstanceId),
+    );
     return yield* gateways
       .connection(id)
       .pipe(Effect.mapError((error) => failure("gateway_error", error.message)));
@@ -214,16 +218,16 @@ export const make = Effect.fn("GatewayMedia.make")(function* () {
     fallbackName: string,
   ) {
     const file = yield* Effect.fromResult(
-      resolveOutputPath(workspace, requested, fallbackName, existsSync),
+      resolveOutputPath(workspace, requested, fallbackName, NodeFS.existsSync),
     );
     yield* fs
-      .makeDirectory(path.dirname(file), { recursive: true })
+      .makeDirectory(NodePath.dirname(file), { recursive: true })
       .pipe(Effect.mapError(() => failure("invalid_request", "Could not make the folder.")));
     return file;
   });
 
   const shown = (workspace: string, file: string) =>
-    path.relative(workspace, file).split(path.sep).join("/");
+    NodePath.relative(workspace, file).split(NodePath.sep).join("/");
 
   const timestamp = DateTime.now.pipe(
     Effect.map((now) => DateTime.formatIso(now).replace(/[:.]/g, "-").slice(0, 19)),
@@ -272,7 +276,9 @@ export const make = Effect.fn("GatewayMedia.make")(function* () {
     const workspace = yield* workspaceOf(scope);
     const connection = yield* connectionOf(scope, requested.gateway);
     // Refused before anything is sent or paid for.
-    yield* Effect.fromResult(resolveOutputPath(workspace, requested.outputPath, "check.mp4", () => false));
+    yield* Effect.fromResult(
+      resolveOutputPath(workspace, requested.outputPath, "check.mp4", () => false),
+    );
     const dialect = yield* withServices(detectVideoDialect(connection));
     const job = yield* start(connection, dialect);
     return yield* finishJob({
@@ -308,7 +314,9 @@ export const make = Effect.fn("GatewayMedia.make")(function* () {
     function* (scope, input) {
       const workspace = yield* workspaceOf(scope);
       const connection = yield* connectionOf(scope, input.gateway);
-      yield* Effect.fromResult(resolveOutputPath(workspace, input.outputPath, "check.mp3", () => false));
+      yield* Effect.fromResult(
+        resolveOutputPath(workspace, input.outputPath, "check.mp3", () => false),
+      );
       const job = yield* withServices(submitAudio(connection, input));
       return yield* finishJob({
         connection,
@@ -351,7 +359,7 @@ export const make = Effect.fn("GatewayMedia.make")(function* () {
       const text = yield* withServices(
         requestTranscript(connection, {
           bytes,
-          fileName: path.basename(file),
+          fileName: NodePath.basename(file),
           model: input.model,
           language: input.language,
           translate: input.translate,
@@ -372,6 +380,4 @@ export const make = Effect.fn("GatewayMedia.make")(function* () {
   return GatewayMedia.of({ video, videoStatus, speech, transcribe, audio, models });
 });
 
-export const layer = Layer.effect(GatewayMedia, make()).pipe(
-  Layer.provide(FetchHttpClient.layer),
-);
+export const layer = Layer.effect(GatewayMedia, make()).pipe(Layer.provide(FetchHttpClient.layer));

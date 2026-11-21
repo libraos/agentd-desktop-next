@@ -1,5 +1,5 @@
 // @effect-diagnostics nodeBuiltinImport:off -- The paths under test are the host OS's.
-import * as path from "node:path";
+import * as NodePath from "node:path";
 
 import { assert, it } from "@effect/vitest";
 import * as Result from "effect/Result";
@@ -11,7 +11,7 @@ const gateways = [
   { id: "b", name: "Beta" },
 ];
 
-const workspace = path.resolve("workspace-root");
+const workspace = NodePath.resolve("workspace-root");
 
 const failureOf = <A, E>(result: Result.Result<A, E>) => {
   assert.isTrue(Result.isFailure(result));
@@ -34,7 +34,7 @@ it("a path outside the workspace is refused", () => {
     failureOf(resolveOutputPath(workspace, "../x.mp4", "a.mp4", () => false)).code,
     "invalid_request",
   );
-  const sibling = path.resolve(workspace, "..", "elsewhere", "x.mp4");
+  const sibling = NodePath.resolve(workspace, "..", "elsewhere", "x.mp4");
   assert.strictEqual(
     failureOf(resolveOutputPath(workspace, sibling, "a.mp4", () => false)).code,
     "invalid_request",
@@ -42,9 +42,9 @@ it("a path outside the workspace is refused", () => {
 });
 
 it("a taken name gets a number", () => {
-  const taken = new Set([path.join(workspace, "generated-media", "a.mp4")]);
+  const taken = new Set([NodePath.join(workspace, "generated-media", "a.mp4")]);
   assert.deepStrictEqual(
     resolveOutputPath(workspace, undefined, "a.mp4", (file) => taken.has(file)),
-    Result.succeed(path.join(workspace, "generated-media", "a-1.mp4")),
+    Result.succeed(NodePath.join(workspace, "generated-media", "a-1.mp4")),
   );
 });

@@ -229,6 +229,8 @@
   "4b45ac8cb8df04a4": "{count, plural, other {尝试预览 {count} 个 HTML 页面}}",
   "a6f62fca5dd25455": "{count, plural, other {已渲染 {count} 个 HTML 页面}}",
   "3280d45703154eb4": "{count, plural, other {尝试渲染 {count} 个 HTML 页面}}",
+  "9ffe87e575a8dc2f": "{count, plural, other {已使用网关媒体工具 {count} 次}}",
+  "78157e46617f2bde": "{count, plural, other {尝试使用网关媒体工具 {count} 次}}",
   "898770cae17df8d2": "{count, plural, other {已发送 {count} 条消息}}",
   "e63f6b002f96e1e0": "{count, plural, other {尝试发送 {count} 条消息}}",
   "fad31ec7ecac436d": "{count, plural, other {已列出会话 {count} 次}}",

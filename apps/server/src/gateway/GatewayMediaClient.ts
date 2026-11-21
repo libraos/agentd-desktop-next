@@ -53,11 +53,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const MESSAGE_LIMIT = 500;
 
 /** The gateway's own reason for a refused request, else its status; never the key. */
-export function gatewayErrorMessage(
-  c: MediaGatewayConnection,
-  status: number,
-  body: unknown,
-): string {
+function gatewayErrorMessage(c: MediaGatewayConnection, status: number, body: unknown): string {
   let text = "";
   if (isRecord(body)) {
     const error = body.error;
@@ -84,11 +80,13 @@ const send = Effect.fn("GatewayMedia.send")(function* (
   request: HttpClientRequest.HttpClientRequest,
 ) {
   const http = yield* HttpClient.HttpClient;
-  return yield* http.execute(authorized(c, request)).pipe(
-    Effect.provideService(FetchHttpClient.RequestInit, { redirect: "manual" }),
-    Effect.provideService(HttpClient.TracerPropagationEnabled, false),
-    Effect.mapError(unreachable(c)),
-  );
+  return yield* http
+    .execute(authorized(c, request))
+    .pipe(
+      Effect.provideService(FetchHttpClient.RequestInit, { redirect: "manual" }),
+      Effect.provideService(HttpClient.TracerPropagationEnabled, false),
+      Effect.mapError(unreachable(c)),
+    );
 });
 
 const readBody = (response: HttpClientResponse.HttpClientResponse) =>
@@ -159,7 +157,7 @@ const RESOLUTION_SHORT_SIDE: Record<string, number> = {
 };
 
 /** `720p` + `9:16` → `720x1280`: the resolution names the short side. */
-export function sizeOf(resolution: string | undefined, aspectRatio: string | undefined) {
+function sizeOf(resolution: string | undefined, aspectRatio: string | undefined) {
   if (resolution === undefined) return undefined;
   const short = RESOLUTION_SHORT_SIDE[resolution.toLowerCase()];
   if (short === undefined) return undefined;
