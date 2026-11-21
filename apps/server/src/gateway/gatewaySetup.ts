@@ -432,7 +432,7 @@ export const withGatewayModels = (
   opencodeModels: ReadonlyArray<LibraosGatewayModel> | null = models,
 ): ProviderInstanceConfigMap => withShapeModels(LIBRAOS_SHAPE, current, models, opencodeModels);
 
-/** The model list a custom gateway's agents have now (Claude's or Codex's), null with neither. */
+/** The model list a custom gateway's agents have now, null without any agent. */
 export function customGatewayModels(
   current: ProviderInstanceConfigMap,
   id: string,
@@ -447,7 +447,20 @@ export function customGatewayModels(
         : [],
     );
   }
-  return null;
+  // A gateway with opencode alone keeps its list in opencode's inline config.
+  const inline = current[ids.opencode]?.environment?.find(
+    (variable) => variable.name === OPENCODE_CONFIG_ENV,
+  )?.value;
+  if (typeof inline !== "string") return null;
+  try {
+    const parsed: unknown = JSON.parse(inline);
+    const provider =
+      isRecord(parsed) && isRecord(parsed.provider) ? parsed.provider[`gw_${id}`] : null;
+    const models = isRecord(provider) && isRecord(provider.models) ? provider.models : null;
+    return models === null ? null : Object.keys(models).map((model) => ({ id: model }));
+  } catch {
+    return null;
+  }
 }
 
 /** A custom gateway's agents given its current name and model list, `current` when unchanged. */
