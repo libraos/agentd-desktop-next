@@ -81,6 +81,8 @@ it.effect("add makes only the agents asked for", () => {
         hasKey: true,
         agents: ["opencode"],
         modelCount: 1,
+        models: ["m1"],
+        hiddenModels: [],
       },
     ]);
     const none = yield* gateways
@@ -174,6 +176,52 @@ it.effect("an anthropic gateway without a key is refused and nothing is saved", 
     assert.deepStrictEqual(settings.customGateways, []);
   }).pipe(Effect.provide(layer));
 });
+
+it.effect(
+  "a model turned off leaves every agent of the gateway and stays off after a refresh",
+  () => {
+    const { layer } = setup(() =>
+      Response.json({ data: [{ id: "m1" }, { id: "m2" }, { id: "m3" }] }),
+    );
+    return Effect.gen(function* () {
+      const gateways = yield* CustomGateway.CustomGateway;
+      const added = yield* gateways.add({ url: URL, format: "openai", key: "k1", name: "Work" });
+      if (added.kind !== "added") return assert.fail(added.message);
+      const id = added.gateway.id;
+      const offered = Effect.gen(function* () {
+        const settings = yield* (yield* ServerSettingsService).getSettings;
+        const codex = instance(settings, `gw-${id}-codex`)?.config as
+          | { customModels?: ReadonlyArray<{ slug: string }> }
+          | undefined;
+        const opencode = JSON.parse(
+          String(
+            instance(settings, `gw-${id}-opencode`)?.environment?.find(
+              (variable) => variable.name === "OPENCODE_CONFIG_CONTENT",
+            )?.value,
+          ),
+        ) as { provider: Record<string, { models: Record<string, unknown> }> };
+        return {
+          codex: codex?.customModels?.map((model) => model.slug),
+          opencode: Object.keys(opencode.provider[`gw_${id}`]!.models),
+        };
+      });
+
+      const listed = yield* gateways.setHiddenModels(id, ["m2"]);
+      assert.deepStrictEqual(listed.gateways[0]?.models, ["m1", "m3"]);
+      assert.deepStrictEqual(listed.gateways[0]?.hiddenModels, ["m2"]);
+      assert.deepStrictEqual(yield* offered, { codex: ["m1", "m3"], opencode: ["m1", "m3"] });
+
+      yield* gateways.refreshModels(id);
+      assert.deepStrictEqual(yield* offered, { codex: ["m1", "m3"], opencode: ["m1", "m3"] });
+
+      const restored = yield* gateways.setHiddenModels(id, []);
+      assert.deepStrictEqual([...(restored.gateways[0]?.models ?? [])].sort(), ["m1", "m2", "m3"]);
+
+      const none = yield* gateways.setHiddenModels(id, ["m1", "m2", "m3"]).pipe(Effect.flip);
+      assert.strictEqual(none.message, "Keep at least one model on.");
+    }).pipe(Effect.provide(layer));
+  },
+);
 
 it.effect("rename to blank falls back to the url", () => {
   const { layer } = setup(served);

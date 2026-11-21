@@ -36,6 +36,8 @@ export const CustomGatewaySetting = Schema.Struct({
   name: Schema.String,
   url: Schema.String,
   format: CustomGatewayFormat,
+  /** Models the gateway lists that its agents do not offer. */
+  hiddenModels: Schema.optional(Schema.Array(Schema.String)),
 });
 export type CustomGatewaySetting = typeof CustomGatewaySetting.Type;
 
@@ -46,6 +48,9 @@ export const CustomGatewaySummary = Schema.Struct({
   format: CustomGatewayFormat,
   hasKey: Schema.Boolean,
   modelCount: Schema.Number,
+  /** The models its agents offer, and the ones turned off. */
+  models: Schema.Array(Schema.String),
+  hiddenModels: Schema.Array(Schema.String),
   /** The agents this gateway has on this environment. */
   agents: Schema.Array(CustomGatewayAgent),
 });
@@ -77,6 +82,12 @@ export const CustomGatewayRenameInput = Schema.Struct({
   name: Bounded(200),
 });
 export type CustomGatewayRenameInput = typeof CustomGatewayRenameInput.Type;
+
+export const CustomGatewayHiddenModelsInput = Schema.Struct({
+  id: Schema.String,
+  hiddenModels: Schema.Array(Bounded(256)).check(Schema.isMaxLength(2000)),
+});
+export type CustomGatewayHiddenModelsInput = typeof CustomGatewayHiddenModelsInput.Type;
 
 export const CustomGatewayIdInput = Schema.Struct({ id: Schema.String });
 export type CustomGatewayIdInput = typeof CustomGatewayIdInput.Type;
