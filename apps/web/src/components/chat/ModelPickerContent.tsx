@@ -29,6 +29,7 @@ import {
 } from "react";
 import { ChevronRightIcon } from "lucide-react";
 import { ModelListRow } from "./ModelListRow";
+import { barColor } from "../usage/UsageLimits";
 import { useProviderWorkspaceSnapshotRefresh } from "./useProviderWorkspaceSnapshotRefresh";
 import { getProviderStatusMessage, hasProviderSetup } from "./ProviderStatusBanner";
 import {
@@ -472,6 +473,10 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
       onInstanceModelChange(instanceId, resolvedModel);
     }
     return resolvedModel;
+  };
+
+  const pickSource = (instanceId: ProviderInstanceId, slug: string) => {
+    handleModelSelect(slug, instanceId);
   };
 
   const modelJumpShortcutContext = {
@@ -1001,6 +1006,8 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
                   return null;
                 }
                 const { row, model, isVariant } = listed;
+                const sourceColorOf = (variant: ModelPickerItem) =>
+                  variant.instanceAccentColor ?? barColor(variant.driverKind);
                 const disabledReason =
                   getModelDisabledReason?.(model.instanceId, model.slug) ?? null;
                 return (
@@ -1021,6 +1028,20 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
                         ? sourceLabels.get(model.instanceId)?.variant
                         : sourceLabels.get(model.instanceId)?.source) ?? model.instanceDisplayName
                     }
+                    sourceColor={sourceColorOf(model)}
+                    sources={
+                      !isVariant && row.variants.length > 1
+                        ? row.variants.map((variant) => ({
+                            instanceId: variant.instanceId,
+                            slug: variant.slug,
+                            label:
+                              sourceLabels.get(variant.instanceId)?.variant ??
+                              variant.instanceDisplayName,
+                            color: sourceColorOf(variant),
+                          }))
+                        : undefined
+                    }
+                    onPickSource={pickSource}
                     isVariant={isVariant}
                     {...(!isVariant && row.variants.length > 1
                       ? {
