@@ -579,6 +579,12 @@ importers:
       '@material/material-color-utilities':
         specifier: 0.3.0
         version: 0.3.0
+      '@noble/curves':
+        specifier: 'catalog:'
+        version: 1.9.1
+      '@noble/hashes':
+        specifier: 'catalog:'
+        version: 1.8.0
       '@pierre/diffs':
         specifier: 1.7.0-beta.4
         version: 1.7.0-beta.4(patch_hash=b24b206d14c79de95be10322b96490b82e41cc13c8a02c7378aaf8e03623431b)(@shikijs/themes@4.2.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
