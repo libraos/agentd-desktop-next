@@ -3590,6 +3590,9 @@
       "v": "v"
     }
   ],
+  "264ff5bcdde342a4": "クラウドタスクはこのリポジトリのブランチを成果として残し、「変更を確認」で開けます。issue やプルリクエストの作成・コメント、他のリポジトリへのアクセスはできません。",
+  "84e6b0dc280d7798": "この目標は issue、プルリクエスト、またはコメントを必要とします。クラウドタスクにはできないため、予算を使った後に失敗します。",
+  "94e2336d0fb6d452": "このコンピューターで実行",
   "8b21ccdccad92c0a": "Checking LibraOS credit…",
   "eb6e2b6aae32f93b": "Cloud Workers aren’t set up. Check the cloud configuration and account key file.",
   "d016144cc5a6dbad": "The repository owner must install the Cloud Workers GitHub App on this repository.",

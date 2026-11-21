@@ -54,6 +54,31 @@ function setup(answer: () => Response) {
 
 const served = () => Response.json({ data: [{ id: "m1" }] });
 
+it.effect("add leaves the models a gateway marks as video or audio out of chat", () => {
+  const { layer } = setup(() =>
+    Response.json({
+      data: [{ id: "m1" }, { id: "minimax-h3", type: "video" }, { id: "tts-1", type: "audio" }],
+    }),
+  );
+  return Effect.gen(function* () {
+    const result = yield* (yield* CustomGateway.CustomGateway).add({
+      url: URL,
+      format: "openai",
+      key: "k1",
+      name: "GW",
+    });
+    assert.strictEqual(result.kind, "added");
+    if (result.kind !== "added") return;
+    assert.strictEqual(result.gateway.modelCount, 1);
+    const settings = yield* (yield* ServerSettingsService).getSettings;
+    const codex = instance(settings, `gw-${result.gateway.id}-codex`);
+    assert.deepStrictEqual(
+      (codex?.config as { customModels?: unknown } | undefined)?.customModels,
+      [{ slug: "m1" }],
+    );
+  }).pipe(Effect.provide(layer));
+});
+
 it.effect("add makes only the agents asked for", () => {
   const { layer } = setup(served);
   return Effect.gen(function* () {
